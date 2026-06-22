@@ -27,15 +27,35 @@ const ROOT = __dirname;
 const HOST = '127.0.0.1'; // localhost host => app's dev login bypass kicks in
 const PORT = 4178;
 
-// --- Critical globals the inline onclick handlers rely on -------------------
+// --- Critical globals the UI relies on, spanning every region of app.js -----
+// (Verified present in the working build. If a future split drops or
+//  mis-orders a file, the missing region's functions show up here.)
 const REQUIRED_GLOBALS = [
-  'goTo',
-  'openLiarLobby', 'openChamLobby', 'openMafiaLobby', 'openMafiaCardsLobby',
-  'liarStartGame', 'chamStartGame', 'mafiaStartGame', 'startGame',
+  // core / i18n / dispatcher
+  't', 'setLang', 'applyLang', 'loadProfile', 'saveProfile', 'loadStats',
+  'goTo', 'goToSlide', 'nextSlide',
+  // hot seat
+  'startGame', 'openLobby', 'renderLobbyPlayers', 'hotWireSync', 'hotClaimSeat',
+  // chameleon
+  'openChamLobby', 'chamStartGame', 'chamWireSync', 'renderChamLobbyPlayers',
+  // liar
+  'openLiarLobby', 'liarStartGame', 'liarWireSync',
+  // mafia
+  'openMafiaLobby', 'openMafiaCardsLobby', 'mafiaStartGame', 'mafiaWireSync',
+  // friends / invites / feedback
+  'renderFriends', 'friendsLoad', 'renderLobbyInvites', 'renderFeedbackBoard', 'feedbackLoad',
+  // admin
+  'renderAdminStats', 'renderAdminFeedback', 'adminStatsLoad', 'adminFeedbackLoad',
+  // profile / settings
+  'renderProfileScreen', 'renderEditProfile', 'renderSettings',
+  // late region (end of app.js) — confirms the whole file executed
+  'wheelTestRun', 'wheelTestReset', 'wheelTestPaintWheel',
 ];
 
-// --- Screens that should render via goTo() without live server data ---------
-const NAV_SCREENS = ['games', 'profile', 'login'];
+// --- Screens that render via goTo() without live-server side effects --------
+// Includes all four game lobbies (these only paint local seat state; real
+// room creation happens in the open*Lobby openers, which we do NOT trigger).
+const NAV_SCREENS = ['games', 'profile', 'login', 'lobby', 'cham-lobby', 'liar-lobby', 'mafia-lobby'];
 
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
