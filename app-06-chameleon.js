@@ -324,12 +324,7 @@
       const tid = setTimeout(() => chamConfirmUserGone(sessionId), CHAM_LEAVE_GRACE_MS);
       _chamLeaveGraceTimers.set(sessionId, tid);
     }
-    function chamCancelLeaveGrace(sessionId){
-      if (_chamLeaveGraceTimers.has(sessionId)) {
-        clearTimeout(_chamLeaveGraceTimers.get(sessionId));
-        _chamLeaveGraceTimers.delete(sessionId);
-      }
-    }
+    function chamCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_chamLeaveGraceTimers, sessionId); }
     function chamResetPresenceState(){
       _chamLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
       _chamLeaveGraceTimers.clear();

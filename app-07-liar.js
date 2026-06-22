@@ -306,12 +306,7 @@
       const tid = setTimeout(() => liarConfirmUserGone(sessionId), LIAR_LEAVE_GRACE_MS);
       _liarLeaveGraceTimers.set(sessionId, tid);
     }
-    function liarCancelLeaveGrace(sessionId){
-      if (_liarLeaveGraceTimers.has(sessionId)) {
-        clearTimeout(_liarLeaveGraceTimers.get(sessionId));
-        _liarLeaveGraceTimers.delete(sessionId);
-      }
-    }
+    function liarCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_liarLeaveGraceTimers, sessionId); }
     function liarResetPresenceState(){
       // Called on channel teardown so a stale presence state doesn't bleed
       // into the next room.

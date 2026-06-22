@@ -189,12 +189,7 @@
       const tid = setTimeout(() => mafiaConfirmUserGone(sessionId), MAFIA_LEAVE_GRACE_MS);
       _mafiaLeaveGraceTimers.set(sessionId, tid);
     }
-    function mafiaCancelLeaveGrace(sessionId){
-      if (_mafiaLeaveGraceTimers.has(sessionId)) {
-        clearTimeout(_mafiaLeaveGraceTimers.get(sessionId));
-        _mafiaLeaveGraceTimers.delete(sessionId);
-      }
-    }
+    function mafiaCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_mafiaLeaveGraceTimers, sessionId); }
     function mafiaResetPresenceState(){
       _mafiaLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
       _mafiaLeaveGraceTimers = new Map();

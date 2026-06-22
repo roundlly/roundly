@@ -360,12 +360,16 @@
       const tid = setTimeout(() => hotConfirmUserGone(sessionId), HOT_LEAVE_GRACE_MS);
       _hotLeaveGraceTimers.set(sessionId, tid);
     }
-    function hotCancelLeaveGrace(sessionId){
-      if (_hotLeaveGraceTimers.has(sessionId)) {
-        clearTimeout(_hotLeaveGraceTimers.get(sessionId));
-        _hotLeaveGraceTimers.delete(sessionId);
+    // Shared leave-grace cancel — logic is identical across all 4 games; only
+    // the per-game timer map differs. Phase 2: one implementation, four thin
+    // callers (kept so existing call sites are untouched).
+    function huddleCancelLeaveGrace(timers, sessionId){
+      if (timers.has(sessionId)) {
+        clearTimeout(timers.get(sessionId));
+        timers.delete(sessionId);
       }
     }
+    function hotCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_hotLeaveGraceTimers, sessionId); }
     function hotResetPresenceState(){
       _hotLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
       _hotLeaveGraceTimers = new Map();
