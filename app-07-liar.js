@@ -272,19 +272,9 @@
     // resolves the gone session id from local claimedBy and fires the RPC;
     // the realtime echo delivers canonical state.
     function liarHandleConfirmedDisconnect(goneSeatId){
-      // Toast surviving players (UI-only side effect, kept client-side).
-      try {
-        const goneName = (() => {
-          const p = liarState.players.find(x => x.id === goneSeatId);
-          if (!p) return goneSeatId;
-          const disp = playerDisplayFor(p, liarState.claimedBy);
-          return disp.name || p.name;
-        })();
-        if (typeof showLobbyToast === 'function' &&
-            liarState.phase !== 'lobby' && liarState.phase !== 'result') {
-          showLobbyToast(t('liar.toastPlayerLeft', { name: goneName }), 3500);
-        }
-      } catch(e){}
+      // Note: the "{name} left" toast is now emitted by the realtime sync handler
+      // (seat-vanish detection), covering BOTH explicit Leave and disconnect — so
+      // it's intentionally NOT shown here (would double-toast).
 
       // Resolve session id from current local state BEFORE the echo arrives.
       const goneSessionId = liarState.claimedBy && liarState.claimedBy[goneSeatId];
@@ -341,8 +331,27 @@
           liarForceLeaveLocal();
           return;
         }
+        // Capture seating BEFORE applying — detect a player leaving (explicit
+        // Leave OR disconnect) for the "{name} left" notice. claimedBy only
+        // changes on a real leave (elimination uses alivePlayers), so this never
+        // mis-fires on a normal knockout. Sole-survivor logic handles end-of-game,
+        // so there's no return-to-lobby here.
+        const _prevClaimedBy = Object.assign({}, liarState.claimedBy || {});
+        const _mySidNow = liarGetSessionId();
         Object.keys(liarState).forEach(k => delete liarState[k]);
         Object.assign(liarState, newState);
+        try {
+          if (liarMe.myId) {
+            const _newClaimedBy = liarState.claimedBy || {};
+            const _goneSeats = Object.keys(_prevClaimedBy).filter(pid =>
+              _prevClaimedBy[pid] && !_newClaimedBy[pid] && _prevClaimedBy[pid] !== _mySidNow);
+            if (_goneSeats.length && typeof showLobbyToast === 'function') {
+              const p = (liarState.players || []).find(x => x.id === _goneSeats[0]);
+              let nm; try { nm = (p && typeof playerDisplayFor === 'function') ? playerDisplayFor(p, _prevClaimedBy).name : (p && p.name); } catch(e){}
+              showLobbyToast(t('liar.toastPlayerLeft', { name: nm || (p && p.name) || '?' }), 3500);
+            }
+          }
+        } catch(e){}
         // Only re-navigate if the user is currently on a Liar's Cup screen.
         // If they've used the back button to leave (e.g. to Games tab), don't yank
         // them back — state is updated silently and they'll see it on return.
