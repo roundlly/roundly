@@ -2564,7 +2564,18 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
     </nav>
   </div>
 
-  <script src="app.js"></script>
+  <!-- app.js was split into ordered fragments (Phase 1). They share one global
+       scope and MUST stay in this numeric order — do not reorder or add defer/module. -->
+  <script src="app-01-core-hotseat.js"></script>
+  <script src="app-02-i18n.js"></script>
+  <script src="app-03-profile-auth.js"></script>
+  <script src="app-04-friends-invites.js"></script>
+  <script src="app-05-settings-feedback-admin.js"></script>
+  <script src="app-06-chameleon.js"></script>
+  <script src="app-07-liar.js"></script>
+  <script src="app-08-mafia.js"></script>
+  <script src="app-09-shared-sheets-liar-cup.js"></script>
+  <script src="app-10-boot.js"></script>
 </body>
 </html>
 
