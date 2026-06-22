@@ -242,7 +242,26 @@
           if (payload && payload.new && payload.new.state) {
             const incomingRev = payload.new.state.revision || 0;
             if (incomingRev >= (mafiaState.revision || 0)) {
+              // Detect a player leaving (explicit Leave or disconnect) so the
+              // narrator/players get a "{name} left" notice — parity with the
+              // other games. Narrator-driven flow, so no auto-return-to-lobby.
+              const _prevClaimedBy = Object.assign({}, mafiaState.claimedBy || {});
+              const _mySidNow = mafiaGetSessionId();
               Object.assign(mafiaState, payload.new.state);
+              try {
+                if (mafiaMe.myId) {
+                  const _newClaimedBy = mafiaState.claimedBy || {};
+                  const _goneSeats = Object.keys(_prevClaimedBy).filter(pid =>
+                    _prevClaimedBy[pid] && !_newClaimedBy[pid] && _prevClaimedBy[pid] !== _mySidNow);
+                  if (_goneSeats.length && typeof showLobbyToast === 'function') {
+                    // Resolve the leaver's name from their session id via the
+                    // claimant-profile cache (how Mafia shows names everywhere).
+                    const _goneSid = _prevClaimedBy[_goneSeats[0]];
+                    let nm; try { const _prof = (typeof profileForClaim === 'function') ? profileForClaim(_goneSid) : null; if (_prof && typeof claimDisplayName === 'function') nm = claimDisplayName(_prof, ''); } catch(e){}
+                    showLobbyToast(t('mafia.toastPlayerLeft', { name: nm || ((typeof t === 'function' && t('common.otherPlayer')) || 'Player') }), 3500);
+                  }
+                }
+              } catch(e){}
               mafiaRerender();
             }
           }

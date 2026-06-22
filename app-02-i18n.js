@@ -476,6 +476,7 @@
         'cham.otherPlayerLeft': 'Other player left — back to the lobby.',
         'hot.toastPlayerLeft': '{name} left the game.',
         'hot.otherPlayerLeft': 'Other player left — back to the lobby.',
+        'mafia.toastPlayerLeft': '{name} left the game.',
         // Liar's Cup
         'liar.howToPlay': 'How to play',
         'liar.howToSub': 'First time? Read this — it\'s a 1-minute read',
@@ -1526,6 +1527,7 @@
         'cham.otherPlayerLeft': 'Diğer oyuncu ayrıldı — lobiye dönülüyor.',
         'hot.toastPlayerLeft': '{name} oyundan ayrıldı.',
         'hot.otherPlayerLeft': 'Diğer oyuncu ayrıldı — lobiye dönülüyor.',
+        'mafia.toastPlayerLeft': '{name} oyundan ayrıldı.',
         // Yalancı Bardağı (Liar's Cup)
         'liar.howToPlay': 'Nasıl oynanır',
         'liar.howToSub': 'İlk kez mi? Bunu oku — 1 dakikada anlatıyor',

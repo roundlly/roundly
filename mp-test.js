@@ -173,6 +173,26 @@ async function testLiarLeaveNotice(browser, base, results) {
   await A.ctx.close(); await B.ctx.close();
 }
 
+// Mafia: verify the explicit-Leave notice in the lobby (narrator-driven game,
+// so notice only — no auto-return-to-lobby).
+async function testMafiaLeaveNotice(browser, base, results) {
+  const A = await newSession(browser, base);
+  const a = await A.page.evaluate(async () => { await openMafiaLobby(); return { code: mafiaState.code }; });
+  await sleep(2000);
+  const B = await newSession(browser, base);
+  const bj = await B.page.evaluate(async (c) => { history.replaceState({}, '', '/?room=' + c + '&game=mafia'); await openMafiaLobby(); return { seated: !!mafiaMe.myId }; }, a.code);
+  await sleep(3000);
+  await B.page.evaluate(async () => { try { await window.sb.rpc('huddle_leave_seat', { p_table: 'mafia_rooms', p_code: mafiaState.code }); } catch (e) {} });
+  const out = await until(A.page, () => {
+    const tEl = document.querySelector('[class*=toast]');
+    return { seats: Object.keys(mafiaState.claimedBy || {}).length, toast: (tEl && tEl.textContent || '').trim() };
+  }, null, (v) => v && /left the game/i.test(v.toast || ''), 16000, 1000);
+  const v = out.value || {};
+  results.push({ name: '[mafia] remaining player sees "left" notice on Leave', ok: /left the game/i.test(v.toast || ''), detail: `Bseated=${bj.seated}, toast="${v.toast}", seats=${v.seats}` });
+  try { await A.page.evaluate(async (c) => { try { await window.sb.from('mafia_rooms').delete().eq('code', c); } catch (e) {} }, a.code); } catch (e) {}
+  await A.ctx.close(); await B.ctx.close();
+}
+
 async function run() {
   const results = [];
   const server = await startServer();
@@ -194,6 +214,7 @@ async function run() {
     await testHotSeatLeave(browser, base, results);
     await testChamLeaveNotice(browser, base, results);
     await testLiarLeaveNotice(browser, base, results);
+    await testMafiaLeaveNotice(browser, base, results);
   } catch (e) {
     if (skipped) console.log(`\n  SKIPPED: ${e.message}`);
     else results.push({ name: 'harness ran without crashing', ok: false, detail: String(e.message || e) });
