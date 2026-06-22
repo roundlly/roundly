@@ -182,13 +182,7 @@
         p_player_id: goneSeatId,
       })).catch(e => console.warn('[Mafia] handle_disconnect failed:', e && e.message));
     }
-    function mafiaStartLeaveGrace(sessionId){
-      if (_mafiaLeaveGraceTimers.has(sessionId)) {
-        clearTimeout(_mafiaLeaveGraceTimers.get(sessionId));
-      }
-      const tid = setTimeout(() => mafiaConfirmUserGone(sessionId), MAFIA_LEAVE_GRACE_MS);
-      _mafiaLeaveGraceTimers.set(sessionId, tid);
-    }
+    function mafiaStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_mafiaLeaveGraceTimers, sessionId, MAFIA_LEAVE_GRACE_MS, mafiaConfirmUserGone); }
     function mafiaCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_mafiaLeaveGraceTimers, sessionId); }
     function mafiaResetPresenceState(){
       _mafiaLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });

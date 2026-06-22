@@ -297,15 +297,7 @@
         p_gone_session_id: goneSessionId,
       });
     }
-    function liarStartLeaveGrace(sessionId){
-      // Cancel any prior timer for this session (defensive — shouldn't happen
-      // with cleanly-ordered presence events, but rejoin/leave can race).
-      if (_liarLeaveGraceTimers.has(sessionId)) {
-        clearTimeout(_liarLeaveGraceTimers.get(sessionId));
-      }
-      const tid = setTimeout(() => liarConfirmUserGone(sessionId), LIAR_LEAVE_GRACE_MS);
-      _liarLeaveGraceTimers.set(sessionId, tid);
-    }
+    function liarStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_liarLeaveGraceTimers, sessionId, LIAR_LEAVE_GRACE_MS, liarConfirmUserGone); }
     function liarCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_liarLeaveGraceTimers, sessionId); }
     function liarResetPresenceState(){
       // Called on channel teardown so a stale presence state doesn't bleed

@@ -317,13 +317,7 @@
         p_gone_session_id: goneSessionId,
       });
     }
-    function chamStartLeaveGrace(sessionId){
-      if (_chamLeaveGraceTimers.has(sessionId)) {
-        clearTimeout(_chamLeaveGraceTimers.get(sessionId));
-      }
-      const tid = setTimeout(() => chamConfirmUserGone(sessionId), CHAM_LEAVE_GRACE_MS);
-      _chamLeaveGraceTimers.set(sessionId, tid);
-    }
+    function chamStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_chamLeaveGraceTimers, sessionId, CHAM_LEAVE_GRACE_MS, chamConfirmUserGone); }
     function chamCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_chamLeaveGraceTimers, sessionId); }
     function chamResetPresenceState(){
       _chamLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });

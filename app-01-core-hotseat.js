@@ -353,13 +353,7 @@
         p_gone_session_id: sessionId,
       })).catch(e => console.warn('[Hot] handle_disconnect failed:', e && e.message));
     }
-    function hotStartLeaveGrace(sessionId){
-      if (_hotLeaveGraceTimers.has(sessionId)) {
-        clearTimeout(_hotLeaveGraceTimers.get(sessionId));
-      }
-      const tid = setTimeout(() => hotConfirmUserGone(sessionId), HOT_LEAVE_GRACE_MS);
-      _hotLeaveGraceTimers.set(sessionId, tid);
-    }
+    function hotStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_hotLeaveGraceTimers, sessionId, HOT_LEAVE_GRACE_MS, hotConfirmUserGone); }
     // Shared leave-grace cancel — logic is identical across all 4 games; only
     // the per-game timer map differs. Phase 2: one implementation, four thin
     // callers (kept so existing call sites are untouched).
@@ -368,6 +362,15 @@
         clearTimeout(timers.get(sessionId));
         timers.delete(sessionId);
       }
+    }
+    // Shared leave-grace start — identical logic across all 4 games; the per-game
+    // timer map, grace duration, and "user gone" callback are passed in. Phase 2 #2.
+    function huddleStartLeaveGrace(timers, sessionId, graceMs, onConfirm){
+      if (timers.has(sessionId)) {
+        clearTimeout(timers.get(sessionId));
+      }
+      const tid = setTimeout(() => onConfirm(sessionId), graceMs);
+      timers.set(sessionId, tid);
     }
     function hotCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_hotLeaveGraceTimers, sessionId); }
     function hotResetPresenceState(){
