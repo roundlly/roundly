@@ -372,12 +372,32 @@
       const tid = setTimeout(() => onConfirm(sessionId), graceMs);
       timers.set(sessionId, tid);
     }
-    function hotCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_hotLeaveGraceTimers, sessionId); }
-    function hotResetPresenceState(){
-      _hotLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
-      _hotLeaveGraceTimers = new Map();
-      _hotPresentSessions = new Set();
+    // ---- More shared room helpers (Phase 2). Each was duplicated 4× and is
+    // identical across games except a game token or which presence collections
+    // it touches. ----
+    function huddleReadUrlRoom(gameToken){
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('room');
+        const game = params.get('game');
+        if (!code) return null;
+        if (game && game !== gameToken) return null;   // wrong game's code → ignore
+        return code.toUpperCase().trim();
+      } catch(e){ return null; }
     }
+    function huddleSyncUrlToRoom(code, gameToken){
+      if (!code) return;
+      try {
+        history.replaceState(history.state, '', '/?room=' + encodeURIComponent(code) + '&game=' + gameToken);
+      } catch(e){}
+    }
+    function huddleResetPresenceState(timers, sessions){
+      timers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
+      timers.clear();
+      sessions.clear();
+    }
+    function hotCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_hotLeaveGraceTimers, sessionId); }
+    function hotResetPresenceState(){ huddleResetPresenceState(_hotLeaveGraceTimers, _hotPresentSessions); }
 
     let _hotChannel = null;
     let _hotChannelCode = null;
@@ -537,23 +557,8 @@
       return origin + '/?room=' + encodeURIComponent(code) + '&game=' + game;
     }
     function hotJoinUrl(code){ return joinUrl(code, 'hotseat'); }
-    function hotReadUrlRoom(){
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('room');
-        const game = params.get('game');
-        if (!code) return null;
-        if (game && game !== 'hotseat') return null;
-        return code.toUpperCase().trim();
-      } catch(e){ return null; }
-    }
-    function hotSyncUrlToRoom(code){
-      if (!code) return;
-      try {
-        const newUrl = '/?room=' + encodeURIComponent(code) + '&game=hotseat';
-        history.replaceState(history.state, '', newUrl);
-      } catch(e){}
-    }
+    function hotReadUrlRoom(){ return huddleReadUrlRoom('hotseat'); }
+    function hotSyncUrlToRoom(code){ huddleSyncUrlToRoom(code, 'hotseat'); }
     function hotFindRecentRoomCode(){
       try { return huddleReadLastRoom('hotseat'); } catch(e){ return null; }
     }

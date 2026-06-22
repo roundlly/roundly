@@ -289,13 +289,7 @@
     }
     function liarStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_liarLeaveGraceTimers, sessionId, LIAR_LEAVE_GRACE_MS, liarConfirmUserGone); }
     function liarCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_liarLeaveGraceTimers, sessionId); }
-    function liarResetPresenceState(){
-      // Called on channel teardown so a stale presence state doesn't bleed
-      // into the next room.
-      _liarLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
-      _liarLeaveGraceTimers.clear();
-      _liarPresentSessions.clear();
-    }
+    function liarResetPresenceState(){ huddleResetPresenceState(_liarLeaveGraceTimers, _liarPresentSessions); }
 
     let _liarChannel = null;
     let _liarChannelCode = null;
@@ -1209,28 +1203,10 @@
 
     // Reads ?room=CODE from the URL bar. Used on lobby open so a phone scanning
     // the QR (or pasting the link) joins the SAME room as the host.
-    function liarReadUrlRoom(){
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('room');
-        const game = params.get('game');
-        if (!code) return null;
-        // Don't honor URLs whose ?game= belongs to a different game (would
-        // try to load a Hot Seat / Chameleon code from liar_rooms and fail).
-        // Absent ?game= is allowed for back-compat with legacy URLs.
-        if (game && game !== 'liar') return null;
-        return code.toUpperCase().trim();
-      } catch(e){ return null; }
-    }
+    function liarReadUrlRoom(){ return huddleReadUrlRoom('liar'); }
 
     // Update the browser URL bar so the current room is shareable / bookmarkable.
     // Uses replaceState so we don't create a history entry.
-    function liarSyncUrlToRoom(code){
-      if (!code) return;
-      try {
-        const newUrl = '/?room=' + encodeURIComponent(code) + '&game=liar';
-        history.replaceState(history.state, '', newUrl);
-      } catch(e){}
-    }
+    function liarSyncUrlToRoom(code){ huddleSyncUrlToRoom(code, 'liar'); }
 
     // ============================================================

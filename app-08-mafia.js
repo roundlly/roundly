@@ -184,11 +184,7 @@
     }
     function mafiaStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_mafiaLeaveGraceTimers, sessionId, MAFIA_LEAVE_GRACE_MS, mafiaConfirmUserGone); }
     function mafiaCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_mafiaLeaveGraceTimers, sessionId); }
-    function mafiaResetPresenceState(){
-      _mafiaLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
-      _mafiaLeaveGraceTimers = new Map();
-      _mafiaPresentSessions = new Set();
-    }
+    function mafiaResetPresenceState(){ huddleResetPresenceState(_mafiaLeaveGraceTimers, _mafiaPresentSessions); }
 
     let mafiaSyncChannel = null;
     let _mafiaChannelCode = null;
@@ -334,23 +330,8 @@
       const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
       return origin + '/?room=' + encodeURIComponent(code) + '&game=mafia';
     }
-    function mafiaReadUrlRoom(){
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('room');
-        const game = params.get('game');
-        if (!code) return null;
-        if (game && game !== 'mafia') return null;
-        return code.toUpperCase().trim();
-      } catch(e){ return null; }
-    }
-    function mafiaSyncUrlToRoom(code){
-      if (!code) return;
-      try {
-        const newUrl = '/?room=' + encodeURIComponent(code) + '&game=mafia';
-        history.replaceState(history.state, '', newUrl);
-      } catch(e){}
-    }
+    function mafiaReadUrlRoom(){ return huddleReadUrlRoom('mafia'); }
+    function mafiaSyncUrlToRoom(code){ huddleSyncUrlToRoom(code, 'mafia'); }
     function mafiaFindRecentRoomCode(){
       try { return huddleReadLastRoom('mafia'); }
       catch(e){ return null; }

@@ -310,10 +310,7 @@
     }
     function chamStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_chamLeaveGraceTimers, sessionId, CHAM_LEAVE_GRACE_MS, chamConfirmUserGone); }
     function chamCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_chamLeaveGraceTimers, sessionId); }
-    function chamResetPresenceState(){
-      _chamLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
-      _chamLeaveGraceTimers.clear();
-      _chamPresentSessions.clear();
+    function chamResetPresenceState(){ huddleResetPresenceState(_chamLeaveGraceTimers, _chamPresentSessions);
     }
 
     let _chamChannel = null;
@@ -474,23 +471,8 @@
     }
 
     function chamJoinUrl(code){ return joinUrl(code, 'chameleon'); }
-    function chamReadUrlRoom(){
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('room');
-        const game = params.get('game');
-        if (!code) return null;
-        if (game && game !== 'chameleon') return null;
-        return code.toUpperCase().trim();
-      } catch(e){ return null; }
-    }
-    function chamSyncUrlToRoom(code){
-      if (!code) return;
-      try {
-        const newUrl = '/?room=' + encodeURIComponent(code) + '&game=chameleon';
-        history.replaceState(history.state, '', newUrl);
-      } catch(e){}
-    }
+    function chamReadUrlRoom(){ return huddleReadUrlRoom('chameleon'); }
+    function chamSyncUrlToRoom(code){ huddleSyncUrlToRoom(code, 'chameleon'); }
     function chamFindRecentRoomCode(){
       try { return huddleReadLastRoom('cham'); } catch(e){ return null; }
     }
