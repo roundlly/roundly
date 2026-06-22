@@ -1,0 +1,15709 @@
+    // ---------- Demo data ----------
+    const PLAYERS = [
+      { id:'jordan', name:'Jordan', initial:'J', wins:0, bestTimeMs:null },
+      { id:'alex',   name:'Alex',   initial:'A', wins:0, bestTimeMs:null },
+      { id:'maria',  name:'Maria',  initial:'M', wins:0, bestTimeMs:null },
+      { id:'kenji',  name:'Kenji',  initial:'K', wins:0, bestTimeMs:null },
+      { id:'sam',    name:'Sam',    initial:'S', wins:0, bestTimeMs:null },
+      { id:'lily',   name:'Lily',   initial:'L', wins:0, bestTimeMs:null },
+      { id:'theo',   name:'Theo',   initial:'T', wins:0, bestTimeMs:null },
+      { id:'nina',   name:'Nina',   initial:'N', wins:0, bestTimeMs:null },
+    ];
+
+    // Word pools for Hot Seat. Each list is curated to be globally recognizable,
+    // safe for any group, and easy to describe without saying the word itself.
+    // pickWord() filters by state.usedWords so a single game never repeats a
+    // word (until the category is exhausted, then the used set wipes).
+    const WORDS = {
+      animals: [
+        'elephant','kangaroo','penguin','dolphin','octopus','giraffe','panda','flamingo','crocodile','squirrel',
+        'lion','tiger','bear','zebra','monkey','gorilla','koala','sloth','owl','eagle',
+        'parrot','peacock','butterfly','dragonfly','spider','snake','lizard','frog','turtle','shark',
+        'whale','jellyfish','starfish','lobster','crab','seahorse','hedgehog','raccoon','fox','wolf',
+        'rabbit','hamster','bat','bee','cheetah','leopard','hippo','rhino','camel','llama',
+        'horse','cow','pig','goat','sheep','chicken','duck','goose','swan','ostrich',
+        'dog','cat','deer','moose','otter','walrus','platypus','chameleon','scorpion','ant'
+      ],
+      food: [
+        'pizza','spaghetti','coffee','pancake','sushi','burger','watermelon','chocolate','popcorn','noodles',
+        'taco','burrito','sandwich','hot dog','fries','salad','soup','ice cream','cake','cookie',
+        'donut','cupcake','brownie','pie','pretzel','bagel','croissant','waffle','omelette','bacon',
+        'eggs','cereal','oatmeal','yogurt','cheese','butter','bread','toast','rice','pasta',
+        'lasagna','ramen','dumplings','curry','pad thai','kebab','falafel','hummus','salmon','steak',
+        'chicken wings','meatballs','ribs','shrimp','lemonade','milkshake','smoothie','tea','juice','soda',
+        'banana','apple','strawberry','mango','pineapple','grapes','avocado','orange','peach','blueberry'
+      ],
+      movies: [
+        'titanic','avatar','frozen','jaws','rocky','inception','gladiator','toy story','jurassic park','the matrix',
+        'star wars','harry potter','lord of the rings','indiana jones','batman','superman','spider-man','iron man','the godfather','pulp fiction',
+        'forrest gump','the lion king','shrek','finding nemo','monsters inc','up','wall-e','ratatouille','the incredibles','cars',
+        'aladdin','mulan','beauty and the beast','cinderella','snow white','the little mermaid','tangled','moana','encanto','coco',
+        'soul','inside out','brave','zootopia','the avengers','black panther','wonder woman','the dark knight','interstellar','the shining',
+        'ghostbusters','back to the future','the wizard of oz','e.t.','home alone','la la land','pirates of the caribbean','mission impossible','james bond','the hunger games',
+        'breaking bad','game of thrones','friends','the office','stranger things','squid game','sherlock','peaky blinders','money heist','the simpsons'
+      ],
+      famous: [
+        'einstein','beyoncé','messi','mozart','shakespeare','oprah','elon musk','taylor swift','obama','da vinci',
+        'michael jackson','elvis presley','madonna','lady gaga','drake','rihanna','ed sheeran','justin bieber','eminem','kanye west',
+        'bruno mars','ariana grande','beethoven','picasso','van gogh','monet','frida kahlo','marie curie','isaac newton','charles darwin',
+        'stephen hawking','nikola tesla','thomas edison','steve jobs','bill gates','jeff bezos','walt disney','abraham lincoln','martin luther king','nelson mandela',
+        'gandhi','queen elizabeth','princess diana','cristiano ronaldo','lebron james','michael jordan','serena williams','roger federer','usain bolt','muhammad ali',
+        'tom cruise','brad pitt','angelina jolie','leonardo dicaprio','will smith','jennifer aniston','dwayne johnson','robert downey jr','tom hanks','morgan freeman',
+        'meryl streep','denzel washington','keanu reeves','scarlett johansson','emma watson','adele','shakira','jennifer lopez','snoop dogg','jay-z'
+      ],
+      sports: [
+        'football','basketball','baseball','tennis','soccer','golf','hockey','volleyball','swimming','running',
+        'cycling','boxing','wrestling','karate','judo','taekwondo','surfing','skateboarding','skiing','snowboarding',
+        'ice skating','gymnastics','ballet','yoga','pilates','weightlifting','rowing','sailing','kayaking','fishing',
+        'archery','fencing','badminton','table tennis','cricket','rugby','lacrosse','polo','sumo','marathon',
+        'triathlon','javelin','discus','shot put','high jump','long jump','hurdles','pole vault','bowling','billiards',
+        'darts','chess','horse racing','formula 1','rock climbing'
+      ],
+      objects: [
+        'chair','table','lamp','refrigerator','microwave','oven','dishwasher','washing machine','toaster','blender',
+        'kettle','computer','laptop','keyboard','mouse','monitor','printer','phone','tablet','headphones',
+        'speaker','television','remote','camera','watch','clock','mirror','vase','candle','blanket',
+        'pillow','mattress','sofa','bookshelf','desk','closet','hanger','broom','vacuum','bucket',
+        'sponge','soap','shampoo','toothbrush','towel','hairdryer','comb','scissors','razor','umbrella',
+        'sunglasses','backpack','suitcase','wallet','purse','key','glasses','pencil','pen','eraser',
+        'notebook','calculator','stapler','flashlight','battery','charger','hammer','screwdriver','rope','ladder'
+      ],
+      places: [
+        'paris','london','new york','tokyo','rome','sydney','dubai','moscow','beijing','mumbai',
+        'cairo','rio de janeiro','los angeles','las vegas','hollywood','hawaii','alaska','miami','chicago','san francisco',
+        'eiffel tower','statue of liberty','big ben','taj mahal','great wall of china','pyramids','colosseum','leaning tower of pisa','mount everest','niagara falls',
+        'grand canyon','amazon rainforest','sahara desert','swiss alps','mount fuji','antarctica','the moon','mars','beach','mountain',
+        'jungle','desert','volcano','ocean','river','lake','forest','island','cave','castle',
+        'palace','temple','church','mosque','museum','zoo','airport','library','stadium','aquarium'
+      ],
+      activities: [
+        'running','swimming','dancing','singing','cooking','baking','gardening','painting','drawing','knitting',
+        'sewing','reading','writing','hiking','camping','fishing','surfing','juggling','snoring','sneezing',
+        'yawning','stretching','jumping','climbing','skating','biking','driving','flying','diving','meditating',
+        'praying','shopping','traveling','studying','exercising','snorkeling','parachuting','bungee jumping','rock climbing','water skiing',
+        'horseback riding','sledding','bird watching','stargazing','sleeping','laughing','crying','whistling','clapping','sneaking'
+      ],
+      music: [
+        'guitar','piano','drums','violin','flute','trumpet','saxophone','harmonica','accordion','banjo',
+        'harp','cello','clarinet','trombone','bass','keyboard','microphone','headphones','rock','pop',
+        'jazz','classical','hip hop','country','blues','reggae','electronic','metal','punk','rap',
+        'opera','choir','orchestra','band','concert','festival','album','lyrics','melody','rhythm',
+        'karaoke','dj','beatbox','musical','symphony'
+      ],
+      // 'mixed' is a hand-picked, globally-recognizable grab-bag drawn from every
+      // other category. Kept separate from the union so it's curated, not noisy.
+      mixed: [
+        'elephant','pizza','rainbow','sunglasses','bicycle','guitar','umbrella','spaghetti','lightning','panda',
+        'skateboard','kangaroo','coffee','mountain','volcano','astronaut','dinosaur','keyboard','telescope','helicopter',
+        'lion','tiger','penguin','dolphin','octopus','butterfly','snake','shark','whale','turtle',
+        'fox','rabbit','owl','eagle','parrot','sushi','tacos','ice cream','cake','donut',
+        'popcorn','cookie','cheese','bread','watermelon','banana','apple','pineapple','mango','strawberry',
+        'titanic','frozen','batman','superman','spider-man','star wars','harry potter','the lion king','shrek','toy story',
+        'finding nemo','jaws','inception','the matrix','beethoven','mozart','picasso','einstein','messi','ronaldo',
+        'michael jordan','lebron james','tom cruise','brad pitt','leonardo dicaprio','taylor swift','beyoncé','oprah','obama','elon musk',
+        'steve jobs','walt disney','soccer','basketball','tennis','swimming','surfing','skiing','yoga','boxing',
+        'gymnastics','marathon','chair','table','lamp','computer','phone','camera','mirror','candle',
+        'pillow','sofa','vacuum','scissors','backpack','suitcase','paris','london','new york','tokyo',
+        'hawaii','eiffel tower','statue of liberty','taj mahal','pyramids','mount everest','niagara falls','beach','jungle','desert',
+        'ocean','castle','museum','dancing','singing','cooking','baking','painting','drawing','reading',
+        'writing','hiking','camping','fishing','skating','juggling','sneezing','yawning','climbing','traveling',
+        'piano','drums','violin','saxophone','microphone','jazz','rock','hip hop','orchestra','concert'
+      ],
+    };
+
+    // ---------- State ----------
+    const state = {
+      mode: null,
+      meId: 'jordan',             // who I am on this device (real multiplayer = logged-in user)
+      category: 'mixed',
+      rounds: 1,
+      order: 'rotating',          // 'rotating' | 'random' | 'host'
+      currentRound: 1,
+      currentPlayerIdx: 0,
+      playersUsedThisRound: [],   // array (was Set) so it survives JSON round-trip via Supabase
+      players: JSON.parse(JSON.stringify(PLAYERS)),
+      view: 'hotseat',
+      currentWord: '',
+      roundOutcome: null,         // 'won' | 'forfeit'
+      turnStartTime: 0,           // ms timestamp when current turn began
+      lastTurnDuration: 0,        // ms elapsed on last completed turn
+      // Multiplayer additions (mirror liarState)
+      code: null,
+      phase: 'lobby',             // 'lobby' | 'splash' | 'play' | 'result'
+      hostId: null,
+      claimedBy: {},              // playerId → sessionId
+      revision: 0,
+    };
+
+    // Local per-device identity for Hot Seat (mirrors liarMe)
+    const hotMe = { sessionId: null, myId: null, bootstrapped: false };
+    // Dedup key for the render-side bumpWins() in showResult — prevents the
+    // re-renders that fire for the same turn (ensureClaimantProfiles callback,
+    // realtime sync echo, language/theme switch) from each bumping the local
+    // lifetime "wins" stat. Format: room-code:round:currentPlayerIdx.
+    let _hotWinsBumpedKey = null;
+
+    async function hotBootstrap(){
+      if (hotMe.bootstrapped) return;
+      hotMe.bootstrapped = true;
+      if (!window.sb) { hotMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10); return; }
+      try {
+        const { data: { user } } = await window.sb.auth.getUser();
+        if (user && user.id) { hotMe.sessionId = user.id; return; }
+        const { data, error } = await window.sb.auth.signInAnonymously();
+        if (error) throw error;
+        hotMe.sessionId = data.user.id;
+      } catch(e) { hotMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10); }
+    }
+    function hotGetSessionId(){
+      if (!hotMe.sessionId) hotMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10);
+      return hotMe.sessionId;
+    }
+    function hotIsHost(){ return hotGetSessionId() === state.hostId; }
+    function hotUsedHas(idx){ return (state.playersUsedThisRound || []).indexOf(idx) !== -1; }
+    function hotUsedAdd(idx){
+      if (!state.playersUsedThisRound) state.playersUsedThisRound = [];
+      if (state.playersUsedThisRound.indexOf(idx) === -1) state.playersUsedThisRound.push(idx);
+    }
+
+    // ---------- C2: server-side RPC helper (per-action security) ----------
+    // huddleCallRPC wraps window.sb.rpc(...) with consistent error handling.
+    // On any failure (network or RLS/permission), it toasts the sync-failed
+    // message and resolves with { error } so callers can branch without
+    // try/catch noise. The next realtime echo from the server will overwrite
+    // any optimistic local mutation that didn't make it through.
+    // Returns true when the URL points at a room code that hasn't been
+    // loaded into this game's state yet. Used by each lobby render fn to
+    // swap in a skeleton grid instead of flashing the default "empty seats"
+    // tiles between the initial paint and the first xxxLoadRoom() resolve
+    // (typically 200-800ms on cold refresh).
+    function huddleLobbyHydrating(loadedCode){
+      try {
+        const urlCode = new URLSearchParams(window.location.search).get('room');
+        return !!urlCode && urlCode !== loadedCode;
+      } catch(e) { return false; }
+    }
+    function huddleLobbySkeletonHTML(count){
+      const n = count || 6;
+      const tile =
+        '<div class="player-tile" aria-busy="true" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:14px 10px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:14px;min-height:120px">' +
+          '<div class="huddle-skeleton-circle" style="width:48px;height:48px"></div>' +
+          '<div class="huddle-skeleton-bar short" style="width:60%"></div>' +
+          '<div class="huddle-skeleton-bar tiny" style="width:40%"></div>' +
+        '</div>';
+      return Array(n).fill(tile).join('');
+    }
+
+    // Distinguish transient errors (worth one retry — server hiccup, wifi
+    // blip, exception thrown before reaching the server) from terminal errors
+    // (4xx, RLS denial, gone room — retrying just produces the same answer).
+    // Per the refresh-best-practices research: auto-retry once on transient,
+    // route-with-toast on terminal. Never retry forever.
+    function _huddleIsTransientRpcError(err){
+      if (!err) return false;
+      // Thrown exceptions (fetch/network failures, CORS hiccups) are always
+      // transient — they didn't even reach the server, so retrying makes sense.
+      if (err._thrown) return true;
+      // PostgREST error codes that ARE transient: 5-digit pg codes starting
+      // with 08 (connection), 53 (insufficient resources), 57 (operator
+      // intervention), 58 (system error). Everything else (P0001 raised by
+      // SQL fn, 23505 unique violation, 42501 RLS, PGRST116 not found) is
+      // terminal — retrying just gets the same answer.
+      if (err.code && typeof err.code === 'string') {
+        return /^(08|53|57|58)/.test(err.code);
+      }
+      // No code, no _thrown flag — probably a partial error object. Be
+      // conservative: don't retry. (Better to surface to the user than to
+      // double-retry a request that we can't reason about.)
+      return false;
+    }
+    async function huddleCallRPC(name, args){
+      if (!window.sb) return { error: { code: 'no_supabase', message: 'Supabase unavailable' } };
+      const _attempt = async () => {
+        try {
+          const { data, error } = await window.sb.rpc(name, args);
+          if (error) return { error: error };
+          return { data: data };
+        } catch (err) {
+          // No code → exception → caller treats as transient.
+          return { error: { code: 'exception', message: String(err && err.message || err), _thrown: true } };
+        }
+      };
+      let res = await _attempt();
+      // Auto-retry exactly once for transient errors with 1s backoff. The
+      // delay gives a wifi blip room to recover; longer waits feel laggy and
+      // shorter waits often hit the same broken connection.
+      if (res.error && _huddleIsTransientRpcError(res.error)) {
+        await new Promise(r => setTimeout(r, 1000));
+        const retry = await _attempt();
+        if (!retry.error) return retry;
+        res = retry; // fall through to the failure path with the retry's error
+      }
+      if (res.error) {
+        console.warn('[Huddle] RPC ' + name + (res.error._thrown ? ' threw:' : ' failed:'),
+                     res.error.message || res.error);
+        try { if (typeof showLobbyToast === 'function') showLobbyToast(t('common.syncFailed'), 3500); } catch(e){}
+      }
+      return res;
+    }
+
+    // ---------- Hot Seat sync transport (mirrors liarPersist/liarLoadRoom/liarWireSync) ----------
+    function hotPersist(){
+      if (!state.code) return;
+      state.revision = (state.revision || 0) + 1;
+      if (!window.sb) return;
+      const snapshot = JSON.parse(JSON.stringify(state));
+      window.sb
+        .from('hotseat_rooms')
+        .upsert({ code: snapshot.code, state: snapshot })
+        .then(({ error }) => {
+          if (error) {
+            console.warn('[Huddle] hot persist failed:', error.message || error);
+            try { if (typeof showLobbyToast === 'function') showLobbyToast(t('common.syncFailed'), 3500); } catch(e){}
+          }
+        }, (err) => {
+          console.warn('[Huddle] hot persist network error:', err && err.message || err);
+          try { if (typeof showLobbyToast === 'function') showLobbyToast(t('common.syncFailed'), 3500); } catch(e){}
+        });
+    }
+    async function hotLoadRoom(code){
+      if (!window.sb) return false;
+      // Two-attempt retry — when an invitee taps Join the host's row may not
+      // have replicated to this client yet (Supabase replication race).
+      // Single-attempt fetches were silently dropping the invitee into a fresh
+      // room with a different code; the retry catches the lag window.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const { data, error } = await window.sb
+            .from('hotseat_rooms')
+            .select('state')
+            .eq('code', code)
+            .maybeSingle();
+          if (error) {
+            console.warn('[Huddle] hotLoadRoom query error (attempt ' + (attempt+1) + '):', error.message || error);
+          } else if (data && data.state) {
+            const incoming = data.state;
+            if (incoming.closedByHost) return false;
+            if (!Array.isArray(incoming.playersUsedThisRound)) incoming.playersUsedThisRound = [];
+            Object.keys(state).forEach(k => { delete state[k]; });
+            Object.assign(state, incoming);
+            return true;
+          }
+        } catch(e) {
+          console.warn('[Huddle] hotLoadRoom exception (attempt ' + (attempt+1) + '):', e);
+        }
+        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+      }
+      return false;
+    }
+    // ───── Presence tracking (Phase 2b) ─────────────────────────────────
+    // Mirrors Chameleon's pattern. When a tab dies (OS kill, wifi drop, app
+    // switch-away), the WebSocket eventually drops and Supabase emits a
+    // `presence.leave` event for that session. A 60-second grace timer
+    // covers legitimate refreshes (Supabase anon UID is stable across
+    // reload), then the lowest-connected peer fires the server cleanup
+    // (huddle_hot_handle_disconnect) which removes the seat and transfers
+    // host if needed. All other connected clients pick up the change via
+    // the postgres_changes broadcast.
+    let _hotPresentSessions = new Set();
+    let _hotLeaveGraceTimers = new Map();
+    const HOT_LEAVE_GRACE_MS = 60000;
+
+    function hotIsPlayerPresent(playerId){
+      if (!playerId) return false;
+      const sid = state.claimedBy && state.claimedBy[playerId];
+      return sid ? _hotPresentSessions.has(sid) : false;
+    }
+    function hotLowestSeatConnectedPlayer(){
+      const claimedBy = state.claimedBy || {};
+      const seats = Object.keys(claimedBy).sort();
+      for (const pid of seats) {
+        const sid = claimedBy[pid];
+        if (sid && _hotPresentSessions.has(sid)) return pid;
+      }
+      return null;
+    }
+    function hotConfirmUserGone(sessionId){
+      _hotPresentSessions.delete(sessionId);
+      _hotLeaveGraceTimers.delete(sessionId);
+      let goneSeatId = null;
+      Object.keys(state.claimedBy || {}).forEach(pid => {
+        if (state.claimedBy[pid] === sessionId) goneSeatId = pid;
+      });
+      if (!goneSeatId) {
+        if (typeof hotRerender === 'function') hotRerender();
+        return;
+      }
+      // Only the lowest-connected peer fires server cleanup. Deterministic
+      // election prevents N clients all racing to free the same seat.
+      const isMyJobToWrite = hotLowestSeatConnectedPlayer() === hotMe.myId;
+      if (!isMyJobToWrite) {
+        if (typeof hotRerender === 'function') hotRerender();
+        return;
+      }
+      // Fire-and-forget — server's postgres_changes echo reconciles every
+      // client's view within ~300ms. New function installed in Phase 2b
+      // accepts the gone session's UUID (not seat id) and handles host
+      // transfer + revision bump internally.
+      Promise.resolve(huddleCallRPC('huddle_hot_handle_disconnect', {
+        p_code: state.code,
+        p_gone_session_id: sessionId,
+      })).catch(e => console.warn('[Hot] handle_disconnect failed:', e && e.message));
+    }
+    function hotStartLeaveGrace(sessionId){
+      if (_hotLeaveGraceTimers.has(sessionId)) {
+        clearTimeout(_hotLeaveGraceTimers.get(sessionId));
+      }
+      const tid = setTimeout(() => hotConfirmUserGone(sessionId), HOT_LEAVE_GRACE_MS);
+      _hotLeaveGraceTimers.set(sessionId, tid);
+    }
+    function hotCancelLeaveGrace(sessionId){
+      if (_hotLeaveGraceTimers.has(sessionId)) {
+        clearTimeout(_hotLeaveGraceTimers.get(sessionId));
+        _hotLeaveGraceTimers.delete(sessionId);
+      }
+    }
+    function hotResetPresenceState(){
+      _hotLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
+      _hotLeaveGraceTimers = new Map();
+      _hotPresentSessions = new Set();
+    }
+
+    let _hotChannel = null;
+    let _hotChannelCode = null;
+    let _hotChannelSessionId = null;
+    function hotWireSync(){
+      if (!window.sb) return;
+      if (!state.code) return;
+      const mySid = hotGetSessionId();
+      if (_hotChannel && _hotChannelCode === state.code && _hotChannelSessionId === mySid) return;
+      if (_hotChannel) {
+        try { window.sb.removeChannel(_hotChannel); } catch(e){}
+        _hotChannel = null; _hotChannelCode = null; _hotChannelSessionId = null;
+        hotResetPresenceState();
+      }
+      const code = state.code;
+      const handler = (payload) => {
+        const newState = payload && payload.new && payload.new.state;
+        if (!newState) return;
+        if (typeof newState.revision === 'number' && newState.revision <= (state.revision || 0)) return;
+        // Host closed the room — auto-leave for every other player still seated.
+        if (newState.closedByHost && hotMe.myId) {
+          if (typeof showLobbyToast === 'function') {
+            try { showLobbyToast(t('lobby.hostClosedRoom'), 3500); } catch(e){}
+          }
+          hotForceLeaveLocal();
+          return;
+        }
+        if (!Array.isArray(newState.playersUsedThisRound)) newState.playersUsedThisRound = [];
+        Object.keys(state).forEach(k => { delete state[k]; });
+        Object.assign(state, newState);
+        // Restore meId from claim so getMyRole works locally
+        const sid = hotGetSessionId();
+        const claimed = Object.entries(state.claimedBy || {}).find(([pid, s]) => s === sid);
+        if (claimed) { hotMe.myId = claimed[0]; state.meId = claimed[0]; }
+        const activeId = document.querySelector('.screen.active');
+        const currentId = activeId ? activeId.id.replace('screen-', '') : null;
+        const hotScreens = ['lobby','splash','play','result'];
+        if (currentId && hotScreens.indexOf(currentId) !== -1) hotRerender();
+      };
+      // Presence handlers — key is the auth session id so refresh-rejoin
+      // looks like the same key, naturally cancelling the grace timer.
+      const onPresenceSync = () => {
+        const presState = _hotChannel.presenceState();
+        const fresh = new Set(Object.keys(presState || {}));
+        fresh.forEach(sid => {
+          if (_hotLeaveGraceTimers.has(sid)) hotCancelLeaveGrace(sid);
+        });
+        _hotPresentSessions = fresh;
+        if (typeof hotRerender === 'function') hotRerender();
+      };
+      const onPresenceJoin = ({ key }) => {
+        if (!key) return;
+        _hotPresentSessions.add(key);
+        hotCancelLeaveGrace(key);
+      };
+      const onPresenceLeave = ({ key }) => {
+        if (!key) return;
+        // DON'T delete from _hotPresentSessions immediately — start a grace
+        // timer so a quick refresh-rejoin doesn't trigger the "gone" flow.
+        hotStartLeaveGrace(key);
+      };
+      _hotChannelSessionId = mySid;
+      _hotChannel = window.sb
+        .channel('hotseat_room:' + code, { config: { presence: { key: mySid || ('tab_' + Math.random()) } } })
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'hotseat_rooms', filter:'code=eq.' + code }, handler)
+        .on('postgres_changes', { event:'INSERT', schema:'public', table:'hotseat_rooms', filter:'code=eq.' + code }, handler)
+        .on('presence', { event: 'sync'  }, onPresenceSync)
+        .on('presence', { event: 'join'  }, onPresenceJoin)
+        .on('presence', { event: 'leave' }, onPresenceLeave)
+        .subscribe(async (status) => {
+          if (status !== 'SUBSCRIBED') return;
+          if (_hotChannelCode !== code) return;
+          // Announce our presence the moment we're subscribed
+          try {
+            await _hotChannel.track({
+              user_id: mySid,
+              joined_at: Date.now(),
+            });
+          } catch(e){}
+          // Reconcile: between the initial hotLoadRoom and this point, other
+          // devices may have written updates that the channel wasn't yet live
+          // to deliver. Re-fetch once so we catch the gap, then re-render.
+          try {
+            const ok = await hotLoadRoom(code);
+            if (ok) {
+              const sid = hotGetSessionId();
+              const claimed = Object.entries(state.claimedBy || {}).find(([pid, s]) => s === sid);
+              if (claimed) { hotMe.myId = claimed[0]; state.meId = claimed[0]; }
+              const activeId = document.querySelector('.screen.active');
+              const currentId = activeId ? activeId.id.replace('screen-', '') : null;
+              if (currentId && ['lobby','splash','play','result'].indexOf(currentId) !== -1) hotRerender();
+            }
+          } catch(e){}
+        });
+      _hotChannelCode = code;
+    }
+    // Hot Seat rerender — wrapped through the generic sync gate so cross-device
+    // dramatic moments land at the same wall-clock instant. See the
+    // huddleSync* block for the mechanism.
+    function hotRerenderInner(){
+      const phaseToScreen = { lobby:'lobby', splash:'splash', play:'play', result:'result' };
+      const target = phaseToScreen[state.phase] || 'lobby';
+      const activeId = document.querySelector('.screen.active');
+      const currentId = activeId ? activeId.id.replace('screen-', '') : null;
+      if (currentId !== target) goTo(target);
+      // Lobby-only invite sheet — auto-close if game starts while it's open.
+      if (state.phase !== 'lobby') {
+        const bd = document.getElementById('lobby-invite-backdrop');
+        if (bd && bd.classList.contains('active') && typeof closeLobbyInviteSheet === 'function') {
+          closeLobbyInviteSheet();
+        }
+      }
+      if (state.phase === 'lobby') { renderLobbyPlayers(); renderSettings(); updateHowToTrigger(); if (typeof renderLobbyInvites === 'function') renderLobbyInvites('hotseat'); }
+      else if (state.phase === 'splash') applySplashContent();
+      else if (state.phase === 'play') applyPlayContent();
+      else if (state.phase === 'result') applyResultContent();
+    }
+    const __hotRerenderPending = { timer: null };
+    function hotRerender(){
+      huddleSyncGateRerender(state, hotRerenderInner, __hotRerenderPending);
+    }
+
+    // Generic join URL — works for both Liar's Cup and Hot Seat
+    function joinUrl(code, game){
+      const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+      return origin + '/?room=' + encodeURIComponent(code) + '&game=' + game;
+    }
+    function hotJoinUrl(code){ return joinUrl(code, 'hotseat'); }
+    function hotReadUrlRoom(){
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('room');
+        const game = params.get('game');
+        if (!code) return null;
+        if (game && game !== 'hotseat') return null;
+        return code.toUpperCase().trim();
+      } catch(e){ return null; }
+    }
+    function hotSyncUrlToRoom(code){
+      if (!code) return;
+      try {
+        const newUrl = '/?room=' + encodeURIComponent(code) + '&game=hotseat';
+        history.replaceState(history.state, '', newUrl);
+      } catch(e){}
+    }
+    function hotFindRecentRoomCode(){
+      try { return huddleReadLastRoom('hotseat'); } catch(e){ return null; }
+    }
+    async function hotStateReset(code){
+      const playersCopy = JSON.parse(JSON.stringify(PLAYERS));
+      const sid = hotGetSessionId();
+      const firstSeat = playersCopy[0] && playersCopy[0].id;
+      Object.keys(state).forEach(k => { delete state[k]; });
+      Object.assign(state, {
+        mode: 'classic',
+        // Pre-claim seat 0 for the creator so the FIRST persist already
+        // contains both hostId and the host's claim. Without this, a friend
+        // accepting an invite very fast could read the room between this
+        // persist and the follow-up hotAutoClaimIfNeeded persist and either
+        // grab the host role or steal seat 0 (last-write-wins on Supabase).
+        meId: firstSeat || null,
+        category: 'mixed',
+        rounds: 1,
+        order: 'rotating',
+        currentRound: 1,
+        currentPlayerIdx: 0,
+        playersUsedThisRound: [],
+        players: playersCopy,
+        view: 'hotseat',
+        currentWord: '',
+        roundOutcome: null,
+        turnStartTime: 0,
+        lastTurnDuration: 0,
+        code: code,
+        phase: 'lobby',
+        hostId: sid,
+        claimedBy: firstSeat ? { [firstSeat]: sid } : {},
+        // Words consumed during the current game; pickWord filters them out so
+        // a single match never repeats a word.
+        usedWords: [],
+        revision: 0,
+      });
+      hotMe.myId = firstSeat || null;
+      hotPersist();
+      try { huddlePersistLastRoom('hotseat',code); } catch(e){}
+    }
+    async function hotClaimSeat(playerId){
+      const sessionId = hotGetSessionId();
+      const currentClaim = state.claimedBy[playerId];
+      if (currentClaim && currentClaim !== sessionId) return;
+      // Optimistic local update — echo will overwrite if RPC rejects.
+      if (hotMe.myId && state.claimedBy[hotMe.myId] === sessionId) {
+        delete state.claimedBy[hotMe.myId];
+      }
+      state.claimedBy[playerId] = sessionId;
+      if (!state.hostId) state.hostId = sessionId;
+      hotMe.myId = playerId;
+      state.meId = playerId;
+      renderLobbyPlayers();
+      renderSettings();
+      // Server-validated claim (C2 turn 4a). Universal RPC handles seat
+      // switching and rejects seat-stealing at the DB layer.
+      await huddleCallRPC('huddle_claim_seat', {
+        p_table: 'hotseat_rooms',
+        p_code: state.code,
+        p_player_id: playerId,
+      });
+    }
+    async function regenerateHotRoom(){
+      const code = generateCode();
+      await hotStateReset(code);
+      hotWireSync();
+      hotSyncUrlToRoom(code);
+      document.getElementById('room-code').textContent = code;
+      resetQrSlot();
+      setRoomQrSrc(document.getElementById('room-qr'), qrUrl(hotJoinUrl(code)));
+      const btn = document.querySelector('#screen-lobby .room-code-action button[onclick*="regenerateHotRoom"], #screen-lobby .room-code-action button[onclick*="regenerateRoom"]');
+      if (btn) {
+        btn.classList.remove('spinning');
+        void btn.offsetWidth;
+        btn.classList.add('spinning');
+        setTimeout(() => btn.classList.remove('spinning'), 520);
+      }
+      hotRerender();
+    }
+
+    function formatDuration(ms) {
+      if (!ms || ms < 0) return '0s';
+      const sec = Math.round(ms / 1000);
+      if (sec < 60) return `${sec}s`;
+      const min = Math.floor(sec / 60);
+      const rem = sec % 60;
+      return rem === 0 ? `${min}m` : `${min}m ${rem}s`;
+    }
+
+    function getMyRole() {
+      const hotSeatPlayer = state.players[state.currentPlayerIdx];
+      return hotSeatPlayer && hotSeatPlayer.id === state.meId ? 'hotseat' : 'helper';
+    }
+    function getMe() {
+      const id = (hotMe && hotMe.myId) || state.meId;
+      const found = state.players.find(p => p.id === id);
+      if (found) return found;
+      // Fallback to a no-op object so callers can read .wins without crashing
+      return { wins: 0, bestTimeMs: null, name: '', initial: '?', id: null };
+    }
+
+    // ---------- Info content ----------
+    // Each entry maps to a pair of i18n keys (title + body). The body may
+    // contain HTML markup which is inserted via innerHTML.
+    const INFO = {
+      rounds:        { titleKey:'info.roundsTitle',   bodyKey:'info.roundsBody' },
+      order:         { titleKey:'info.orderTitle',    bodyKey:'info.orderBody' },
+      'role-hotseat':{ titleKey:'info.hotSeatTitle',  bodyKey:'info.hotSeatBody' },
+      'role-helper': { titleKey:'info.helperTitle',   bodyKey:'info.helperBody' },
+      // Mode-specific variants. Titles stay the same ("🔥 You're in the hot seat" / "👂 You're
+      // a helper"); only the body copy diverges so it doesn't contradict the in-play mode pill.
+      'role-hotseat-silent': { titleKey:'info.hotSeatTitle', bodyKey:'info.hotSeatBody_silent' },
+      'role-helper-silent':  { titleKey:'info.helperTitle',  bodyKey:'info.helperBody_silent' },
+      // Liar's Cup — single role for all players (no team/role variants). Used by the
+      // help button in liar-play / liar-reveal / liar-cup screen headers.
+      'liar-howplay':        { titleKey:'liar.help.title',   bodyKey:'liar.help.body' },
+      // Mafia — same modal system as Liar. Title + body live in i18n
+      // (mafia.help.*) so they translate; opened from the Rules pill on
+      // each in-game mafia screen header.
+      'mafia-howplay':       { titleKey:'mafia.help.title',  bodyKey:'mafia.help.body' },
+    };
+
+    function showInfo(key) {
+      const info = INFO[key];
+      if (!info) return;
+      document.getElementById('info-title').textContent = t(info.titleKey);
+      document.getElementById('info-body').innerHTML = t(info.bodyKey);
+      document.getElementById('info-backdrop').classList.add('active');
+    }
+    function hideInfo(e) {
+      if (e && e.target && e.target.id !== 'info-backdrop' && !e.target.classList.contains('btn')) return;
+      document.getElementById('info-backdrop').classList.remove('active');
+    }
+
+    function showRoleInfo() {
+      const role = state.view === 'hotseat' ? 'role-hotseat' : 'role-helper';
+      const mode = state.mode || 'classic';
+      // Use the mode-specific variant if it exists in INFO, otherwise fall back to the
+      // base role key. Classic always uses the base key.
+      const key = (mode !== 'classic' && INFO[role + '-' + mode]) ? (role + '-' + mode) : role;
+      showInfo(key);
+    }
+
+    // ---------- How to play modal ----------
+    const HOWTO_TOTAL = 4;
+    const HOWTO_DURATION = 5200;
+    let howtoCurrent = 1;
+    let howtoTimer = null;
+
+    // Per-mode "seen" flags. A user who's seen the Classic rules but switches to Silent for
+    // the first time should still see the pulse — they haven't seen *those* rules yet.
+    // Migrate any legacy single-flag value to the classic key once, so existing users don't
+    // suddenly see the pulse return for Classic.
+    try {
+      const legacy = localStorage.getItem('huddle.howto.seen');
+      if (legacy && !localStorage.getItem('huddle.howto.seen.classic')) {
+        localStorage.setItem('huddle.howto.seen.classic', '1');
+        localStorage.removeItem('huddle.howto.seen');
+      }
+    } catch(e){}
+
+    function howToSeenKey(){ return 'huddle.howto.seen.' + (state.mode || 'classic'); }
+    function hasSeenHowTo(){
+      try { return !!localStorage.getItem(howToSeenKey()); } catch(e){ return false; }
+    }
+    function markHowToSeen(){
+      try { localStorage.setItem(howToSeenKey(), '1'); } catch(e){}
+    }
+
+    // Per-mode title/sub i18n keys. For slides where a mode doesn't override (e.g. Silent
+    // slide 1 = Classic slide 1), the helper falls back to the classic key.
+    const HOWTO_MODE_OVERRIDES = {
+      silent: { 2: ['Title','Sub'] },
+    };
+    function howToText(slideN, field){
+      const mode = state.mode || 'classic';
+      const overrides = HOWTO_MODE_OVERRIDES[mode];
+      if (overrides && overrides[slideN] && overrides[slideN].indexOf(field) !== -1) {
+        return t('howTo.' + mode + '.slide' + slideN + field);
+      }
+      return t('howTo.slide' + slideN + field);
+    }
+
+    // Populate slide titles/subs + toggle slide-4 board variant based on state.mode.
+    // Called from openHowTo before activating the modal so the right content is visible
+    // the instant the modal animates in.
+    function applyHowToContent(){
+      const slides = [
+        { n: 1, field: 'Sub'     },
+        { n: 2, field: 'Sub'     },
+        { n: 3, field: 'SubHtml' },
+        { n: 4, field: 'SubHtml' },
+      ];
+      slides.forEach(({n, field}) => {
+        const root = document.querySelector('.howto-slide[data-slide="' + n + '"] .howto-text');
+        if (!root) return;
+        const titleEl = root.querySelector('h2');
+        const subEl = root.querySelector('p');
+        if (titleEl) titleEl.textContent = howToText(n, 'Title');
+        if (subEl) {
+          if (field === 'SubHtml') subEl.innerHTML = howToText(n, 'SubHtml');
+          else subEl.textContent = howToText(n, 'Sub');
+        }
+      });
+    }
+
+    // Update the lobby's how-to-play trigger sub-text + pulse state to reflect state.mode.
+    // Called whenever mode changes (setMode / applyRecommended), the lobby reopens, or the
+    // language switches (applyLang would otherwise leave the sub stale).
+    function updateHowToTrigger(){
+      const subEl = document.getElementById('howto-trigger-sub');
+      if (subEl) {
+        const mode = state.mode || 'classic';
+        const subKey = (mode === 'classic') ? 'lobby.howToSub' : ('lobby.howToSub_' + mode);
+        subEl.textContent = t(subKey);
+      }
+      maybePulseHowTo();
+    }
+
+    function openHowTo() {
+      applyHowToContent();
+      document.getElementById('howto-modal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      markHowToSeen();
+      document.querySelectorAll('.howto-trigger').forEach(t => t.classList.remove('pulse'));
+      goToSlide(1);
+    }
+    function closeHowTo() {
+      document.getElementById('howto-modal').classList.remove('active');
+      document.body.style.overflow = '';
+      stopAutoAdvance();
+    }
+    function goToSlide(n) {
+      if (n < 1) n = 1;
+      if (n > HOWTO_TOTAL) { closeHowTo(); return; }
+      howtoCurrent = n;
+      document.querySelectorAll('.howto-slide').forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.slide) === n);
+      });
+      document.querySelectorAll('.howto-dot').forEach((d, i) => {
+        d.classList.toggle('active', i + 1 === n);
+      });
+      const nextBtn = document.getElementById('howto-next-btn');
+      nextBtn.textContent = (n === HOWTO_TOTAL) ? t('howTo.startPlaying') : t('common.next');
+      startAutoAdvance();
+    }
+    function nextSlide() { goToSlide(howtoCurrent + 1); }
+    function startAutoAdvance() {
+      stopAutoAdvance();
+      howtoTimer = setTimeout(() => goToSlide(howtoCurrent + 1), HOWTO_DURATION);
+    }
+    function stopAutoAdvance() {
+      if (howtoTimer) { clearTimeout(howtoTimer); howtoTimer = null; }
+    }
+    function maybePulseHowTo() {
+      const seen = hasSeenHowTo();
+      document.querySelectorAll('.howto-trigger').forEach(t => {
+        t.classList.toggle('pulse', !seen);
+      });
+    }
+
+    // ---------- Games page ----------
+    function renderGamesStep() {
+      const gamesStep = document.getElementById('games-step');
+      if (!gamesStep) return;
+
+      const gamesList = document.getElementById('games-list');
+
+      {
+        // The Cards (freeform) variant is now the ONE Mafia game on the list —
+        // classic mode code stays in the file but its tile is hidden so users
+        // only ever pick the freeform variant. Set showMafia = true to bring
+        // the classic tile back if needed.
+        const showMafia = false;
+        gamesList.innerHTML = `
+          <div class="hotseat-card" onclick="openLobby('classic')">
+            <div class="hotseat-thumb classic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 4 H10"></path>
+                <path d="M8 4 V13"></path>
+                <path d="M6 13 H18"></path>
+                <path d="M7 13 V20"></path>
+                <path d="M17 13 V20"></path>
+              </svg>
+            </div>
+            <div class="hotseat-info">
+              <div class="hotseat-title-row">
+                <div class="hotseat-title">${t('games.classic')}</div>
+                <span class="badge">${t('games.fastestWins')}</span>
+              </div>
+              <div class="hotseat-desc">${t('games.classicDesc')}</div>
+              <div class="hotseat-meta">${t('games.classicMeta')}</div>
+            </div>
+          </div>
+          <div class="hotseat-card" onclick="openChamLobby()">
+            <div class="hotseat-thumb chameleon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 10c0-1.6 1.3-2.8 3-2.8h12c1.7 0 3 1.2 3 2.8v1.5c0 2.6-2.1 4.7-4.7 4.7-1.8 0-3-1-3.6-2.4h-1.4C10.7 15.2 9.5 16.2 7.7 16.2 5.1 16.2 3 14.1 3 11.5V10z"/>
+                <circle cx="8" cy="11.2" r="1.3" fill="currentColor"/>
+                <circle cx="16" cy="11.2" r="1.3" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="hotseat-info">
+              <div class="hotseat-title-row">
+                <div class="hotseat-title">${t('games.chameleon')}</div>
+                <span class="badge">${t('games.bluff')}</span>
+              </div>
+              <div class="hotseat-desc">${t('games.chameleonDesc')}</div>
+              <div class="hotseat-meta">${t('games.chameleonMeta')}</div>
+            </div>
+          </div>
+          <div class="hotseat-card" onclick="openLiarLobby()">
+            <div class="hotseat-thumb liar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16l-8 9-8-9z"/>
+                <path d="M12 13v6"/>
+                <path d="M8 20h8"/>
+              </svg>
+            </div>
+            <div class="hotseat-info">
+              <div class="hotseat-title-row">
+                <div class="hotseat-title">${t('games.liar')}</div>
+                <span class="badge">${t('games.bluff')}</span>
+              </div>
+              <div class="hotseat-desc">${t('games.liarDesc')}</div>
+              <div class="hotseat-meta">${t('games.liarMeta')}</div>
+            </div>
+          </div>
+          ${showMafia ? `
+            <div class="hotseat-card" onclick="openMafiaLobby()">
+              <div class="hotseat-thumb mafia">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  <circle cx="6" cy="6.5" r="0.6" fill="currentColor"/>
+                  <circle cx="17.5" cy="4.5" r="0.6" fill="currentColor"/>
+                </svg>
+              </div>
+              <div class="hotseat-info">
+                <div class="hotseat-title-row">
+                  <div class="hotseat-title">${t('games.mafia')}</div>
+                  <span class="badge">${t('games.mafiaBadge')}</span>
+                </div>
+                <div class="hotseat-desc">${t('games.mafiaDesc')}</div>
+                <div class="hotseat-meta">${t('games.mafiaMeta')}</div>
+              </div>
+            </div>
+          ` : ''}
+          <div class="hotseat-card" onclick="openMafiaCardsLobby()">
+            <div class="hotseat-thumb mafia">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="6" width="13" height="15" rx="2"/>
+                <rect x="8" y="3" width="13" height="15" rx="2"/>
+              </svg>
+            </div>
+            <div class="hotseat-info">
+              <div class="hotseat-title-row">
+                <div class="hotseat-title">${t('games.mafiaCards')}</div>
+                <span class="badge">${t('games.mafiaCardsBadge')}</span>
+              </div>
+              <div class="hotseat-desc">${t('games.mafiaCardsDesc')}</div>
+              <div class="hotseat-meta">${t('games.mafiaCardsMeta')}</div>
+            </div>
+          </div>
+          <div class="section-title">${t('games.moreSoon')}</div>
+          <div class="empty">
+            <div class="empty-emoji">🎲</div>
+            <div>${t('games.moreSoonSub')}<br>${t('games.tellUsNext')}</div>
+          </div>
+        `;
+      }
+    }
+
+    // ---------- Screen routing + browser-history integration ----------
+    // Suppression flag — set by the popstate handler so we don't push history
+    // when we're navigating because the user already pressed Back.
+    let _huddleSuppressHistory = false;
+    // Tracks the very first screen the app rendered (the one already 'active' in HTML).
+    // Used as the fallback target when popstate fires with no state (root of history).
+    const _huddleInitialScreen = (() => {
+      const active = document.querySelector('.screen.active');
+      return active ? active.id.replace('screen-', '') : 'login';
+    })();
+
+    // Screens whose refresh behavior we restore from localStorage. Must stay
+    // in lockstep with the pre-paint `safe` whitelist in <head> (see Step 2).
+    //   - Lobbies are excluded: they restore via URL `?room=&game=`, not from
+    //     localStorage. Booting to a lobby with no room data would show an
+    //     empty broken screen.
+    //   - login is excluded: it's the HTML default, no need to save it.
+    //   - Game-phase screens (splash/play/result/etc.) are excluded: those
+    //     restore via their lobby's URL → hotRerender routes to the phase.
+    const HUDDLE_SAFE_SCREENS = {
+      'games':1, 'friends':1, 'profile':1,
+      'edit-profile':1, 'feedback-board':1,
+      'admin':1, 'admin-feedback':1, 'admin-stats':1,
+    };
+    // Screens that LEGITIMATELY belong to a lobby/game in progress, so the
+    // URL `?room=&game=` should be kept across navigation here. Any screen
+    // NOT in this set will have those params stripped from the URL when
+    // navigated to, so a later refresh on (say) Friends doesn't auto-route
+    // back into the abandoned lobby.
+    const HUDDLE_KEEP_ROOM_URL = {
+      'lobby':1, 'cham-lobby':1, 'liar-lobby':1,
+      'splash':1, 'play':1, 'result':1,
+      'cham-splash':1, 'cham-play':1, 'cham-vote':1, 'cham-result':1,
+      'liar-play':1,
+      // Mafia screens that carry ?room=&game=. Lobby + (future) in-game screens.
+      'mafia-lobby':1, 'mafia-role':1, 'mafia-narrator':1, 'mafia-vote':1,
+      'mafia-out':1, 'mafia-result':1,
+    };
+
+    function goTo(screen) {
+      // Admin gate: anyone calling goTo('admin*') without admin flag bounces
+      // to profile. UI-level guard only — server checks (is_admin() RLS) are
+      // the real defence for any admin action.
+      if (screen.startsWith('admin') && !huddleIsAdmin) screen = 'profile';
+
+      // Tear down realtime subscriptions tied to the screen we're leaving so
+      // a Supabase channel doesn't stay open while the user is elsewhere.
+      // Cheap to re-establish on re-entry; saves a websocket subscription per
+      // long-lived session and avoids any cross-user channel-staleness edge
+      // case (e.g. sign out → sign in as someone else without a full reload).
+      try {
+        var _leavingEl = document.querySelector('.screen.active');
+        var _leavingId = (_leavingEl && _leavingEl.id) ? _leavingEl.id.replace(/^screen-/, '') : '';
+        if (_leavingId === 'feedback-board' && screen !== 'feedback-board' &&
+            typeof feedbackUnwireSync === 'function') feedbackUnwireSync();
+        if (_leavingId === 'admin-feedback' && screen !== 'admin-feedback' &&
+            typeof adminFbUnwireSync === 'function') adminFbUnwireSync();
+        // Liar's Cup: if user navigates away mid-cup-spin, scrub the wheel
+        // animation state so coming back doesn't show a half-spun wheel or
+        // stale OUT/SAFE stamp. The renderer re-paints from server truth
+        // on re-entry — this is a safety net for cached visual classes.
+        if (_leavingId === 'liar-play' && screen !== 'liar-play' &&
+            typeof liarResetCupVisuals === 'function') liarResetCupVisuals();
+      } catch(e) {}
+
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const el = document.getElementById('screen-' + screen);
+      if (el) el.classList.add('active');
+
+      const nav = document.getElementById('bottom-nav');
+      const showNav = ['games','friends','profile'].includes(screen);
+      nav.style.display = showNav ? 'flex' : 'none';
+
+      document.querySelectorAll('.nav-item').forEach(n => {
+        n.classList.toggle('active', n.dataset.go === screen);
+      });
+
+      if (screen === 'games')  renderGamesStep();
+      if (screen === 'profile') renderProfileScreen();
+      if (screen === 'feedback-board') {
+        // Render synchronously with whatever state we have (instant tab paint),
+        // then kick off the load — feedbackLoad() re-renders when data lands.
+        renderFeedbackBoard();
+        if (typeof feedbackLoad === 'function') feedbackLoad();
+      }
+      if (screen === 'admin') {
+        // Refresh the "Feedback NEW count" badge whenever the admin panel
+        // opens — keeps it accurate without a heavy reload.
+        if (typeof adminRefreshFeedbackBadge === 'function') adminRefreshFeedbackBadge();
+      }
+      if (screen === 'admin-feedback') {
+        if (typeof renderAdminFeedback === 'function') renderAdminFeedback();
+        if (typeof adminFeedbackLoad === 'function') adminFeedbackLoad(true);
+      }
+      if (screen === 'admin-stats') {
+        if (typeof renderAdminStats === 'function') renderAdminStats();
+        if (typeof adminStatsLoad === 'function') adminStatsLoad(adminStatsState.period, true);
+      }
+      if (screen === 'friends') friendsLoad();
+      if (screen === 'lobby')   renderLobbyPlayers();
+      // SETTINGS dropdown: always start collapsed on lobby entry (host or guest,
+      // fresh open or re-entry). Auto-expand intentionally NOT done per design.
+      if (screen === 'lobby') {
+        const el = document.getElementById('hot-settings-collapse');
+        if (el) { el.classList.remove('expanded'); const btn = el.querySelector('.settings-collapse-header'); if (btn) btn.setAttribute('aria-expanded','false'); }
+      }
+      if (screen === 'cham-lobby') {
+        const el = document.getElementById('cham-settings-collapse');
+        if (el) { el.classList.remove('expanded'); const btn = el.querySelector('.settings-collapse-header'); if (btn) btn.setAttribute('aria-expanded','false'); }
+      }
+      // Refresh any sound-toggle icons that are now in the visible header.
+      document.querySelectorAll('[data-sound-toggle]').forEach(updateSoundToggleIcon);
+      // Refresh-restore: if booted directly to Edit Profile, the form fields
+      // and avatar preview need populating (editDraft is null on fresh load).
+      if (screen === 'edit-profile' && typeof editDraft !== 'undefined' && !editDraft &&
+          typeof setupEditProfileForm === 'function') {
+        setupEditProfileForm();
+      }
+      window.scrollTo(0,0);
+
+      // Persist last screen so a refresh on a tab (Friends/Profile/Games/etc.)
+      // restores the correct tab instead of falling back to the default.
+      if (HUDDLE_SAFE_SCREENS[screen]) {
+        try { sessionStorage.setItem('huddle.lastScreen', screen); } catch(e){}
+      }
+
+      // Strip ?room=&game= when navigating to a non-room screen so refresh on
+      // a tab doesn't auto-route back into a lobby the user has left behind.
+      // Lobbies + game-phase screens keep the URL so refresh restores the room.
+      if (!HUDDLE_KEEP_ROOM_URL[screen]) {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          if (params.has('room') || params.has('game')) {
+            params.delete('room'); params.delete('game');
+            const qs = params.toString();
+            const newUrl = window.location.pathname + (qs ? '?' + qs : '');
+            history.replaceState(history.state, '', newUrl);
+          }
+        } catch(e){}
+      }
+
+      // Push a new history entry for this navigation. Browser back will then
+      // pop screens within the app instead of leaving the site. The suppress
+      // flag skips this push when we're navigating because of a popstate.
+      if (!_huddleSuppressHistory) {
+        try {
+          // Preserve query string (so ?room=CODE survives forward navigation)
+          history.pushState({ huddleScreen: screen }, '', window.location.search || '');
+        } catch(e){}
+      }
+    }
+
+    // Browser back / forward → re-navigate within the app.
+    window.addEventListener('popstate', (e) => {
+      const target = (e.state && e.state.huddleScreen) || _huddleInitialScreen;
+      _huddleSuppressHistory = true;
+      goTo(target);
+      _huddleSuppressHistory = false;
+    });
+
+    document.addEventListener('click', (e) => {
+      const navBtn = e.target.closest('.nav-item');
+      if (navBtn && navBtn.dataset.go) { goTo(navBtn.dataset.go); return; }
+      const chip = e.target.closest('.player-picker .chip');
+      if (chip) {
+        chip.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      }
+      const tab = e.target.closest('.tabs .tab');
+      if (tab) {
+        tab.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      }
+    });
+
+    // ---------- Lobby ----------
+    async function openLobby(_legacyMode) {
+      document.getElementById('lobby-title').textContent = t('lobby.title');
+      // Drop any seat we still hold in OTHER game lobbies before claiming
+      // one here — invariant: one user, one seat across all games.
+      try { huddleLeaveOtherGameSeats('hotseat'); } catch(e){}
+
+      const urlRoom = hotReadUrlRoom();
+      const existingCode = urlRoom || hotFindRecentRoomCode();
+
+      const authPromise = hotBootstrap();
+      const loadPromise = existingCode ? hotLoadRoom(existingCode) : Promise.resolve(false);
+      await authPromise;
+      const sessionId = hotGetSessionId();
+      const loaded = await loadPromise;
+
+      // Invitee arrived via a URL/invite but the room couldn't be loaded —
+      // DON'T silently drop them into a fresh room (they'd think they joined
+      // their friend but be alone). Surface the failure and route to Games.
+      if (urlRoom && !loaded) {
+        try { history.replaceState(history.state, '', '/'); } catch(e){}
+        if (typeof showLobbyToast === 'function') {
+          try { showLobbyToast(t('lobby.joinFailed')); } catch(e){}
+        }
+        goTo('games');
+        return;
+      }
+
+      let cachedRoomGone = !!existingCode && !loaded;
+      if (loaded) {
+        const claimed = Object.entries(state.claimedBy || {}).find(([pid, sid]) => sid === sessionId);
+        hotMe.myId = claimed ? claimed[0] : null;
+        if (hotMe.myId) {
+          // Returning to a room we already own a seat in (refresh / re-open).
+          state.meId = hotMe.myId;
+          try { huddlePersistLastRoom('hotseat',existingCode); } catch(e){}
+        } else if (urlRoom) {
+          // Came in via a URL — treat as an intentional join (invite or shared link).
+          try { huddlePersistLastRoom('hotseat',existingCode); } catch(e){}
+        } else {
+          // Cached localStorage room but we have no claim and no invite — don't
+          // barge into someone else's lobby. Start a fresh room of our own.
+          try { huddleClearLastRoom('hotseat'); } catch(e){}
+          await hotStateReset(generateCode());
+          cachedRoomGone = true;
+        }
+
+        // === Reconnect protection (mirrors openLiarLobby) ===
+        // If we returned to a room that's mid-game (splash / play) but we no
+        // longer own a seat, bounce to Games instead of stranding the user on
+        // a screen they can't act on. See openLiarLobby for the full rationale.
+        const inGamePhase = state.phase
+          && state.phase !== 'lobby'
+          && state.phase !== 'result';
+        if (inGamePhase && !hotMe.myId) {
+          if (typeof showLobbyToast === 'function') {
+            try { showLobbyToast(t('liar.toastReconnectStale'), 4500); } catch(e){}
+          }
+          hotForceLeaveLocal();
+          return;
+        }
+      } else {
+        await hotStateReset(generateCode());
+      }
+
+      hotWireSync();
+      hotSyncUrlToRoom(state.code);
+
+      // Auto-claim the first empty seat so the user doesn't have to tap.
+      // Skips if they already hold a seat (returning visitor / refresh) or if the room is full.
+      // Awaited so the seat is committed before render — without await, joiners
+      // saw their seat as unclaimed for ~200-800ms until the realtime echo
+      // landed, and often refreshed to fix it.
+      await hotAutoClaimIfNeeded();
+
+      document.getElementById('room-code').textContent = state.code;
+      resetQrSlot();
+      setRoomQrSrc(document.getElementById('room-qr'), qrUrl(hotJoinUrl(state.code)));
+      updateHowToTrigger();
+      hotRerender();
+
+      if (cachedRoomGone && typeof showLobbyToast === 'function') {
+        showLobbyToast(t('lobby.previousRoomGone'));
+      }
+    }
+
+    // Auto-assign this device to the first unclaimed seat on lobby entry.
+    // Mirrors what would happen if the user immediately tapped an empty tile.
+    // Async so callers can await — without awaiting, the lobby renders before
+    // the claim RPC commits and joining players see their seat as unclaimed
+    // until the next realtime echo lands, forcing them to refresh. See
+    // mafiaAutoClaimIfNeeded for the pattern this matches.
+    async function hotAutoClaimIfNeeded(){
+      if (hotMe.myId) return; // already seated (returning visitor)
+      if (state.phase && state.phase !== 'lobby') return; // game already in progress — sit out
+      const empty = (state.players || []).find(p => !state.claimedBy || !state.claimedBy[p.id]);
+      if (!empty) return; // room full
+      await hotClaimSeat(empty.id);
+    }
+
+    function qrUrl(code) {
+      return 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' + encodeURIComponent(code);
+    }
+
+    // Set the QR <img> src AND clear the data-loading="1" flag (which controls
+    // the pulsing-gray skeleton CSS). Use this helper everywhere we set a real
+    // QR src so the loading shimmer always stops the moment the QR is available.
+    function setRoomQrSrc(el, url) {
+      if (!el) return;
+      el.src = url;
+      el.style.display = '';
+      el.removeAttribute('data-loading');
+    }
+
+    function generateCode() {
+      const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let out = '';
+      for (let i=0;i<8;i++){ if (i===4) out += '-'; out += c[Math.floor(Math.random()*c.length)] }
+      return out;
+    }
+
+    // Hides the QR fallback and shows the img element. Called when (re)loading the QR
+    // so a previously-failed slot resets and tries again with the new URL.
+    function resetQrSlot(){
+      const img = document.getElementById('room-qr');
+      const fallback = document.getElementById('room-qr-fallback');
+      if (img) img.style.display = '';
+      if (fallback) fallback.classList.remove('show');
+    }
+
+    // Fired by the QR <img>'s onerror handler. Hide the broken img, show the fallback
+    // message in the same slot so layout doesn't shift. User can tap regenerate to retry.
+    function handleQrError(){
+      const img = document.getElementById('room-qr');
+      const fallback = document.getElementById('room-qr-fallback');
+      if (img) img.style.display = 'none';
+      if (fallback) fallback.classList.add('show');
+    }
+
+    // Tap the refresh icon → new code + new QR. Brief spin on the icon for tactile feedback.
+    // Also resets the QR slot so a previously-failed load gets another attempt with the new URL.
+    function regenerateRoom(){
+      const code = generateCode();
+      const codeEl = document.getElementById('room-code');
+      if (codeEl) codeEl.textContent = code;
+      resetQrSlot();
+      setRoomQrSrc(document.getElementById('room-qr'), qrUrl(code));
+      // One-shot spin animation on the refresh button.
+      const btn = document.querySelector('.room-code-action button[onclick*="regenerateRoom"]');
+      if (btn) {
+        btn.classList.remove('spinning');
+        // Force reflow so removing + re-adding the class re-triggers the animation.
+        void btn.offsetWidth;
+        btn.classList.add('spinning');
+        setTimeout(() => btn.classList.remove('spinning'), 520);
+      }
+    }
+
+    function infoIcon(key){
+      return `<button class="info-btn" onclick="showInfo('${key}')" aria-label="What's this?">i</button>`;
+    }
+
+    // Shared between Hot Seat ('hot') and Chameleon ('cham') lobbies. Flips
+    // the .expanded class on the wrapper; goTo() resets to closed on lobby entry.
+    function toggleSettingsCollapse(which){
+      const id = which === 'cham' ? 'cham-settings-collapse' : 'hot-settings-collapse';
+      const el = document.getElementById(id);
+      if (!el) return;
+      const expanded = el.classList.toggle('expanded');
+      const btn = el.querySelector('.settings-collapse-header');
+      if (btn) btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+
+    function renderSettings() {
+      const list = document.getElementById('settings-list');
+      const recWrap = document.getElementById('btn-recommended-wrap');
+
+      const roundsSeg = [1,2,3,5].map(r =>
+        `<button onclick="setRounds(${r})" class="${state.rounds===r?'active':''}">${r}</button>`
+      ).join('');
+
+      const orderSeg = [
+        {v:'rotating',k:'order.rotating'},
+        {v:'random',k:'order.random'},
+        {v:'host',k:'order.host'},
+      ].map(o =>
+        `<button onclick="setOrder('${o.v}')" class="${state.order===o.v?'active':''}">${t(o.k)}</button>`
+      ).join('');
+
+      const recActive = state.mode === 'classic' && state.category === 'mixed' && state.rounds === 1 && state.order === 'rotating';
+
+      // Inline mode hint — only shown for Silent mode, explains the rule twist right beneath
+      // the Mode row so the user doesn't have to leave the lobby to learn.
+      const modeHintHTML = state.mode === 'silent' ? `
+        <div class="mode-hint">
+          <div class="mode-hint-icon">🤫</div>
+          <div>${t('mode.hint_silent')}</div>
+        </div>
+      ` : '';
+
+      recWrap.innerHTML = `
+        <button class="btn-recommended${recActive ? ' applied' : ''}" id="btn-recommended" onclick="applyRecommended()">
+          <div class="btn-recommended-icon">✨</div>
+          <div class="btn-recommended-text">
+            <div class="btn-recommended-title">${t('lobby.useRecommended')}</div>
+            <div class="btn-recommended-sub">${t('lobby.useRecommendedSub')}</div>
+          </div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="m9 18 6-6-6-6"></path></svg>
+        </button>
+      `;
+
+      list.innerHTML = `
+        <div class="setting-row" onclick="openModeSheet()" style="cursor:pointer">
+          <div class="setting-row-label">${t('lobby.mode')}</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
+            <span>${t('mode.' + state.mode)}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+        </div>
+        <div class="setting-row" onclick="openCategorySheet()" style="cursor:pointer">
+          <div class="setting-row-label">${t('lobby.category')}</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
+            <span>${t('cat.' + state.category)}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-row-label">${t('lobby.rounds')} ${infoIcon('rounds')}</div>
+          <div class="seg">${roundsSeg}</div>
+        </div>
+        <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
+          <div class="setting-row-label">${t('lobby.order')} ${infoIcon('order')}</div>
+          <div class="seg full">${orderSeg}</div>
+        </div>
+      `;
+
+      const hintSlot = document.getElementById('mode-hint-slot');
+      if (hintSlot) hintSlot.innerHTML = modeHintHTML;
+    }
+
+    // "Selected" indicator is derived in renderSettings() from state matching the recommended preset.
+    // No manual class flips, no setTimeout flash — change a setting, the border disappears automatically.
+    function applyRecommended() {
+      if (state.code && !hotIsHost()) return;
+      // Optimistic local update; server-validated via RPC.
+      state.mode = 'classic';
+      state.category = 'mixed';
+      state.rounds = 1;
+      state.order = 'rotating';
+      if (state.code) huddleCallRPC('huddle_hot_apply_recommended', { p_code: state.code });
+      renderSettings();
+      if (typeof updateHowToTrigger === 'function') updateHowToTrigger();
+    }
+    function setMode(m){
+      if (state.code && !hotIsHost()) return;
+      state.mode = m;
+      if (state.code) {
+        huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'mode', p_value: m });
+      }
+      renderSettings();
+      if (typeof updateHowToTrigger === 'function') updateHowToTrigger();
+    }
+
+    // ---------- Mode picker (mirrors category picker UX) ----------
+    function renderModeOptions(){
+      const wrap = document.getElementById('mode-options');
+      if (!wrap) return;
+      const modes = [
+        { id: 'classic', emoji: '💬' },
+        { id: 'silent',  emoji: '🤫' },
+      ];
+      wrap.innerHTML = modes.map(m => `
+        <button class="theme-option${state.mode === m.id ? ' active' : ''}" onclick="pickMode('${m.id}')">
+          <span class="theme-option-icon" style="background:var(--bg-subtle)">${m.emoji}</span>
+          <span class="theme-option-text">
+            <span class="theme-option-title">${t('mode.' + m.id)}</span>
+            <span class="theme-option-sub">${t('mode.sub_' + m.id)}</span>
+          </span>
+          <svg class="theme-option-check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        </button>
+      `).join('');
+      parseEmoji(wrap);
+    }
+    function openModeSheet(){
+      renderModeOptions();
+      document.getElementById('mode-backdrop').classList.add('active');
+    }
+    function closeModeSheet(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'mode-backdrop') return;
+      document.getElementById('mode-backdrop').classList.remove('active');
+    }
+    function pickMode(m){
+      setMode(m);
+      setTimeout(() => document.getElementById('mode-backdrop').classList.remove('active'), 140);
+    }
+    function setCategory(c){ if (state.code && !hotIsHost()) return; state.category = c; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'category', p_value: c }); renderSettings(); }
+    function setRounds(r){ if (state.code && !hotIsHost()) return; state.rounds = r; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'rounds', p_value: r }); renderSettings(); }
+    function setOrder(o){ if (state.code && !hotIsHost()) return; state.order = o; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'order', p_value: o }); renderSettings(); }
+
+    // ---------- Gameplay ----------
+    // Helper: which player indices have claimed a seat
+    function hotClaimedIndices(){
+      return state.players
+        .map((p, i) => state.claimedBy && state.claimedBy[p.id] ? i : -1)
+        .filter(i => i !== -1);
+    }
+    function hotClaimedCount(){
+      return Object.keys(state.claimedBy || {}).length;
+    }
+
+    function startGame() {
+      // If the button is gated (aria-disabled), surface the live hint text
+      // as a toast so the user understands WHY tap did nothing instead of
+      // staring at a dead button. Existing validation guards stay below as
+      // a backstop in case the gate state is stale.
+      const _gateBtn = document.getElementById('hot-start-btn');
+      if (_gateBtn && _gateBtn.getAttribute('aria-disabled') === 'true') {
+        const _hintEl = document.getElementById('hot-seats-hint');
+        const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
+        if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
+        return;
+      }
+      if (!hotIsHost()) return;
+      if (hotClaimedCount() < 2 || !hotMe.myId) return;
+      // For 'host' picker order, show the picker first — hostPicked will
+      // call the RPC once a player is chosen. For auto-orders (rotating /
+      // random), pick locally and call huddle_hot_play_again directly.
+      if (state.order === 'host') {
+        const claimed = hotClaimedIndices();
+        const remaining = claimed.filter(i => !hotUsedHas(i));
+        if (remaining.length === 0) return;
+        showPicker(remaining);
+        return;
+      }
+      // Pick the first player + word locally, server validates and resets
+      // game state atomically (C2 turn 4b).
+      const claimed = hotClaimedIndices();
+      const idx = (state.order === 'random')
+        ? claimed[Math.floor(Math.random() * claimed.length)]
+        : claimed[0];
+      const word = pickWord();
+      huddleCallRPC('huddle_hot_play_again', {
+        p_code: state.code,
+        p_player_idx: idx,
+        p_word: word,
+      });
+    }
+
+    function pickNextPlayer(isFirst) {
+      // C2 turn 4b: now only used by nextTurn (auto-orders). Host-picker
+      // path goes through hostPicked directly. Fresh-game start lives in
+      // startGame above. Server-validated via huddle_hot_next_turn.
+      if (!hotIsHost()) return;
+      const claimed = hotClaimedIndices();
+      const remaining = claimed.filter(i => !hotUsedHas(i));
+      if (remaining.length === 0) return;
+
+      if (state.order === 'host') {
+        showPicker(remaining);
+        return;
+      }
+      const idx = (state.order === 'random')
+        ? remaining[Math.floor(Math.random() * remaining.length)]
+        : remaining[0];
+      const word = pickWord();
+      huddleCallRPC('huddle_hot_next_turn', {
+        p_code: state.code,
+        p_player_idx: idx,
+        p_word: word,
+      });
+    }
+
+    function showPicker(remaining) {
+      const grid = document.getElementById('pick-grid');
+      const claimed = new Set(hotClaimedIndices());
+      ensureClaimantProfiles(Object.values(state.claimedBy || {}), () => showPicker(remaining));
+      grid.innerHTML = state.players.map((p,i) => {
+        const isClaimed = claimed.has(i);
+        const done = hotUsedHas(i);
+        const isMe = p.id === state.meId;
+        const clickable = isClaimed && !done;
+        const tileDisplay = playerDisplayFor(p, state.claimedBy);
+        return `<div class="pick-tile ${done?'done':''} ${!isClaimed?'unclaimed':''}" ${clickable?`onclick="hostPicked(${i})"`:''} ${!isClaimed?'style="opacity:.4"':''}>
+          ${avatarHTML(tileDisplay.avatar, 44, { fallback: p.initial })}
+          <div class="pick-tile-name">${isMe ? 'You' : escapeHTML(tileDisplay.name)}</div>
+        </div>`;
+      }).join('');
+      parseEmoji(grid);
+      document.getElementById('pick-backdrop').classList.add('active');
+    }
+
+    function hostPicked(idx) {
+      if (!hotIsHost()) return;
+      document.getElementById('pick-backdrop').classList.remove('active');
+      const word = pickWord();
+      // Context-aware RPC routing (C2 turn 4b):
+      //   • phase='lobby'  → fresh game start (uses play_again RPC which
+      //                       also resets wins/round/etc. for the fresh game)
+      //   • phase='result' → mid-game host advancing to next turn
+      //   • phase='splash' → host re-picking after a cancel; treat as next_turn
+      if (state.phase === 'lobby') {
+        huddleCallRPC('huddle_hot_play_again', {
+          p_code: state.code,
+          p_player_idx: idx,
+          p_word: word,
+        });
+      } else {
+        huddleCallRPC('huddle_hot_next_turn', {
+          p_code: state.code,
+          p_player_idx: idx,
+          p_word: word,
+        });
+      }
+    }
+
+    function cancelPicker(e) {
+      // Only close on backdrop or X click — not when clicking inside the sheet itself
+      if (e && e.target && e.target.id !== 'pick-backdrop' && !e.target.closest('.icon-btn')) return;
+      document.getElementById('pick-backdrop').classList.remove('active');
+      // User stays on whatever screen they came from (lobby or result).
+      // They can re-tap "Start game" or "Next turn" to reopen the picker.
+    }
+
+    function applySplashContent(){
+      const player = state.players[state.currentPlayerIdx];
+      if (!player) return;
+      const meIsHotSeat = player.id === hotMe.myId;
+      const claimedTotal = hotClaimedCount();
+      const totalTurns = claimedTotal * state.rounds;
+      const turnNumber = (state.currentRound - 1) * claimedTotal + (state.playersUsedThisRound || []).length + 1;
+
+      // Kick off profile fetch + re-render when it arrives so "Jordan" → real display_name
+      ensureClaimantProfiles(Object.values(state.claimedBy || {}), applySplashContent);
+      const display = playerDisplayFor(player, state.claimedBy);
+
+      document.getElementById('splash-emoji').textContent = meIsHotSeat ? '🔥' : '👂';
+      document.getElementById('splash-label').textContent =
+        state.rounds === 1
+          ? t('splash.turnOf', { n: turnNumber, total: totalTurns })
+          : t('splash.roundTurn', { round: state.currentRound, rounds: state.rounds, n: turnNumber, total: totalTurns });
+      document.getElementById('splash-name').textContent =
+        meIsHotSeat ? t('splash.yourTurn') : t('splash.namesTurn', { name: display.name });
+      document.getElementById('splash-role').textContent =
+        meIsHotSeat ? t('splash.youAreHotSeat') : t('splash.youAreHelper');
+      document.getElementById('splash-context').textContent =
+        meIsHotSeat
+          ? t('splash.hotSeatContext')
+          : t('splash.helperContext', { name: display.name });
+
+      const splashSection = document.getElementById('screen-splash');
+      const splashEl = splashSection && splashSection.querySelector('.splash');
+      if (splashEl) {
+        splashEl.style.animation = 'none';
+        void splashEl.offsetWidth;
+        splashEl.style.animation = '';
+      }
+    }
+    function showSplash() {
+      applySplashContent();
+      goTo('splash');
+    }
+
+    function dismissSplash() {
+      // Any claimant can advance. Server records used-this-round + sets
+      // turnStartTime + phase='play' (C2 turn 4b). Echo updates local.
+      huddleCallRPC('huddle_hot_dismiss_splash', { p_code: state.code });
+    }
+
+    function applyPlayContent(){
+      state.view = getMyRole();
+      const player = state.players[state.currentPlayerIdx];
+      if (!player) return;
+      const meIsHotSeat = state.view === 'hotseat';
+      ensureClaimantProfiles(Object.values(state.claimedBy || {}), applyPlayContent);
+      const display = playerDisplayFor(player, state.claimedBy);
+      document.getElementById('play-round').textContent =
+        t('play.round', { current: state.currentRound, total: state.rounds });
+      document.getElementById('play-role-label').textContent =
+        meIsHotSeat ? t('play.yourTurnFire') : t('play.helpName', { name: display.name });
+      document.getElementById('play-wins').textContent = (getMe() && getMe().wins) || 0;
+      renderPlay();
+    }
+    function startTurn() {
+      // Legacy entry — keep for safety; just re-apply content if we're in play phase.
+      applyPlayContent();
+      goTo('play');
+    }
+
+    function pickWord() {
+      const list = WORDS[state.category] || WORDS.mixed;
+      // Track used words for THIS game so the same word never repeats in a
+      // single match. The list is reset on startGame / hotPlayAgain. If a long
+      // game somehow exhausts the category, wipe and reuse so we never stall.
+      if (!Array.isArray(state.usedWords)) state.usedWords = [];
+      const remaining = list.filter(w => state.usedWords.indexOf(w) === -1);
+      const pool = remaining.length > 0 ? remaining : list;
+      if (remaining.length === 0) state.usedWords = [];
+      const word = pool[Math.floor(Math.random() * pool.length)];
+      state.usedWords.push(word);
+      return word;
+    }
+
+    function renderPlay() {
+      const card = document.getElementById('play-content');
+      const actions = document.getElementById('play-actions');
+      const player = state.players[state.currentPlayerIdx];
+      ensureClaimantProfiles(Object.values(state.claimedBy || {}), renderPlay);
+      const playerDisplay = playerDisplayFor(player, state.claimedBy);
+      const helpButton = `
+        <button class="role-hero-help" onclick="showRoleInfo()">
+          ${t('play.howDoesThis')}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+        </button>
+      `;
+      // Mode reminder pill — sits inside the role-hero so it's visible the whole turn.
+      // Tells the helper "act it out, no talking" in Silent. Empty for Classic.
+      let modePill = '';
+      if (state.mode === 'silent') {
+        modePill = `<div class="play-mode-pill"><span class="mp-icon">🤫</span>${t('play.modePill.silent')}</div>`;
+      }
+
+      if (state.view === 'hotseat') {
+        card.innerHTML = `
+          <div class="role-hero">
+            <div class="role-hero-emoji">🔥</div>
+            <div class="role-hero-title">${t('play.youreInHotSeat')}</div>
+            <div class="role-hero-sub">${t('play.hotSeatSub')}</div>
+            ${modePill}
+            ${helpButton}
+          </div>
+        `;
+        actions.innerHTML = `
+          <button class="btn btn-give-up" onclick="endRound('forfeit', event)">
+            ${t('play.iGiveUp')}
+          </button>
+        `;
+      } else {
+        card.innerHTML = `
+          <div class="role-hero">
+            <div class="role-hero-emoji">👂</div>
+            <div class="word-label-big">${t('play.giveCluesFor')}</div>
+            <div class="word-text-big">${state.currentWord}</div>
+            <div class="role-hero-sub">${t('play.describeIt', { name: playerDisplay.name })}</div>
+            ${modePill}
+            ${helpButton}
+          </div>
+        `;
+        actions.innerHTML = `
+          <button class="btn btn-got-it" onclick="endRound('won', event)">
+            ${t('play.hotSeatGotIt')}
+          </button>
+        `;
+      }
+    }
+
+    async function endRound(outcome, ev) {
+      // Local action-gate (UX) — server enforces same rule against canonical
+      // claimedBy + currentPlayerIdx, so a tampered client cannot bypass it.
+      const player = state.players[state.currentPlayerIdx];
+      if (!player) return;
+      const meIsHotSeat = player.id === hotMe.myId;
+      if (outcome === 'forfeit' && !meIsHotSeat) return;
+      if (outcome === 'won' && meIsHotSeat) return;
+      // Disable the button while the RPC is in flight so a frustrated tap-spam
+      // doesn't fire 5 simultaneous requests. On success, the realtime push
+      // re-renders the screen and removes the button anyway; on failure, we
+      // re-enable so the user can retry (huddleCallRPC already shows a toast).
+      const btn = ev && ev.currentTarget;
+      if (btn) { btn.disabled = true; btn.setAttribute('aria-busy','true'); }
+      // Lifetime "wins" stat is bumped render-side in showResult — see the
+      // _hotWinsBumpedKey block there. Bumping HERE would never fire on the
+      // winner's device in multi-device mode: this handler runs on the helper
+      // (the hot seat can't tap "won" themselves), so player.id === hotMe.myId
+      // is always false by this line.
+      // Server validates role, records outcome/duration/wins/bestTimeMs (C2 turn 4b).
+      const res = await huddleCallRPC('huddle_hot_end_round', {
+        p_code: state.code,
+        p_outcome: outcome,
+      });
+      // Re-enable on error so retry works. Success path: realtime push has
+      // already (or will shortly) swap screens; if the button is still in the
+      // DOM after a brief grace window, re-enable defensively.
+      const restore = () => {
+        if (btn && document.body.contains(btn)) {
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+        }
+      };
+      if (res && res.error) restore();
+      else setTimeout(restore, 2000);
+    }
+
+    function quitGame() {
+      // Real leave — release seat, transfer host, clear room reference so the
+      // user (and remaining players) aren't pulled back into a stale match.
+      // Has its own confirm dialog because they're mid-game.
+      hotLeaveRoom();
+    }
+
+    function applyResultContent(){
+      showResult();
+    }
+    function showResult() {
+      const player = state.players[state.currentPlayerIdx];
+      const claimedTotal = hotClaimedCount();
+      const usedCount = (state.playersUsedThisRound || []).length;
+      const roundOver = usedCount === claimedTotal;
+      const isLastTurn = roundOver && state.currentRound === state.rounds;
+      const won = state.roundOutcome === 'won';
+
+      ensureClaimantProfiles(Object.values(state.claimedBy || {}), showResult);
+      const display = playerDisplayFor(player, state.claimedBy);
+      const isMeHotSeat = player && player.id === state.meId;
+      const hotSeatName = isMeHotSeat ? t('picker.you') : display.name;
+
+      document.getElementById('result-header').textContent =
+        isLastTurn ? t('result.gameOver') : t('result.namesTurn', { name: hotSeatName });
+      document.getElementById('result-emoji').textContent = won ? '🎉' : '🏳️';
+      document.getElementById('result-title').textContent = won
+        ? t('result.gotIt', { name: hotSeatName })
+        : t('result.gaveUp', { name: hotSeatName });
+      document.getElementById('result-sub').textContent = won
+        ? t('result.wordWasWin', { word: state.currentWord.toUpperCase() })
+        : t('result.wordWasLose', { word: state.currentWord.toUpperCase() });
+
+      const timeText = formatDuration(state.lastTurnDuration);
+      document.getElementById('result-time').textContent =
+        won ? t('result.guessedIn', { time: timeText }) : t('result.lastedFor', { time: timeText });
+
+      const lb = document.getElementById('leaderboard');
+      // Sort by fastest best time. Players with no wins go last.
+      // If two players have the same best time, more wins = higher rank (consistency tiebreaker).
+      // Only show players who actually claimed a seat — empty seats don't appear on the leaderboard.
+      const claimedSet = new Set(Object.keys(state.claimedBy || {}));
+      const sorted = state.players.filter(p => claimedSet.has(p.id)).sort((a,b) => {
+        const aTime = (a.bestTimeMs != null) ? a.bestTimeMs : Infinity;
+        const bTime = (b.bestTimeMs != null) ? b.bestTimeMs : Infinity;
+        if (aTime !== bTime) return aTime - bTime;
+        return (b.wins || 0) - (a.wins || 0);
+      });
+      lb.innerHTML = sorted.map((p,i) => {
+        const timeText = (p.bestTimeMs != null) ? `⏱ ${formatDuration(p.bestTimeMs)}` : '—';
+        const isCrowned = i === 0 && isLastTurn && p.bestTimeMs != null;
+        const isMe = p.id === state.meId;
+        const rowDisplay = playerDisplayFor(p, state.claimedBy);
+        return `
+          <div class="lb-row ${isCrowned ? 'winner' : ''}">
+            <div class="lb-rank">${i+1}</div>
+            ${avatarHTML(rowDisplay.avatar, 44, { fallback: p.initial })}
+            <div class="lb-name">${isMe ? t('picker.you') : escapeHTML(rowDisplay.name)}</div>
+            <div class="lb-score">${timeText}</div>
+          </div>
+        `;
+      }).join('');
+      parseEmoji(lb);
+
+      const nextBtn = document.getElementById('next-btn');
+      const leaveBtn = document.getElementById('leave-btn');
+      const amHost = hotIsHost();
+      // Primary button (nextBtn) and secondary leave button vary by phase + role:
+      //   • Game over + host  → "Play again" + "Leave" (host-leave closes the room for everyone)
+      //   • Game over + other → "Waiting for host to start new game…" + "Leave" (just me)
+      //   • Mid-round + host  → "Next turn" + "Leave" (just me; transfers host)
+      //   • Mid-round + other → "Waiting for host…" + "Leave" (just me)
+      if (isLastTurn) {
+        if (amHost) {
+          nextBtn.textContent = t('result.playAgain');
+          nextBtn.onclick = hotPlayAgain;
+          nextBtn.disabled = false;
+          leaveBtn.textContent = t('result.leaveGame');
+          leaveBtn.onclick = hotCloseRoom;
+        } else {
+          nextBtn.textContent = t('result.waitingForHostNewGame');
+          nextBtn.onclick = null;
+          nextBtn.disabled = true;
+          leaveBtn.textContent = t('result.leaveGame');
+          leaveBtn.onclick = hotLeaveGameOver;
+        }
+      } else if (amHost) {
+        nextBtn.textContent = t('result.nextTurn');
+        nextBtn.onclick = nextTurn;
+        nextBtn.disabled = false;
+        leaveBtn.textContent = t('result.leaveGame');
+        leaveBtn.onclick = hotLeaveGameOver;
+      } else {
+        nextBtn.textContent = t('lobby.seatsHintWaitingHost');
+        nextBtn.onclick = null;
+        nextBtn.disabled = true;
+        leaveBtn.textContent = t('result.leaveGame');
+        leaveBtn.onclick = hotLeaveGameOver;
+      }
+
+      // Count a completed game once, when reaching the last turn's result.
+      // Flag rides on synced state so no device double-bumps via re-render
+      // (ensureClaimantProfiles callback @7105, realtime sync, language/theme switch).
+      // Persist immediately so the realtime echo of endRound's persist doesn't
+      // wipe this local flag (wipe-and-replace at line 5985 would otherwise
+      // restore the pre-bump snapshot and re-trigger the bump).
+      if (isLastTurn && !state._gamesPlayedCounted) {
+        bumpGamesPlayed();
+        state._gamesPlayedCounted = true;
+        // Persist the flag server-side via RPC (C2 turn 4b) so the realtime
+        // echo of endRound's persist doesn't wipe it.
+        huddleCallRPC('huddle_hot_mark_game_counted', { p_code: state.code });
+      }
+
+      // Lifetime "wins" stat — render-side hook so every device evaluates
+      // "did MY player just win?" locally. This is what makes the bump fire
+      // on the winner's device in multi-device mode; bumping inside endRound
+      // would only ever run on the helper's device (see comment there).
+      // Per-turn dedup key prevents re-renders from double-bumping.
+      if (won && player && player.id === hotMe.myId) {
+        // Include lastTurnDuration so the key stays unique across hotPlayAgain
+        // (same code+round+idx could otherwise repeat in 1-round replays).
+        const winKey = (state.code || '') + ':' + (state.currentRound || 0) + ':' + (state.currentPlayerIdx == null ? -1 : state.currentPlayerIdx) + ':' + (state.lastTurnDuration == null ? 0 : state.lastTurnDuration);
+        if (_hotWinsBumpedKey !== winKey) {
+          _hotWinsBumpedKey = winKey;
+          bumpWins();
+        }
+      }
+    }
+
+    function nextTurn() {
+      // Server handles round-rollover + next-turn pick atomically via
+      // huddle_hot_next_turn (C2 turn 4b). Client picks the player + word
+      // locally and passes them to the RPC. pickNextPlayer still handles
+      // the host-picker branch by showing the UI; hostPicked routes that
+      // case to the RPC.
+      pickNextPlayer(false);
+    }
+
+    // ============================================================
+    // i18n — English + Turkish
+    // - STRINGS dictionary keyed by short paths (nav.games, etc.)
+    // - t(key, params) returns translated string; {name} placeholders
+    //   are interpolated from params.
+    // - applyLang() walks the DOM and translates elements tagged with
+    //   data-i18n / data-i18n-placeholder / data-i18n-aria attributes.
+    // - setLang(lang) persists to localStorage and re-renders dynamic
+    //   screens that build HTML in JS.
+    // ============================================================
+    const STRINGS = {
+      en: {
+        // Common buttons / actions
+        'common.save': 'Save',
+        'common.cancel': 'Cancel',
+        'common.gotIt': 'Got it',
+        'common.next': 'Next',
+        'common.back': 'Back',
+        'common.close': 'Close',
+        'common.refresh': 'Refresh',
+        'common.mute': 'Mute sound',
+        'common.unmute': 'Turn sound on',
+        'common.share': 'Share',
+        'common.more': 'More',
+        'common.quit': 'Quit',
+        'common.applied': 'Applied',
+        'common.syncFailed': "Couldn't sync — check your connection.",
+        'net.reconnecting': 'Reconnecting…',
+        'net.backOnline': 'Back online',
+
+        // Nav
+        'nav.games': 'Games',
+        'nav.friends': 'Friends',
+        'nav.profile': 'Profile',
+
+        // Login
+        'login.welcomeBack': 'Welcome back',
+        'login.createTitle': 'Create your account',
+        'login.createSub': 'Pick a username — friends will use it to add you.',
+        'login.createAccountBtn': 'Create account',
+        'login.haveAccount': 'Already have an account?',
+        'login.signInLink': 'Sign in',
+        'login.username': 'Username',
+        'login.signingIn': 'Signing in…',
+        'login.creatingAccount': 'Creating account…',
+        'login.missingFields': 'Please fill in email and password.',
+        'login.invalidEmail': 'That email doesn\'t look right.',
+        'login.invalidCredentials': 'Wrong email or password. Try again.',
+        'login.alreadyRegistered': 'That email is already registered. Try signing in.',
+        'login.passwordTooShort': 'Password must be at least 6 characters.',
+        'login.signInFailed': 'Couldn\'t sign in. Check your connection.',
+        'login.confirmEmailFirst': 'Account created. Check your email for a confirmation link, then come back and sign in. (You can disable this in Supabase → Authentication → Email → turn off "Confirm email" for testing.)',
+        'login.supabaseDown': 'Connection problem. Please refresh and try again.',
+        'login.rateLimited': 'Too many attempts. Wait a minute and try again.',
+        'login.rateLimitedSec': 'Too many attempts. Wait {n} seconds and try again.',
+        'login.forgotLink': 'Forgot password?',
+        'login.forgotTitle': 'Reset your password',
+        'login.forgotSub': 'Enter the email for your account. We\'ll send you a reset link.',
+        'login.sendResetLink': 'Send reset link',
+        'login.sendingResetLink': 'Sending…',
+        'login.resetLinkSent': 'Reset link sent! Check your email.',
+        'login.missingEmail': 'Please enter your email.',
+        'login.rememberPassword': 'Remembered it?',
+        'login.resetTitle': 'Set a new password',
+        'login.resetSub': 'Pick a new password (at least 6 characters).',
+        'login.setNewPassword': 'Set new password',
+        'login.savingPassword': 'Saving…',
+        'login.sub': 'Sign in to play games with friends.',
+        'login.email': 'Email',
+        'login.emailPlaceholder': 'you@example.com',
+        'login.password': 'Password',
+        'login.signIn': 'Sign in',
+        'login.or': 'or',
+        'login.continueGoogle': 'Continue with Google',
+        'login.continueGuest': 'Continue as guest',
+        'login.googleUnavailable': 'Google sign-in is unavailable. Try again.',
+        'login.googleFailed': 'Google sign-in failed. Try again.',
+        'login.newHere': 'New here?',
+        'login.createAccount': 'Create an account',
+        // Username setup (first sign-in via Google)
+        'username.pickTitle': 'Pick a username',
+        'username.pickSub': 'This is how friends will find you in Roundlly.',
+        'login.tagline': 'Play with your friends and family.',
+        'login.fineprint': 'By continuing, you agree to play nicely.',
+        'username.placeholder': 'your_username',
+        'username.available': 'Available',
+        'username.taken': 'Already taken',
+        'username.invalid': 'Use 3–20 lowercase letters, numbers, or _',
+        'username.checking': 'Checking…',
+        'username.saving': 'Saving…',
+        'username.confirm': 'Continue',
+
+        // Games
+        'games.notifications': 'Notifications',
+        'games.pickGame': 'Pick a game',
+        'games.classic': 'Hot Seat',
+        'games.fastestWins': 'Fastest wins',
+        'games.classicDesc': 'One guesses, others give clues. Fastest correct guess wins.',
+        'games.classicMeta': '2–8 players · No timer',
+        'games.chameleon': 'The Chameleon',
+        'games.bluff': 'Bluff & spot',
+        'games.chameleonDesc': 'One player doesn\'t know the secret. Spot them before they blend in.',
+        'games.chameleonMeta': '3–8 players · Quick rounds',
+        'games.liar': 'Liar\'s Cup',
+        'games.liarDesc': 'Play cards face-down. Lie about what they are. Get caught — and take a sip from the unlucky cup.',
+        'games.liarMeta': '2–8 players · Bluff & survive',
+        'games.mafia': 'Mafia',
+        'games.mafiaBadge': 'Catch the killer',
+        'games.mafiaDesc': 'Find the killer hiding among you. One person narrates with on-screen prompts.',
+        'games.mafiaMeta': '6–9 friends · 1 narrates',
+        'games.mafiaCards': 'Mafia',
+        'games.mafiaCardsBadge': 'Catch the killer',
+        'games.mafiaCardsDesc': 'Find the killer hiding among you. One person narrates and runs the night phases — phones stay in pockets after roles are dealt.',
+        'games.mafiaCardsMeta': '6–9 friends · 1 narrates',
+        'mafiaCards.placeholder.title': 'Game coming soon',
+        'mafiaCards.placeholder.body': 'Roles have been dealt — the card-style game UI lands in the next phase. For now this placeholder confirms the lobby + start flow works.',
+        'mafiaCards.role.hiddenTitle': 'Your role is hidden',
+        'mafiaCards.role.hiddenSub': 'Tap "Reveal Role" when you\'re ready to see who you are.',
+        'mafiaCards.role.revealBtn': 'Reveal Role',
+        'mafiaCards.role.hideBtn': 'Hide Role',
+        'mafiaCards.role.status': 'Listen for the narrator. They\'ll guide the game.',
+        'mafiaCards.narrator.phaseNight': 'Night',
+        'mafiaCards.narrator.phaseDay': 'Day',
+        'mafiaCards.narrator.playersTitle': 'Players',
+        'mafiaCards.narrator.loadingRoles': 'Loading roles…',
+        'mafiaCards.narrator.help': 'Tap a player to mark them out. Tap the pill to flip Night ↔ Day.',
+        'mafiaCards.narrator.statsAliveOut': '{alive} alive · {out} out',
+        'mafiaCards.narrator.endGame': 'End game',
+        'mafiaCards.narrator.endGameConfirm': 'End the game? You can declare the winner verbally and start a new one.',
+        'mafiaCards.narrator.endedTitle': 'Game ended',
+        'mafiaCards.narrator.endedBody': 'This game’s progress was lost when the tab was closed. Tap End game to start a fresh round.',
+        'mafiaCards.script.summary': 'What do I say?',
+        'mafiaCards.script.kindOnce': 'Read once',
+        'mafiaCards.script.kindEveryRound': 'Read every round',
+        'mafiaCards.script.kindEndgame': 'When game ends',
+        'mafiaCards.script.openingTitle': 'Setup & opening night',
+        'mafiaCards.script.roundLoopTitle': 'Each round (night → day)',
+        'mafiaCards.script.subNight': 'Night',
+        'mafiaCards.script.subDay': 'Day',
+        'mafiaCards.script.endgameTitle': 'Win conditions',
+        'mafiaCards.script.detectiveHint': 'Watch who they point at. Look at your cheat sheet, then give a thumbs-up if Mafia, thumbs-down if not.',
+        'mafiaCards.script.dayRevealHint': 'Announce who died (or that nobody did). Tap their tile on the dashboard to mark them out.',
+        'mafiaCards.script.voteCardsLine': 'Time to vote. Show of hands — who do you suspect?',
+        'mafiaCards.script.endgameTownWins': 'Town wins when every Mafia is voted out.',
+        'mafiaCards.script.endgameMafiaWins': 'Mafia wins when their numbers equal or outnumber the villagers.',
+        'mafiaCards.rules.summary': 'Narrator rules',
+        'mafiaCards.rules.r1.title': 'Watch carefully during night',
+        'mafiaCards.rules.r1.body': 'Make sure every player has their eyes closed and stays still. If you see someone peek, call them out loud — peeking ruins the game for everyone.',
+        'mafiaCards.rules.r2.title': 'How the Detective works',
+        'mafiaCards.rules.r2.body': 'When you say "Detective, wake up," the Detective opens their eyes and silently <strong>points at one player</strong> — the person they want to investigate. Glance at your cheat sheet to check that player\'s role. Then give the Detective a <strong>thumbs-up if Mafia</strong>, <strong>thumbs-down if not</strong>. Keep your hand low so only the Detective sees the signal.<br><br><strong>Exception — Mafia Leader:</strong> if the Mafia Leader role is in the game and the Detective points at the Mafia Leader, you must <strong>LIE</strong>. Give a thumbs-down (civilian) even though they\'re Mafia. The Mafia Leader is hidden from the Detective\'s investigation — that\'s their special power.',
+        'mafiaCards.rules.r3.title': 'Your word is final',
+        'mafiaCards.rules.r3.body': 'If the table disputes a vote or a death, you decide. Don\'t argue it out — declare your ruling and move on. The game flows better when the narrator is decisive.',
+        'games.mafiaComingSoon': 'Mafia lobby is coming in the next phase. The card you just tapped is wired and working — but the lobby screen ships next.',
+        // Mafia (Game #4) — lobby strings
+        'mafia.howToPlay': 'How to play',
+        'mafia.rulesBtn': 'Rules',
+        'mafia.help.title': 'How to play Mafia',
+        'mafia.help.body': '<div class="info-blocks"><p class="info-intro">Villagers find and vote out the Mafia. Mafia kill villagers in the night. The side still standing wins.</p><div class="info-block"><div class="info-block-emoji">🎭</div><div class="info-block-content"><div class="info-block-title">The Roles</div><div class="info-block-text"><strong>🔪 Mafia</strong> — Silently agree on one player to kill each night. Win by outnumbering the village.<br><br><strong>🩺 Doctor</strong> — Silently pick one player to protect each night. May protect themselves.<br><br><strong>🕵️ Detective</strong> — Each night, point at one player. The narrator gives a discreet thumbs-up if Mafia, thumbs-down if not.<br><br><strong>👤 Villager</strong> — No special power. Talk, listen, and vote to expose the Mafia.</div></div></div><div class="info-block"><div class="info-block-emoji">🌙</div><div class="info-block-content"><div class="info-block-title">Each Round</div><div class="info-block-text"><strong>Night.</strong> Eyes closed. Mafia choose a victim. Doctor picks someone to save. Detective investigates one player.<br><br><strong>Day.</strong> The narrator announces what happened. Everyone discusses.<br><br><strong>Vote.</strong> Majority gets eliminated — their role is revealed.</div></div></div><div class="info-block"><div class="info-block-emoji">🏆</div><div class="info-block-content"><div class="info-block-title">Winning</div><div class="info-block-text">Villagers win when every Mafia is voted out.<br>Mafia win when their numbers equal or outnumber the villagers.</div></div></div><div class="info-block"><div class="info-block-emoji">💡</div><div class="info-block-content"><div class="info-block-title">Quick Tips</div><div class="info-block-text">• Keep your role secret.<br>• Phones face-down once you\'ve memorized your role.<br>• No peeking at night — Mafia is listening too.<br>• The narrator\'s word is final.</div></div></div></div>',
+        'mafia.howToSub': 'First time? 1-minute read',
+        'mafia.prototypeHint': '<strong>Each player on their own phone.</strong> One person becomes the narrator — they run the game with on-screen prompts but don\'t play. Need 5–8 players + 1 narrator.',
+        'mafia.narratorLabel': 'Narrator',
+        'mafia.narratorNotSet': 'Tap to pick a narrator',
+        'mafia.narratorNotSetGuest': 'Waiting for host to pick a narrator',
+        'mafia.narratorSub': 'Runs the game with on-screen prompts. Doesn\'t play.',
+        'mafia.narratorAssignedSub': 'Will run the game from this device.',
+        'mafia.narratorIsYou': 'You\'re the narrator',
+        'mafia.narratorTagline': 'Narrator',
+        'mafia.unknownPlayer': 'Player',
+        'mafia.narratorPickerTitle': 'Pick the narrator',
+        'mafia.narratorPickerSub': 'Who runs the game? They won\'t play — they just read the prompts.',
+        'mafia.narratorPickerEmpty': 'No players have joined yet. Share the room code.',
+        'mafia.narratorPickThis': 'Tap to set as narrator',
+        'mafia.narratorCurrent': 'Current narrator',
+        'mafia.you': 'you',
+        'mafia.rolemixTitle': 'Role mix · auto-balanced',
+        'mafia.optional.title': 'Optional roles',
+        'mafia.optional.sub': 'Add powers to spice things up. Toggle any combination.',
+        'mafia.optional.detective.name': 'Detective',
+        'mafia.optional.detective.desc': 'Each night, investigate one player. Narrator answers with a thumb.',
+        'mafia.optional.child.name': 'Child',
+        'mafia.optional.child.desc': 'Plays as a Villager, but takes one player with them when they die (by vote or by Mafia).',
+        'mafia.optional.mafiaLeader.name': 'Mafia Leader',
+        'mafia.optional.mafiaLeader.desc': 'Replaces one Mafia. Appears INNOCENT to the Detective — narrator gives thumbs-down.',
+        'mafia.rolemixWaiting': 'Need 5–8 players for a balanced game.',
+        'mafia.role.mafia': 'Mafia',
+        'mafia.role.mafia_leader': 'Mafia Leader',
+        'mafia.role.mafiaLeader': 'Mafia Leader',
+        'mafia.role.detective': 'Detective',
+        'mafia.role.doctor': 'Doctor',
+        'mafia.role.child': 'Child',
+        'mafia.role.villager': 'Villager',
+        // Cheat-sheet label only — used in the narrator's roster so they
+        // remember to LIE (give thumbs-DOWN) when the Detective points at the
+        // Leader. Player-facing label stays "Mafia Leader" without the warning.
+        'mafia.cheatSheet.mafiaLeader': 'Mafia Leader (innocent to Detective)',
+        'mafia.players': 'Players',
+        'mafia.playerN': 'Player {n}',
+        'mafia.emptySeat': 'Empty seat',
+        'mafia.tapToJoin': 'Tap to join',
+        'mafia.inviteFriend': 'Invite friend',
+        'mafia.statusYou': 'You',
+        'mafia.statusClaimed': 'Joined',
+        'mafia.statusNarrator': 'Narrator',
+        'mafia.hintNeedMorePlayers': 'Need {n} more player(s) to start.',
+        'mafia.hintNeedNarrator': 'Host needs to pick a narrator before starting.',
+        'mafia.hintTooMany': 'Too many players. Max 8.',
+        'mafia.hintReady': 'Ready to start with {n} players.',
+        'mafia.startWaitingHost': 'Waiting for host…',
+        'mafia.startedComingSoon': 'Game started on the server! Role cards + the narrator screen ship in the next phase.',
+        'mafia.starting': 'Starting…',
+        'mafia.startFailed': 'Couldn\'t start the game: {msg}',
+        // Role card (Phase 4)
+        'mafia.roleCard.loading': 'Loading your role…',
+        'mafia.roleCard.hideBtn': 'Hide role',
+        'mafia.roleCard.showBtn': 'Show role',
+        'mafia.roleCard.hiddenPrompt': 'Tap "Show role" to peek',
+        'mafia.roleCard.listenForNarrator': 'Listen for the narrator\'s prompts.',
+        'mafia.roleCard.itsNight': 'It\'s night. Eyes closed. Wait for the narrator.',
+        'mafia.roleCard.itsDay': 'It\'s day. Discuss and decide together.',
+        'mafia.roleCard.teammatesLabel': 'Your teammates:',
+        'mafia.roleCard.mafia.title': 'You\'re Mafia',
+        'mafia.roleCard.mafia.desc': 'Kill villagers at night. Don\'t get voted out by day. Work with your teammates silently.',
+        'mafia.roleCard.detective.title': 'You\'re the Detective',
+        'mafia.roleCard.detective.desc': 'Each night, investigate one player. The narrator will tell you with a thumb if they\'re Mafia.',
+        'mafia.roleCard.doctor.title': 'You\'re the Doctor',
+        'mafia.roleCard.doctor.desc': 'Each night, pick someone to protect. If the Mafia attacks them, they live. You can protect yourself.',
+        'mafia.roleCard.villager.title': 'You\'re a Villager',
+        'mafia.roleCard.villager.desc': 'Find the Mafia by talking and voting. You have no special powers — just your wits.',
+        'mafia.roleCard.mafiaLeader.title': 'You\'re the Mafia Leader',
+        'mafia.roleCard.mafiaLeader.desc': 'You\'re on the Mafia team. The Detective sees you as INNOCENT — the narrator will lie for you. Coordinate the nightly kill with your team.',
+        'mafia.roleCard.child.title': 'You\'re the Child',
+        'mafia.roleCard.child.desc': 'You play as a Villager — no special night power. But when you die (by vote OR by Mafia), you take one player with you. Pick anyone you suspect.',
+        // Narrator stub (Phase 5 replaces — kept for back-compat for one cycle)
+        'mafia.narratorStub.title': 'You\'re the narrator',
+        'mafia.narratorStub.sub': 'The game has started. The full narrator script with read-aloud prompts ships in the next phase.',
+        'mafia.narratorStub.phaseLine': 'Phase: {phase} · Round {round}',
+        // Narrator screen UI (Phase 5)
+        'mafia.narrator.readAloud': 'Read aloud',
+        'mafia.narrator.continue': 'Continue →',
+        'mafia.narrator.advancing': 'Advancing…',
+        'mafia.narrator.startVote': 'Start vote',
+        'mafia.narrator.unknownBeat': 'Unknown beat: {beatId}. Tap Leave and start a new game.',
+        'mafia.narrator.advanceFailed': 'Couldn\'t advance: {msg}',
+        'mafia.narrator.aliveLabel': 'Alive',
+        'mafia.narrator.deadLabel': 'Out',
+        'mafia.narrator.roundLabel': 'Round',
+        'mafia.narrator.stubHint': 'Wired in Phase {phase}. Continue is disabled for now.',
+        'mafia.narrator.phaseNight': 'NIGHT {round}',
+        'mafia.narrator.phaseDay': 'DAY {round}',
+        'mafia.narrator.phaseVote': 'VOTE',
+        'mafia.narrator.phaseLobby': 'LOBBY',
+        'mafia.narrator.modeOpening': 'Opening',
+        'mafia.narrator.modeMiddle': 'Middle',
+        'mafia.narrator.modeEndgame': 'Endgame',
+        // Phase 6 — night actions
+        'mafia.narrator.targetHintMafia': 'Tap the player the Mafia silently points at.',
+        'mafia.narrator.targetHintDetective': 'Tap the player the Detective points at. The app will show you 👍 or 👎.',
+        'mafia.narrator.targetHintDoctor': 'Tap the player the Doctor silently points at.',
+        'mafia.narrator.actionFailed': 'Action failed: {msg}',
+        'mafia.narrator.resolving': 'Resolving night…',
+        'mafia.narrator.resolveFailed': 'Couldn\'t resolve night: {msg}',
+        'mafia.narrator.thumbMafiaTitle': '👍 {name} IS Mafia',
+        'mafia.narrator.thumbMafiaSub': 'Give the Detective a discreet 👍 — they alone should see it.',
+        'mafia.narrator.thumbNotMafiaTitle': '👎 {name} is NOT Mafia',
+        'mafia.narrator.thumbNotMafiaSub': 'Give the Detective a discreet 👎 — they alone should see it.',
+        'mafia.narrator.thumbCountdown': 'Auto-advance in',
+        'mafia.narrator.thumbSeconds': 's',
+        // Phase 7 — day phase + vote
+        'mafia.narrator.startingVote': 'Starting vote…',
+        'mafia.narrator.revealResult': 'Reveal result',
+        'mafia.narrator.revealing': 'Revealing…',
+        'mafia.narrator.tallyEmpty': 'No votes yet — waiting for players to tap.',
+        'mafia.narrator.votesProgress': '{cast} of {total} voted',
+        // Dynamic beat copy
+        'mafia.script.middle.dayRevealSaved': 'Morning arrives. The doctor saved a life last night — no one died.',
+        'mafia.script.middle.dayRevealKilledRole': 'Morning arrives. {name} is gone — killed in the night. They were a {role}.',
+        'mafia.script.middle.dayRevealKilledNoRole': 'Morning arrives. {name} is gone — killed in the night.',
+        'mafia.script.middle.voteRevealOutRole': '{name} was voted out. They were a {role}.',
+        'mafia.script.middle.voteRevealOutNoRole': '{name} was voted out.',
+        'mafia.script.middle.voteTie.text': 'It\'s a tie. Re-vote — only between the tied candidates.',
+        'mafia.script.middle.voteTieBetween': 'Tie between {names}. Re-vote — only between those two.',
+        // Vote screen (alive players)
+        'mafia.vote.title': 'Time to vote',
+        'mafia.vote.sub': 'Tap one player to vote out. You can\'t change your vote.',
+        'mafia.vote.tieRevotePill': 'Re-vote — tied candidates only',
+        'mafia.vote.tapToLock': 'Tap a player to lock your vote.',
+        'mafia.vote.lockedTitle': 'Vote locked: {name}',
+        'mafia.vote.lockedSub': 'Wait for everyone else to vote. The narrator will reveal the result.',
+        'mafia.vote.noCandidates': 'No one to vote for. Wait for the narrator.',
+        'mafia.vote.failed': 'Vote failed: {msg}',
+        // Out screen (eliminated players)
+        'mafia.out.title': 'You\'re out',
+        'mafia.out.sub': 'Stay quiet. Don\'t help your team with hints, gestures, or reactions. The game continues without you.',
+        // Phase 8 — end-game result
+        'mafia.result.townWinsTitle': 'Town wins!',
+        'mafia.result.townWinsSub': 'The Mafia have been caught. Justice for the village.',
+        'mafia.result.mafiaWinsTitle': 'Mafia wins',
+        'mafia.result.mafiaWinsSub': 'The Mafia now outnumber the town. The village falls.',
+        'mafia.result.gameOver': 'Game over',
+        'mafia.result.rolesLabel': 'Roles reveal',
+        'mafia.result.statusAlive': 'Alive',
+        'mafia.result.statusOut': 'Out',
+        'mafia.result.playAgain': 'Play again with same crew',
+        'mafia.result.playAgainFailed': 'Couldn\'t reset: {msg}',
+        'mafia.result.resetting': 'Resetting…',
+        'mafia.result.rotateHint': 'Tip: rotate the narrator next game so everyone gets to play.',
+        'mafia.result.waitingHost': 'The host can start a new game with this same crew.',
+        'mafia.result.backToGames': 'Back to games',
+        // Script — OPENING mode (Round 1, Day 0)
+        'mafia.script.opening.setup.text': 'Welcome to Mafia. I\'ll be running this game — don\'t worry, your phone tells me exactly what to say. Each of you has a secret role on your phone. Memorize it, then place your phone face-down.',
+        'mafia.script.opening.setup.stageDir': 'Wait until everyone has memorized their role and put their phone face-down.',
+        'mafia.script.opening.roles.text': 'Quick reminder. Villagers find the Mafia by talking and voting. Mafia kill villagers at night. The Detective investigates one player each night — I\'ll tell them with a thumb if they\'re Mafia. The Doctor protects one player each night.',
+        'mafia.script.opening.night1Open.text': 'Night falls. Everyone, close your eyes. No peeking, no whispering — Mafia is listening.',
+        'mafia.script.opening.night1Open.stageDir': 'Wait until everyone has their eyes closed and heads lowered. Calm 3-second pause.',
+        'mafia.script.opening.night1MafiaMeet.text': 'Mafia, open your eyes. Memorize your team. Nod silently.',
+        'mafia.script.opening.night1MafiaMeet.stageDir': 'Pause 4–5 seconds. Confirm the Mafia all opened their eyes and saw each other.',
+        'mafia.script.opening.night1MafiaSleep.text': 'Mafia, close your eyes. Tonight is just to meet — no one dies.',
+        'mafia.script.opening.day0Morning.text': 'Morning. Everyone wake up. No one died — take a minute together. Tonight the killing starts.',
+        // Script — MIDDLE mode (Round 2+ standard cycle)
+        'mafia.script.middle.nightOpen.text': 'Night falls. Eyes closed.',
+        'mafia.script.middle.mafiaWake.text': 'Mafia, wake up. Choose your target.',
+        'mafia.script.middle.mafiaWake.stageDir': 'Watch silently while the Mafia agree on a victim.',
+        'mafia.script.middle.mafiaSleep.text': 'Mafia, close your eyes.',
+        'mafia.script.middle.detectiveWake.text': 'Detective, wake up. Pick someone to investigate.',
+        'mafia.script.middle.detectiveWake.stageDir': 'Check your role list, then give the Detective a discreet 👍 if they pointed at Mafia, 👎 if not.',
+        'mafia.script.middle.detectiveSleep.text': 'Detective, close your eyes.',
+        // Reminder line shown right after detective wakes. Only appears when
+        // Mafia Leader is in play — narrator must lie if Detective targets them.
+        'mafia.script.middle.leaderHint.text': 'Reminder: if Detective points at the Mafia Leader, give thumbs-DOWN (innocent).',
+        'mafia.script.middle.doctorWake.text': 'Doctor, wake up. Save anyone, even yourself.',
+        'mafia.script.middle.doctorWake.stageDir': 'Watch silently while the Doctor chooses.',
+        'mafia.script.middle.doctorSleep.text': 'Doctor, close your eyes.',
+        // Child death cues — only appear when Child is in play. Both vote and
+        // night-kill cases use the same flow: ask Child to point at someone.
+        'mafia.script.middle.childNightDeath.text': 'If the Mafia killed the Child tonight, ask the Child to point at one player — that player also dies.',
+        'mafia.script.middle.childVoteDeath.text': 'If the Child was voted out, ask them to point at one player — that player also dies.',
+        'mafia.script.middle.dayReveal.text': 'Morning. The town wakes up…',
+        'mafia.script.middle.dayReveal.stageDir': 'Announce who died (or that nobody did) — then tap their tile to mark them out.',
+
+        // Pre-game rules page (shown to everyone after Start Game).
+        'mafia.rules.title': 'How to Play Mafia',
+        'mafia.rules.intro': 'Read together. Tap "I\'m Ready" when you\'re done — the game begins once everyone is ready.',
+        'mafia.rules.goalHeader': 'The Goal',
+        'mafia.rules.goalText': 'Villagers find and vote out the Mafia. Mafia secretly kill villagers each night. The side still standing wins.',
+        'mafia.rules.rolesHeader': 'The Roles',
+        'mafia.rules.role.mafia.name': 'Mafia',
+        'mafia.rules.role.mafia.desc': 'Each night, you and your fellow Mafia silently agree on one player to kill. Win when you outnumber the village.',
+        'mafia.rules.role.doctor.name': 'Doctor',
+        'mafia.rules.role.doctor.desc': 'Each night, silently pick one player to protect. If the Mafia attacks them, they survive. You may protect yourself.',
+        'mafia.rules.role.detective.name': 'Detective',
+        'mafia.rules.role.detective.desc': 'Each night, point at one player to investigate. The narrator will give you a discreet thumbs-up if they\'re Mafia, thumbs-down if not.',
+        'mafia.rules.role.villager.name': 'Villager',
+        'mafia.rules.role.villager.desc': 'No special power — just your instincts. Talk, listen, and vote to expose the Mafia before they wipe out the town.',
+        'mafia.rules.role.child.name': 'Child',
+        'mafia.rules.role.child.desc': 'Plays as a Villager during the game. When the Child dies (by vote or by Mafia), they take one player of their choice with them.',
+        'mafia.rules.role.mafiaLeader.name': 'Mafia Leader',
+        'mafia.rules.role.mafiaLeader.desc': 'On the Mafia team, but appears INNOCENT to the Detective. The narrator gives a thumbs-down when the Detective investigates them.',
+        'mafia.rules.roundHeader': 'Each Round',
+        'mafia.rules.round.night.label': 'Night.',
+        'mafia.rules.round.night.desc': 'Everyone closes their eyes. Mafia silently agree on a target. Doctor secretly picks someone to save.',
+        'mafia.rules.round.day.label': 'Day.',
+        'mafia.rules.round.day.desc': 'Eyes open. The narrator announces who died. Everyone discusses and accuses.',
+        'mafia.rules.round.vote.label': 'Vote.',
+        'mafia.rules.round.vote.desc': 'Everyone votes for one suspect. Majority gets eliminated — their role is revealed.',
+        'mafia.rules.winHeader': 'Winning',
+        'mafia.rules.winText': 'Villagers win when every Mafia is voted out. Mafia win when their numbers equal or outnumber the villagers.',
+        'mafia.rules.tipsHeader': 'Quick Tips',
+        'mafia.rules.tip1': 'Keep your role secret. Only the narrator knows everyone.',
+        'mafia.rules.tip2': 'Phones face-down once you\'ve memorized your role.',
+        'mafia.rules.tip3': 'No peeking at night. The Mafia is listening for clues too.',
+        'mafia.rules.tip4': 'The narrator\'s word is final.',
+        'mafia.rules.readyBtn': 'I\'m Ready',
+        'mafia.rules.readyDone': 'You\'re ready',
+        'mafia.rules.readyCount': '{count} of {total} ready',
+        'mafia.script.middle.dayDiscuss.text': 'Discuss. Vote when ready.',
+        'mafia.script.middle.voteProgress.text': 'Vote on your phones.',
+        'mafia.script.middle.voteProgress.stageDir': 'Only alive players vote. Reveal when everyone\'s in.',
+        'mafia.script.middle.voteReveal.text': 'The vote is in. Read the result aloud.',
+        // Script — ENDGAME mode (alive ≤ 4 OR town-mafia ≤ 1)
+        'mafia.script.endgame.transition.text': 'Few of you remain. Choose carefully.',
+        'mafia.script.endgame.nightOpen.text': 'Night falls. Eyes closed. This may be the final night.',
+        'mafia.script.endgame.dayDiscuss.text': 'Talk. Vote. This vote could end the game.',
+        'mafia.script.endgame.winTown.text': 'The last Mafia has been caught. The town wins!',
+        'mafia.script.endgame.winMafia.text': 'The Mafia now outnumber the town. The Mafia win.',
+        'mafia.howToComingSoon': 'The full how-to-play sheet ships in a later phase. Short version: one narrator runs the game, others find the Mafia by talking and voting.',
+        // Mafia "How to Play" video — captions overlay the animation. Keep
+        // each line short (≤7 words ideal) so it doesn't compete with
+        // George's voiceover. Eyebrows are tiny ALL-CAPS scene tags.
+        'mafia.howto.s1.eyebrow': 'Setup',
+        'mafia.howto.s1.line': 'Five friends + one narrator',
+        'mafia.howto.s2.eyebrow': 'Secret roles',
+        'mafia.howto.s2.line': 'The app deals each player a hidden role',
+        'mafia.howto.s3.eyebrow': 'Night',
+        'mafia.howto.s3.line': 'Eyes close. Each role acts in secret.',
+        'mafia.howto.s4.eyebrow': 'Morning',
+        'mafia.howto.s4.line': 'The town discusses. Spot the lie.',
+        'mafia.howto.s5.eyebrow': 'Vote',
+        'mafia.howto.s5.line': 'Most-voted is eliminated',
+        'mafia.howto.s6.eyebrow': 'Win',
+        'mafia.howto.s6.line': 'Outnumber the other side',
+        'mafia.howto.end.title': "You're ready.",
+        'mafia.howto.end.sub': 'Round up your friends and start a game.',
+        'mafia.howto.end.replay': 'Watch again',
+        'mafia.howto.end.start': 'Start playing',
+        'mafia.toastReconnectStale': 'That game is no longer running. Back to the games list.',
+        'games.moreSoon': 'More coming soon',
+        'games.moreSoonSub': 'More games on the way.',
+        'games.tellUsNext': 'Tell us what to add next.',
+        // The Chameleon
+        'cham.howToPlay': 'How to play',
+        'cham.howToSub': 'Quick rules',
+        'cham.howToTitle': 'How to play The Chameleon',
+        'cham.howToBody': '<div class="info-blocks"><p class="info-intro">A bluffing game. The app picks a <strong>secret word</strong> from a grid, and one player to be the <strong>Chameleon</strong>. The Chameleon doesn\'t see which word is the secret. Everyone else does. Your job is to find them.</p><div class="info-block"><div class="info-block-emoji">🎯</div><div class="info-block-content"><div class="info-block-title">Each player says ONE word</div><div class="info-block-text">A clue that proves you know the secret — but not so obvious that the Chameleon can copy you.</div></div></div><div class="info-block"><div class="info-block-emoji">🗳️</div><div class="info-block-content"><div class="info-block-title">Then everyone votes</div><div class="info-block-text">Who do you think didn\'t actually know the word? Tap their face on your phone.</div></div></div><div class="info-block"><div class="info-block-emoji">🏆</div><div class="info-block-content"><div class="info-block-title">Who wins</div><div class="info-block-text">Vote out the Chameleon → <strong>Players win</strong>. Vote the wrong person → <strong>Chameleon wins</strong>.</div></div></div></div>',
+        'cham.topicLabel': 'Topic',
+        'cham.topicSub': 'Pick which topic this game uses, or Mixed for a random one per round.',
+        'cham.topic.mixed': 'Mixed',
+        'cham.topic.dogs': 'Dog Breeds',
+        'cham.topic.zoo': 'Zoo Animals',
+        'cham.topic.sea': 'Sea Creatures',
+        'cham.topic.birds': 'Birds',
+        'cham.topic.farm': 'Farm Animals',
+        'cham.topic.pizza': 'Pizza Toppings',
+        'cham.topic.fruits': 'Fruits',
+        'cham.topic.veggies': 'Vegetables',
+        'cham.topic.desserts': 'Desserts',
+        'cham.topic.drinks': 'Drinks',
+        'cham.topic.turkish': 'Turkish Foods',
+        'cham.topic.breakfast': 'Breakfast',
+        'cham.topic.disney': 'Disney Characters',
+        'cham.topic.heroes': 'Superheroes',
+        'cham.topic.ballsports': 'Ball Sports',
+        'cham.topic.olympic': 'Olympic Sports',
+        'cham.topic.instruments': 'Instruments',
+        'cham.topic.hospital': 'Hospital Jobs',
+        'cham.topic.trades': 'Trades',
+        'cham.topic.landmarks': 'Landmarks',
+        'cham.topic.kitchen': 'Kitchen Items',
+        'cham.topic.clothes': 'Clothes',
+        'cham.youAreChameleon': 'You\'re the Chameleon',
+        'cham.youArePlayer': 'You know the secret',
+        'cham.roleBannerChameleon': 'You\'re the <b>Chameleon</b>',
+        'cham.roleBannerPlayer': 'You\'re <b>not</b> the Chameleon',
+        'cham.yourJobLabel': 'Your job',
+        'cham.yourJobPlayer': 'Say <b>one word</b> that hints at the secret. Don\'t make it obvious.',
+        'cham.yourJobChameleon': 'You don\'t know the secret. Listen to the clues and say <b>one word</b> that blends in.',
+        'cham.secretIs': 'The secret is {word}',
+        'cham.roundOf': 'Round {current} / {total}',
+        'cham.youStart': 'You start. Going clockwise.',
+        'cham.nameStarts': '{name} starts. Going clockwise.',
+        'cham.cuePlayer': 'Say <b>one word</b> that hints at the highlighted secret. Don\'t make it obvious.',
+        'cham.cueChameleon': 'Listen to the clues. Say <b>one word</b> that fits in — try to blend in.',
+        'cham.doneHints': 'Done — ready to vote',
+        'cham.voteTitle': 'Who\'s the Chameleon?',
+        'cham.voteSub': 'Tap the player you think is the Chameleon. Discuss first if you want — there\'s no rush.',
+        'cham.lockInVote': 'Lock in vote',
+        'cham.voteForName': 'Vote {name}',
+        'cham.tallyTitle': 'Vote tally',
+        'cham.tallySub': 'How players voted this round',
+        'cham.leaderboardTitle': 'Total wins',
+        'cham.leaderboardSub': 'Across all rounds in this game',
+        'cham.voteCount': '{n} votes',
+        'cham.voteCountOne': '1 vote',
+        'cham.gameOver': 'Game over',
+        'cham.roundComplete': 'Round {n} complete',
+        'cham.chameleonWins': 'Chameleon wins!',
+        'cham.playersWin': 'Players win!',
+        'cham.resultEscaped': 'The Chameleon ({name}) was never caught.',
+        'cham.resultCaught': '{name} was the Chameleon — caught!',
+        'cham.theSecretWas': 'The secret was {word}',
+        'cham.scoreWins': '{n} wins',
+        'cham.scoreWinsOne': '1 win',
+        'cham.toastPlayerLeft': '{name} left the game.',
+        // Liar's Cup
+        'liar.howToPlay': 'How to play',
+        'liar.howToSub': 'First time? Read this — it\'s a 1-minute read',
+        // In-game help sheet (one tap from any play/reveal/cup header).
+        // Designed for mid-game refresh — answers "what do I do right now",
+        // "are there different roles", and "how do I win".
+        'liar.help.title': 'How to play',
+        'liar.help.body': '<div class="info-blocks"><p class="info-intro">Bluff your friends, catch liars, and survive the cup.<br>The last player left wins.</p><div class="info-block"><div class="info-block-emoji">🎯</div><div class="info-block-content"><div class="info-block-title">Truth Card</div><div class="info-block-text">At the start of each round, the game chooses a <strong>Truth Card</strong> (King, Queen, or Ace).<br><br>• Playing the Truth Card = telling the truth<br>• Any other card = lying<br>• Jokers count as the Truth Card every time</div></div></div><div class="info-block"><div class="info-block-emoji">🃏</div><div class="info-block-content"><div class="info-block-title">Your Turn</div><div class="info-block-text">1. Pick 1–3 cards from your hand<br>2. Press <strong>Play Face-Down</strong><br>3. Tell everyone what you played<br><br>You can tell the truth… or bluff.<br><br>Other players only see how many cards you played, not the actual cards.</div></div></div><div class="info-block"><div class="info-block-emoji">👀</div><div class="info-block-content"><div class="info-block-title">Call Liar</div><div class="info-block-text">Think the last play was a bluff?<br><strong>Any player still in the round</strong> (except the one who just played) can tap <strong>CALL LIAR</strong> — you don\'t have to wait for your turn.<br><br>First to tap wins it. The cards flip over:<br>• If they lied → they go to the cup<br>• If they told the truth → the accuser goes to the cup<br><br>Winner of the call leads the next round.</div></div></div><div class="info-block"><div class="info-block-emoji">🎡</div><div class="info-block-content"><div class="info-block-title">The Wheel</div><div class="info-block-text">The loser spins a wheel — <strong>6 chambers</strong>, some are SPILLS.<br><br>• Lands on safe = stay in the game<br>• Lands on a spill = eliminated<br><br>Each round adds one more spill chamber, so the wheel gets more dangerous as the game goes on.</div></div></div><div class="info-block"><div class="info-block-emoji">🏆</div><div class="info-block-content"><div class="info-block-title">Win the Game</div><div class="info-block-text">Be the last player still in the game.<br><br>Bluff smart. Catch liars. Survive the cup.</div></div></div></div>',
+        'liar.help.aria': 'How to play',
+        'liar.rulesBtn': 'Rules',
+        'liar.howToTitle': 'How to play Liar\'s Cup',
+        'liar.howToBody': '<div class="info-blocks"><p class="info-intro">A bluffing card game for 3–6 friends sitting at the same table. <strong>Each player uses their own phone</strong> — your hand is private to you. Everyone plays at the same time, takes turns acting, and watches the bluffing live.</p><div class="info-block"><div class="info-block-emoji">📱</div><div class="info-block-content"><div class="info-block-title">Everyone joins the room</div><div class="info-block-text">One person opens Huddle and goes to Liar\'s Cup. Their phone shows a <strong>room code</strong>. Others scan it (or type it) on their phones, then everyone picks their seat (Jordan / Alex / Maria / Kenji). Tap Start when 3+ seats are claimed.</div></div></div><div class="info-block"><div class="info-block-emoji">🃏</div><div class="info-block-content"><div class="info-block-title">Your hand & the table card</div><div class="info-block-text">Each round the app picks ONE card — say <strong>KING</strong> — as the table card. Kings (and Jokers) are <strong>TRUTH</strong>. Aces and Queens are <strong>LIES</strong>. You see 3–5 cards on YOUR phone. <strong>Other players don\'t see your cards</strong> — only you do.</div></div></div><div class="info-block"><div class="info-block-emoji">🎲</div><div class="info-block-content"><div class="info-block-title">On your turn — play cards</div><div class="info-block-text"><strong>Play 1, 2, or 3 cards face-down</strong> and say out loud <em>"I\'m playing two Kings."</em> The others see "you played 2 cards" — but not WHICH cards. Then the turn passes to the next player.</div></div></div><div class="info-block"><div class="info-block-emoji">📣</div><div class="info-block-content"><div class="info-block-title">Call LIAR — anytime, anyone</div><div class="info-block-text"><strong>Any player still in the round</strong> (except the one who just played) can call LIAR on the most recent play. You don\'t have to wait for your turn. First to tap wins it.</div></div></div><div class="info-block"><div class="info-block-emoji">🤥</div><div class="info-block-content"><div class="info-block-title">When LIAR is called</div><div class="info-block-text">Every phone shows the last cards flipping over.<br>• If <strong>any</strong> wasn\'t the table card (Jokers count as anything) → <strong>the player was lying</strong> → they lose.<br>• If <strong>all</strong> the cards were valid → <strong>the accuser was wrong</strong> → they lose.</div></div></div><div class="info-block"><div class="info-block-emoji">🎡</div><div class="info-block-content"><div class="info-block-title">The unlucky wheel</div><div class="info-block-text">The wheel auto-spins on the loser\'s phone (others watch from theirs) — <strong>6 chambers</strong>, one starts as a "spill."<br>• Lands on the spill → <strong>YOU\'RE OUT</strong>.<br>• Lands safe → you stay in, but next time the wheel has <strong>TWO</strong> spill chambers. Then three. The longer the game, the worse the odds.</div></div></div><div class="info-block"><div class="info-block-emoji">🏆</div><div class="info-block-content"><div class="info-block-title">Winning</div><div class="info-block-text"><strong>Last player standing wins.</strong> Bluff hard. Accuse smart. Get lucky with the cup.</div></div></div><p class="info-intro" style="margin-top:18px"><strong>Quick example:</strong> Table card is KING. On Maria\'s phone she taps 2 cards and hits "Play face-down" — out loud she says <em>"two Kings."</em> Alex sees "Maria played 2 cards" on his own phone. He doesn\'t believe her and taps CALL LIAR. Every phone flips the cards: a King and a Queen. Maria lied — her phone goes to the cup; everyone else watches.</p></div>',
+        'liar.tableCardLabel': 'This round\'s table card',
+        'liar.tableCardSub': 'This rank & Jokers are TRUTH. Everything else is a LIE.',
+        'liar.tableCardGo': 'Deal the cards',
+        'liar.tableCardShort': 'Table card:',
+        'liar.rank.A': 'ACE',
+        'liar.rank.K': 'KING',
+        'liar.rank.Q': 'QUEEN',
+        'liar.playHeader': 'Your turn',
+        'liar.handEmpty': 'No cards left — you must call LIAR.',
+        'liar.statusFirstTurn': 'You start the round. Play 1, 2, or 3 cards face-down — claim they\'re all <strong>{tableCard}s</strong>.',
+        'liar.statusFollow': '<strong>{name}</strong> just played <strong>{count}</strong>. Beat them at their game — play your own, or call LIAR.',
+        'liar.statusYouEmpty': 'No cards left. Tap CALL LIAR to call out the last play.',
+        'liar.callLiar': 'CALL LIAR!',
+        'liar.playFaceDown': 'Play face-down',
+        'liar.cardsInPile': '{n} cards in the pile',
+        'liar.cardsInPileOne': '1 card in the pile',
+        'liar.pileEmpty': 'No cards played yet — start the round.',
+        'liar.claimNamePlayed': '<span class="liar-pile-claim-name">{name} played:</span> <strong>{count} {tableCard}{s}</strong>',
+        'liar.revealHeader': 'The truth',
+        'liar.revealLabel': '{name} said "{count} {tableCard}{s}"',
+        'liar.revealTitle': 'Were they?',
+        'liar.verdictLied': '<strong>{name} was LYING.</strong> Not all the cards were {tableCard}s. They go to the cup.',
+        'liar.verdictWrongAccuse': '<strong>{accuser} accused wrong!</strong> {name} was telling the truth. {accuser} goes to the cup.',
+        'liar.cupChambersHint': '{spills} of 6 chambers are spills',
+        'liar.cupChambersHintOne': '1 of 6 chambers is a spill',
+        'liar.cupSafeTitle': 'You survived!',
+        'liar.cupSafeText': 'The cup didn\'t spill. You stay in the game — but next time the cup has <strong>{nextSpills}</strong> spills.',
+        'liar.cupSpilledTitle': 'You SPILLED!',
+        'liar.cupSpilledText': '<strong>{name}</strong> is out of the game. Round over.',
+        'liar.resultHeader': 'Game over',
+        'liar.winTitle': '{name} wins!',
+        'liar.winSub': 'Last one standing.',
+        'liar.leaderboardTitle': 'How everyone fared',
+        'liar.playAgain': 'Play again',
+        'liar.statusOut': 'OUT',
+        'liar.statusAlive': '{n} cards',
+        'liar.statusAliveOne': '1 card',
+        'liar.handCountAria': '{n} cards in hand',
+        // Multiplayer seat picker + waiting strings
+        'liar.pickSeatTitle': 'Pick your seat',
+        'liar.players': 'Players',
+        'liar.seatInviteTap': 'Invite friend',
+        'liar.seatEmpty': 'Empty seat',
+        'lobby.inviteSheetTitle': 'Invite a friend',
+        'lobby.inviteOnline': 'Online',
+        'lobby.inviteOffline': 'Offline',
+        'lobby.inviteSearchPlaceholder': 'Search friends',
+        'lobby.inviteNoMatch': 'No friends match "{q}"',
+        'lobby.inviteShareInstead': 'Or share this room code:',
+        'lobby.inviteSignInPrompt': 'Sign in to invite friends to your room.',
+        'liar.prototypeHint': '<strong>Each player on their own phone.</strong> Share the room code or QR with your friends — when they join, you\'ll see their seat fill up below. 3+ seats needed to start.',
+        'joinCode.tileTitle': 'Join with code',
+        'joinCode.tileSub': 'Have a friend\'s room code? Enter it here',
+        'joinCode.title': 'Join with code',
+        'joinCode.sub': 'Paste the room code your friend shared with you.',
+        'joinCode.placeholder': 'ABCD-EFGH',
+        'joinCode.btn': 'Join',
+        'joinCode.checking': 'Looking for the room…',
+        'joinCode.notFound': 'Room not found. Double-check the code with your friend.',
+        'joinCode.networkError': 'Couldn’t reach the server. Check your connection and try again.',
+        'joinCode.enterCode': 'Enter a code first.',
+        'liar.seatTapToClaim': 'Tap to claim',
+        'liar.seatYou': 'You',
+        'liar.seatTaken': 'Taken',
+        'liar.seatsHintNotPicked': 'Pick a seat to join the game.',
+        'liar.seatsHintNeedMore': 'Waiting for {n} more player(s) to pick a seat…',
+        'liar.seatsHintReady': 'All seats look ready. Tap Start when everyone has claimed.',
+        'liar.waitingFor': 'Waiting for {name}…',
+        'liar.waitingForToAct': 'Waiting for {name} to play or call LIAR…',
+        'liar.revealWaiting': '{name} is heading to the cup… watch the next screen.',
+        'liar.toastPlayerLeft': '{name} left the game.',
+        'liar.toastReconnectStale': 'This game is over — back to home.',
+        'common.otherPlayer': 'Player',
+        'liar.otherPlayerLeft': 'Other player left — ending game…',
+        'liar.otherPlayerLeftStatus': 'The other player left the game. Ending in a moment…',
+        'liar.stampBusted': 'BUSTED!',
+        'liar.stampWrongCall': 'WRONG CALL!',
+        'liar.stampPhew': 'PHEW! 😅',
+        'liar.stampSpilled': '💧 SPILLED!',
+        // Auto-advance hint copy — small text shown while the game is about to
+        // transition on its own (no button tap). Different by perspective so
+        // watchers know it's not stuck and the loser knows they don't need to act.
+        'liar.autoNextTruthYou': 'Heading to the cup…',
+        'liar.autoNextTruthOther': '{name} is heading to the cup…',
+        'liar.autoNextRound': 'Next round in a sec…',
+        'liar.autoNextWinner': 'Crowning the winner…',
+        'liar.youAreOut': 'You\'re out — watch the rest of the game.',
+        'liar.noSeatClaimed': 'You\'re not in this game. Tap × to leave.',
+        // Shared splash + result keys
+        'splash.tapToContinue': 'Tap to continue',
+        'result.nextRound': 'Next round',
+
+        // Friends
+        'friends.title': 'Friends',
+        'friends.addFriend': 'Add friend',
+        'friends.search': 'Add friend by username',
+        'friends.searchPlaceholder': 'Add friend by username',
+        'friends.searchMinChars': 'Type at least 2 characters',
+        'friends.searchNoResults': 'No users match "{q}"',
+        'friends.all': 'All',
+        'friends.online': 'Online',
+        'friends.offline': 'Offline',
+        'friends.requests': 'Requests',
+        'friends.tabAll': 'All',
+        'friends.tabOnline': 'Online',
+        'friends.tabRequests': 'Requests',
+        'friends.onlineCount': 'Online',
+        'friends.offlineCount': 'Offline',
+        'friends.invite': 'Invite',
+        'friends.message': 'Message',
+        'friends.actionAdd': 'Add',
+        'friends.actionSent': 'Sent',
+        'friends.actionAccept': 'Accept',
+        'friends.actionDecline': 'Decline',
+        'friends.actionCancel': 'Cancel',
+        'friends.actionFriends': 'Friends',
+        'friends.actionRemove': 'Remove',
+        'friends.removeConfirm': 'Remove {name} from your friends?',
+        'friends.sectionFriends': 'Friends',
+        'friends.sectionIncoming': 'Incoming',
+        'friends.sectionSent': 'Sent',
+        'friends.emptyList': 'Your friends list is empty. Search above to add friends by username.',
+        'friends.emptyRequests': 'No friend requests right now.',
+        'friends.heroTitle': 'Find your friends',
+        'friends.heroSub': 'Type a friend’s username in the search box above to send them a friend request.',
+        'friends.heroArrow': 'Search up here',
+        'friends.removeTitle': 'Remove {name}?',
+        'friends.removeBody': 'They’ll no longer appear in your friends list. You can always add them back later.',
+        'friends.thisFriend': 'this friend',
+        'common.confirm': 'Confirm',
+        'friends.onlineSoon': 'Online presence coming soon — check back when friends are playing.',
+        'friends.requestSent': 'Request sent',
+        'friends.signInPrompt': 'Sign in to see your friends.',
+        'friends.statusInGame': 'Online · in a game',
+        'friends.statusOnline': 'Online',
+        'friends.statusLastSeen': 'Last seen {when}',
+        'friends.timeHoursAgo': '{n}h ago',
+        'friends.timeYesterday': 'yesterday',
+        'friends.timeDaysAgo': '{n} days ago',
+        'friends.timeWeekAgo': 'a week ago',
+
+        // Lobby — Invite friends (Phase 4)
+        'lobby.inviteFriends': 'Invite friends',
+        'lobby.inviteNoFriendsYet': 'No friends yet — add some on the Friends tab.',
+        'invite.invite': 'Invite',
+        'invite.invited': 'Invited',
+        'invite.joined': 'Joined',
+        'invite.declined': 'Declined',
+        'invite.cancel': 'Cancel',
+        'invite.join': 'Join',
+        'invite.decline': 'Decline',
+        'invite.banner': '{name} invited you to {game}',
+        'invite.sectionTitle': 'Game invites',
+        'game.hotseat': 'Hot Seat',
+        'game.chameleon': 'The Chameleon',
+        'game.liar': 'Liar\'s Cup',
+
+        // Profile
+        'profile.title': 'Profile',
+        'profile.editAria': 'Edit profile',
+        'profile.statGames': 'Games',
+        'profile.statWins': 'Wins',
+        'profile.statFriends': 'Friends',
+        'profile.account': 'Account',
+        'profile.editProfile': 'Edit profile',
+        'profile.preferences': 'Preferences',
+        'profile.theme': 'Theme',
+        'profile.language': 'Language',
+        'profile.support': 'Support',
+        'profile.about': 'About Roundlly',
+        'profile.feedback': 'Send feedback',
+        'profile.signedInAs': 'Signed in as',
+        'profile.signOut': 'Sign out',
+
+        // Feedback sheet
+        'feedback.title': 'Send feedback',
+        'feedback.sub': 'Pick what you want to share. The next step lets you type the details.',
+        // Compose popup (stage 2 — the typing screen)
+        'feedback.compose.title_bug': 'Report a bug',
+        'feedback.compose.title_idea': 'Share an idea',
+        'feedback.compose.title_word': 'A word feels wrong',
+        'feedback.compose.title_other': 'Send a note',
+        'feedback.compose.sub_bug': 'What broke? Add detail so we can find it.',
+        'feedback.compose.sub_idea': 'What would make Roundlly better?',
+        'feedback.compose.sub_word': 'Which category, which word, and why does it feel off?',
+        'feedback.compose.sub_other': 'Anything you\'d like us to know.',
+        'feedback.compose.placeholder_bug': 'e.g. The chair icon looks weird on iPhone…',
+        'feedback.compose.placeholder_idea': 'e.g. A Movies-only night mode would be fun…',
+        'feedback.compose.placeholder_word': 'e.g. In Animals, "platypus" felt too obscure…',
+        'feedback.compose.placeholder_other': 'Type your note here…',
+        'feedback.compose.post': 'Post',
+        'feedback.compose.save': 'Save changes',
+        'feedback.compose.editTitle': 'Edit post',
+        'feedback.compose.editSub': 'Update your post and tap Save.',
+        // Feedback board screen
+        'feedback.board.title': 'Feedback board',
+        'feedback.board.newAria': 'New post',
+        'feedback.board.tab.bug': 'Bugs',
+        'feedback.board.tab.idea': 'Ideas',
+        'feedback.board.tab.word': 'Wording',
+        'feedback.board.tab.other': 'Other',
+        // Persistent description shown under the tabs — describes what each
+        // category is for so users know where to post (and what to expect to
+        // read here). Stays visible whether the section is empty or not.
+        'feedback.board.desc_bug': 'Something broken or behaving strangely? Report it here so we can fix it.',
+        'feedback.board.desc_idea': 'Suggest features and improvements you\'d like to see in Roundlly.',
+        'feedback.board.desc_word': 'Flag confusing or wrong words you saw in any game — tell us which game and which word.',
+        'feedback.board.desc_other': 'Anything else worth sharing — thoughts, questions, notes that don\'t fit the other tabs.',
+        'feedback.board.empty_bug': 'No bug reports yet.',
+        'feedback.board.empty_idea': 'No ideas posted yet.',
+        'feedback.board.empty_word': 'No wording flags yet.',
+        'feedback.board.empty_other': 'Nothing posted here yet.',
+        'feedback.board.emptySub': 'Posts you share will show up here.',
+        'feedback.board.firstPost': 'Be the first',
+        'feedback.board.edit': 'Edit',
+        'feedback.board.delete': 'Delete',
+        'feedback.board.deleteTitle': 'Delete this post?',
+        'feedback.board.deleteBody': 'This post will be removed. You can\'t undo this.',
+        'feedback.board.edited': 'edited',
+        'feedback.board.likeAria': 'Like this post',
+        'feedback.board.unlikeAria': 'Remove like',
+        'feedback.board.moreAria': 'More options',
+        'feedback.board.translating': 'Translating…',
+        'feedback.board.showOriginal': 'Show original',
+        'feedback.board.showTranslation': 'Show translation',
+        'feedback.board.translateError': 'Translation unavailable',
+        'feedback.board.translateRetry': 'Retry',
+        'feedback.board.loading': 'Loading posts…',
+        'feedback.board.errorTitle': 'Couldn\'t load the board',
+        'feedback.board.retry': 'Try again',
+        'feedback.board.saveError': 'Couldn\'t save. Check your connection and try again.',
+        'profile.feedbackBoard': 'Feedback board',
+        'profile.admin': 'Admin',
+        'profile.adminPill': 'Owner',
+        'admin.title': 'Admin',
+        'admin.heroBadge': 'Owner access',
+        'admin.heroTitle': 'Control room',
+        'admin.heroSub': 'Tools to keep Roundlly healthy. One ships at a time — only the next tool is unlocked.',
+        'admin.next': 'Next',
+        'admin.comingSoon': 'Coming soon',
+        'admin.footnote': 'More tools land here as they ship. Each is fully wired before the next begins.',
+        'admin.tile.feedback.title': 'Feedback',
+        'admin.tile.feedback.desc': 'Moderate the board, see who posted what.',
+        'admin.tile.stats.title': 'Stats',
+        'admin.tile.stats.desc': 'Daily signups, lobbies, games finished.',
+        'admin.tile.users.title': 'Users',
+        'admin.tile.users.desc': 'Search, last seen, recent lobbies.',
+        'admin.tile.announce.title': 'Announcements',
+        'admin.tile.announce.desc': 'Push a banner to every player.',
+        'admin.tile.kill.title': 'Kill switches',
+        'admin.tile.kill.desc': 'Turn off a broken game without a deploy.',
+        'admin.tile.reports.title': 'Reports',
+        'admin.tile.reports.desc': 'Player-flagged content and blocks.',
+        // Admin → Feedback moderation
+        'adminFb.title': 'Feedback',
+        'adminFb.filterNew': 'New',
+        'adminFb.filterAll': 'All',
+        'adminFb.filterDone': 'Done',
+        'adminFb.sortNewest': 'Newest first',
+        'adminFb.sortTop': 'Most voted',
+        'adminFb.status_new': 'New',
+        'adminFb.status_done': 'Done',
+        'adminFb.guest': 'Guest',
+        'adminFb.unknownUser': 'User',
+        'adminFb.menuMarkDone': 'Mark as done',
+        'adminFb.menuMarkNew': 'Mark as new',
+        'adminFb.menuDelete': 'Delete post',
+        'adminFb.deleteTitle': 'Delete this post?',
+        'adminFb.deleteBody': "This removes the post for everyone — it can't be undone.",
+        'adminFb.actionError': "Couldn't update — check your connection and try again.",
+        'adminFb.empty_new': 'No new feedback. Nice — inbox zero.',
+        'adminFb.empty_all': 'No feedback yet.',
+        'adminFb.empty_done': 'Nothing actioned yet.',
+        'adminFb.badgeNew': 'new',
+        // Admin → Stats dashboard
+        'adminStats.title': 'Stats',
+        'adminStats.period24h': '24h',
+        'adminStats.period7d': '7 days',
+        'adminStats.period30d': '30 days',
+        'adminStats.periodAll': 'All',
+        'adminStats.heroLabel': 'Active players',
+        'adminStats.signups': 'New signups',
+        'adminStats.lobbies': 'Lobbies created',
+        'adminStats.gamesPlayed': 'Games played',
+        'adminStats.feedback': 'Feedback received',
+        'adminStats.byGameTitle': 'By game',
+        'adminStats.byGameEmpty': 'No lobbies in this period yet.',
+        'adminStats.game.hotseat': 'Hot Seat',
+        'adminStats.game.chameleon': 'Chameleon',
+        'adminStats.game.liar': "Liar's Cup",
+        'adminStats.game.mafia': 'Mafia',
+        'adminStats.deltaVsPrev': 'vs. previous',
+        'adminStats.deltaNoChange': 'No change',
+        'adminStats.deltaAllTime': 'All time total',
+        'adminStats.updated': 'Updated',
+        'adminStats.justNow': 'just now',
+        'adminStats.ago': 'ago',
+        'adminStats.loading': 'Crunching numbers…',
+        'adminStats.errorTitle': 'Could not load stats',
+        'adminStats.axisNow': 'now',
+        'adminStats.axisEarliest': 'earliest',
+        'adminStats.axisMid': 'midpoint',
+        'adminStats.summaryAvg': 'Average',
+        'adminStats.summaryPeak': 'Peak',
+        'adminStats.summaryLow': 'Low',
+        // Relative time
+        'time.justNow': 'just now',
+        'time.minutesAgo': '{n}m',
+        'time.hoursAgo': '{n}h',
+        'time.daysAgo': '{n}d',
+        'feedback.bug': 'Something\'s broken',
+        'feedback.bugSub': 'A bug or glitch',
+        'feedback.idea': 'I have an idea',
+        'feedback.ideaSub': 'Feature request or suggestion',
+        'feedback.word': 'A word feels wrong',
+        'feedback.wordSub': 'Something in one of the categories',
+        'feedback.other': 'Something else',
+        'feedback.otherSub': 'General feedback',
+        'feedback.subject_bug': 'Roundlly — Bug report',
+        'feedback.subject_idea': 'Roundlly — Idea',
+        'feedback.subject_word': 'Roundlly — Word issue',
+        'feedback.subject_other': 'Roundlly — Feedback',
+        'feedback.body_bug': 'What happened:\n\n\nWhat I expected to happen:\n\n',
+        'feedback.body_idea': 'My idea:\n\n\nWhy it would be useful:\n\n',
+        'feedback.body_word': 'The word:\n\n\nWhy it doesn\'t fit:\n\n\nCategory (Mixed / Animals / Food / Movies / Famous):\n\n',
+        'feedback.body_other': 'My message:\n\n',
+        'feedback.contextHeader': '— App info (please leave the lines below this so we can debug) —',
+
+        // Edit profile
+        'editProfile.title': 'Edit profile',
+        'editProfile.shuffle': 'Surprise me',
+        'editProfile.pickHint': 'or pick a symbol, colour & style below',
+        'editProfile.displayName': 'Display name',
+        'editProfile.namePlaceholder': 'Your name',
+        'editProfile.username': 'Username',
+        'editProfile.usernamePlaceholder': 'username',
+        'editProfile.usernameTooShort': 'Username must be at least 3 characters.',
+        'editProfile.usernameBadChars': 'Only lowercase letters, numbers, and underscore.',
+        'editProfile.usernameTaken': 'That username is taken. Try another.',
+        'editProfile.checkingUsername': 'Checking…',
+        'editProfile.savingProfile': 'Saving…',
+        'editProfile.saveFailed': 'Couldn\'t save. Check your connection and try again.',
+        'editProfile.tabSymbol': 'Symbol',
+        'editProfile.tabColour': 'Colour',
+        'editProfile.tabStyle': 'Style',
+        'editProfile.bgColour': 'Background colour',
+        'editProfile.bgStyle': 'Background style',
+
+        // Symbol categories
+        'symbolCat.faces': 'Faces',
+        'symbolCat.animals': 'Animals',
+        'symbolCat.food': 'Food',
+        'symbolCat.hobbies': 'Hobbies',
+        'symbolCat.things': 'Things',
+
+        // Avatar styles
+        'style.solid': 'Solid',
+        'style.gradient': 'Gradient',
+        'style.soft': 'Soft',
+        'style.half': 'Half',
+        'style.ring': 'Ring',
+        'style.dots': 'Dots',
+        'style.stripes': 'Stripes',
+        'style.glow': 'Glow',
+        'style.pulse': 'Pulse',
+        'style.shimmer': 'Shimmer',
+        'style.halo': 'Halo',
+        'style.float': 'Float',
+        'style.ripple': 'Ripple',
+
+        // About sheet
+        'about.title': 'Roundlly',
+        'about.body': 'Made for friends at the table.\n\nRoundlly is a party game for groups in the same room — cafe, kitchen, road trip. Each player on their own phone. One person\'s in the hot seat, everyone else gives clues. Fastest guess wins.\n\nNo online strangers, no random matchmaking. Just the people sitting next to you.',
+
+        // Theme picker
+        'theme.title': 'Theme',
+        'theme.sub': 'Choose how Roundlly looks. System follows your device setting.',
+        'theme.system': 'System',
+        'theme.systemSub': 'Match my device',
+        'theme.light': 'Light',
+        'theme.lightSub': 'Bright surfaces, dark text',
+        'theme.dark': 'Dark',
+        'theme.darkSub': 'Dim surfaces, easier on the eyes at night',
+
+        // Language picker
+        'language.title': 'Language',
+        'language.sub': 'Choose the language Roundlly uses for everything.',
+        'language.en': 'English',
+        'language.enSub': 'Use English',
+        'language.tr': 'Türkçe',
+        'language.trSub': 'Türkçe kullan',
+
+        // Lobby
+        'lobby.title': 'Hot Seat',
+        'lobby.roomCode': 'Room code',
+        'lobby.scanToJoin': 'Scan to join',
+        'lobby.refreshCode': 'New room code',
+        'lobby.qrFallback': 'QR couldn\'t load.\nShare the code instead.',
+        'lobby.howToPlay': 'How to play',
+        'lobby.howToSub': 'Quick 20-second intro',
+        'lobby.howToSub_silent': 'Silent mode rules',
+        // Per-mode slide overrides for the How to play modal. Slides that aren't listed reuse
+        // the classic key — saves on i18n bloat and means a mode only owns the slides it changes.
+        'howTo.silent.slide2Title': 'Mime it — no talking',
+        'howTo.silent.slide2Sub': 'The hot seat can\'t see the word. Helpers can — but can\'t say a thing. Act it out, gesture, point.',
+        'lobby.settings': 'Settings',
+        'lobby.useRecommended': 'Use recommended setup',
+        'lobby.useRecommendedSub': 'Good defaults for new players',
+        'lobby.recommendedApplied': 'Recommended setup applied',
+        'lobby.recommendedAppliedSub': 'You can still customize anything below',
+        'lobby.category': 'Category',
+        'category.sub': 'Choose which words to play with.',
+        // Mode (rule variant for this Hot Seat session)
+        'lobby.mode': 'Mode',
+        'mode.sub': 'Pick how you want this round of Hot Seat to play.',
+        'mode.classic': 'Classic',
+        'mode.silent': 'Silent',
+        'mode.sub_classic': 'Helpers talk and describe. Standard rules.',
+        'mode.sub_silent': 'Helpers can\'t talk — only act it out.',
+        'mode.hint_silent': '<b>Silent mode —</b> Helpers can\'t say a word. Act it out, mime, point. Hot seat shouts their guess.',
+        // In-play mode pill (shown under role hero, reminds players of the active rule)
+        'play.modePill.silent': 'No talking — act it out',
+        'lobby.rounds': 'Rounds',
+        'lobby.order': 'Hot seat order',
+        'lobby.players': 'Players',
+        'lobby.playersCount': 'Players · {count}',
+        'lobby.startGame': 'Start game',
+        'lobby.host': 'Host',
+        'lobby.seatTapToClaim': 'Tap to claim',
+        'lobby.seatYou': 'You',
+        'lobby.seatTaken': 'Joined',
+        'lobby.seatWaiting': 'Waiting…',
+        'lobby.seatsHintNotPicked': 'Pick a seat to play',
+        'lobby.seatsHintNeedMore': 'Need {n} more friends to join',
+        'lobby.seatsHintReady': 'Ready — host can start',
+        'lobby.seatsHintWaitingHost': 'Waiting for host to start…',
+        'lobby.leaveRoom': 'Leave room',
+        'lobby.leaveShort': 'Leave',
+        'lobby.resetShort': 'Reset',
+        'lobby.previousRoomGone': 'Your previous room ended — you\'re in a new one now.',
+        'lobby.joinFailed': 'Couldn\'t join that room. The invite may have expired, the host left, or the room isn\'t syncing yet.',
+        'lobby.hostClosedRoom': 'Host left the game',
+        'lobby.leaveTitle': 'Leave this room?',
+        'lobby.leaveBody': 'You can rejoin later if the host re-invites you, or scan the QR again.',
+        'lobby.leaveConfirm': 'Leave',
+        'common.leaveGame': 'Leave game',
+        'common.leaveMidRoundTitle': 'Leave this round?',
+        'common.leaveMidRoundBody': 'The round will continue without you, and your scores so far are saved. You can rejoin later if the host re-invites you.',
+        'lobby.resetPlayers': 'Reset players',
+        'lobby.resetTitle': 'Reset all other players?',
+        'lobby.resetBody': 'This frees up every seat except yours. Useful if old players from previous games are still in the list.',
+        'lobby.resetConfirm': 'Reset',
+
+        // Categories
+        'cat.mixed': 'Mixed',
+        'cat.animals': 'Animals',
+        'cat.food': 'Food & Drink',
+        'cat.movies': 'Movies & TV',
+        'cat.famous': 'Famous People',
+        'cat.sports': 'Sports',
+        'cat.objects': 'Everyday Objects',
+        'cat.places': 'Places & Landmarks',
+        'cat.activities': 'Activities',
+        'cat.music': 'Music',
+
+        // Order options
+        'order.rotating': 'Rotating',
+        'order.random': 'Random',
+        'order.host': 'Host picks',
+
+        // Splash
+        'splash.yourTurn': 'Your turn',
+        'splash.namesTurn': '{name}\'s turn',
+        'splash.youAreHotSeat': 'You\'re in the hot seat',
+        'splash.youAreHelper': 'You\'re a helper',
+        'splash.hotSeatContext': 'Listen carefully to your friends\' clues, then shout out your guess. No rush!',
+        'splash.helperContext': 'Help {name} guess. Describe the word — but don\'t say it out loud!',
+        'splash.tapAnywhere': 'Tap anywhere to start',
+        'splash.turnOf': 'Turn {n} of {total}',
+        'splash.roundTurn': 'Round {round} of {rounds} · Turn {n} of {total}',
+
+        // Play
+        'play.round': 'Round {current}/{total}',
+        'play.yourTurnFire': '🔥 Your turn',
+        'play.helpName': 'Help {name} guess',
+        'play.statWins': 'Wins',
+        'play.youreInHotSeat': 'You\'re in the<br>hot seat',
+        'play.hotSeatSub': 'Listen to your friends\' clues, then shout out your guess. No rush.',
+        'play.giveCluesFor': 'Give clues for',
+        'play.describeIt': 'Describe it to {name} — but never say the word!',
+        'play.howDoesThis': 'How does this work?',
+        'play.iGiveUp': '🏳️ I give up',
+        'play.hotSeatGotIt': '✓ Hot seat got it!',
+
+        // Coach marks
+        'coach.hotSeatTip': '🔥 <strong>You\'re in the hot seat.</strong> Listen to your friends\' clues, then shout out your guess. <strong>No timer</strong> — take your time!',
+        'coach.hotSeatStuck': 'Stuck? Tap <strong>🏳️ I give up</strong> to forfeit. No win this round, but you\'ll get more turns.',
+        'coach.helperTip': '👂 <strong>This is the secret word.</strong> Describe it to the hot seat — but <strong>never say the word itself!</strong>',
+        'coach.helperTap': 'Tap <strong>✓ Hot seat got it!</strong> the moment the hot seat says the word. First helper to tap wins it for them.',
+        'coach.dismiss': 'Got it, let\'s play!',
+
+        // Result
+        'result.gameOver': 'Game over',
+        'result.namesTurn': '{name}\'s turn',
+        'result.gotIt': '{name} got it!',
+        'result.gaveUp': '{name} gave up',
+        'result.wordWasWin': 'The word was "{word}". +1 win!',
+        'result.wordWasLose': 'The word was "{word}". No win this round.',
+        'result.guessedIn': '⏱ Guessed in {time}',
+        'result.lastedFor': '⏱ Lasted {time}',
+        'result.leaderboard': 'Leaderboard · Fastest',
+        'result.nextTurn': 'Next turn',
+        'result.backToGames': 'Back to games',
+        'result.leaveGame': 'Leave game',
+        'result.playAgain': 'Play again',
+        'result.waitingForHostNewGame': 'Waiting for host to start new game…',
+
+        // How to play modal
+        'howTo.skip': 'Skip intro',
+        'howTo.slide1Title': 'Sit together. Play together.',
+        'howTo.slide1Sub': 'Each player joins on their own phone with the same room code.',
+        'howTo.slide2Title': 'One guesses, others help',
+        'howTo.slide2Sub': 'The hot seat\'s phone hides the word. Everyone else sees it and gives clues out loud.',
+        'howTo.slide3Title': 'Win the round, or give up',
+        'howTo.slide3SubHtml': 'When the hot seat guesses, any helper taps <strong>Hot seat got it!</strong> If stuck, the hot seat can <strong>give up</strong> and lose the round.',
+        'howTo.slide4Title': 'Fastest guesser wins',
+        'howTo.slide4SubHtml': 'Each player goes in the hot seat. The player with the <strong>fastest correct guess</strong> takes the crown.',
+        'howTo.tagHotSeat': 'Hot seat',
+        'howTo.tagHelper': 'Helpers',
+        'howTo.giveCluesFor': 'Give clues for',
+        'howTo.listenForClues': 'Listen for clues',
+        'howTo.dontSayWord': 'Don\'t say the word!',
+        'howTo.startPlaying': 'Start playing',
+
+        // The Chameleon — how to play (4-slide modal)
+        'cham.howTo.slide1Title': 'Sit together. Play together.',
+        'cham.howTo.slide1Sub': 'Each player joins on their own phone with the same room code.',
+        'cham.howTo.slide2Title': 'One doesn\'t know the word',
+        'cham.howTo.slide2Sub': 'The Chameleon sees the grid but not which word is secret. Everyone else does — find the imposter.',
+        'cham.howTo.slide3Title': 'Each player says ONE word',
+        'cham.howTo.slide3Sub': 'A clue that proves you know the secret — but not so obvious the Chameleon can copy you.',
+        'cham.howTo.slide4Title': 'Vote out the Chameleon',
+        'cham.howTo.slide4SubHtml': 'Find them → <strong>Players win</strong>. Wrong guess → <strong>Chameleon wins</strong>.',
+        'cham.howTo.tagCham': 'Chameleon',
+        'cham.howTo.tagKnower': 'Knowers',
+        'cham.howTo.topicAnimals': 'Animals',
+        'cham.howTo.youreCham': 'You\'re the Chameleon',
+        'cham.howTo.secretIs': 'Secret: LION',
+        'cham.howTo.clue1': '"Mane"',
+        'cham.howTo.clue2': '"Roar"',
+        'cham.howTo.clue3': '"Wild"',
+        'cham.howTo.clue4': '"Pride"',
+        'cham.howTo.clueTagCham': 'CHAM',
+        'cham.howTo.chameleonCaught': 'Chameleon caught',
+        'cham.howTo.playersWin': 'Players win',
+
+        // Liar's Cup — how to play (4-slide modal)
+        'liar.howTo.slide1Title': 'Sit together. Bluff together.',
+        'liar.howTo.slide1Sub': '3 or 4 players, each on their own phone. Your hand stays private to you.',
+        'liar.howTo.slide2Title': 'Sit around the table',
+        'liar.howTo.slide2SubHtml': 'You see <strong>everyone\'s hand counts</strong> and the table card. Your own cards stay private to your phone.',
+        'liar.howTo.tableLabel': 'The table',
+        'liar.howTo.othersCounts': 'Everyone sees the counts',
+        'liar.howTo.seatMaria': 'Maria',
+        'liar.howTo.slide3Title': 'Play face-down — or call LIAR',
+        'liar.howTo.slide3SubHtml': 'On your turn: play 1–3 cards and bluff out loud. Or accuse the player who just went.',
+        'liar.howTo.slide4Title': 'Lose a round? Drink the cup.',
+        'liar.howTo.slide4SubHtml': 'Hit the spill chamber → <strong>you\'re out</strong>. Survive → odds get worse next time.',
+        'liar.howTo.tableCard': 'Table card',
+        'liar.howTo.cardKing': 'KING',
+        'liar.howTo.yourHand': 'Your hand',
+        'liar.howTo.onlyYouSee': 'Only YOU see these',
+        'liar.howTo.tagYourTurn': 'Your turn',
+        'liar.howTo.tagWatching': 'Watching',
+        'liar.howTo.tableKing': 'Table: KING',
+        'liar.howTo.playFaceDown': 'Play face-down',
+        'liar.howTo.sayItLoud': 'Say "two Kings" out loud',
+        'liar.howTo.mariaPlayed': 'Maria played 2',
+        'liar.howTo.believeHer': 'Believe her?',
+        'liar.howTo.callLiar': 'CALL LIAR',
+        'liar.howTo.lastStanding': 'Last player standing',
+        'liar.howTo.wins': 'wins',
+
+        // Picker (host picks next)
+        'picker.title': 'Who\'s in the hot seat next?',
+        'picker.sub': 'Host, tap a player to put them in the hot seat for the next turn.',
+        'picker.you': 'You',
+
+        // Info sheets (rounds / order / hot seat / helper)
+        'info.roundsTitle': 'Rounds',
+        'info.roundsBody': 'How many times the whole group cycles through everyone.\n\nExample: with 4 players and 3 rounds, every player sits in the hot seat 3 times — 12 turns total.',
+        'info.orderTitle': 'Hot seat order',
+        'info.orderBody': 'Who sits in the hot seat each turn.\n\n<strong>Rotating</strong> — take turns in order. Fair, everyone goes evenly.\n\n<strong>Random</strong> — app picks a random player. Adds surprise.\n\n<strong>Host picks</strong> — you choose who goes next before each turn.',
+        'info.hotSeatTitle': '🔥 You\'re in the hot seat',
+        'info.hotSeatBody': `<div class="info-blocks"><p class="info-intro">Your friends can see a secret word on their phones — you can't see it on yours. Their job is to <strong>give you clues</strong>. Your job is to <strong>guess the word</strong>.</p><div class="info-block"><div class="info-block-emoji">🎧</div><div class="info-block-content"><div class="info-block-title">Listen, then guess out loud</div><div class="info-block-text">Pay attention to your friends' clues, then say each guess <strong>out loud</strong>. You can guess as many times as you need.</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">No timer — take your time</div><div class="info-block-text">There's no clock pressuring you. We do silently track how long you took and show it on the result screen — just a fun stat. It doesn't affect your score.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">When you say the right word</div><div class="info-block-text">Your friends have a <strong>"Hot seat got it!"</strong> button on their phones. The moment you say the word, one of them taps it for you. You score <strong>+1 win</strong> on the leaderboard.</div></div></div><div class="info-block"><div class="info-block-emoji">🏳️</div><div class="info-block-content"><div class="info-block-title">If you're truly stuck</div><div class="info-block-text">Tap <strong>"I give up"</strong> on your own phone to forfeit. No win this round, but the game continues — you'll still get more turns to play.</div></div></div></div>`,
+        'info.helperTitle': '👂 You\'re a helper',
+        'info.helperBody': `<div class="info-blocks"><p class="info-intro">You can see a secret word on your phone — the hot seat can't see it on theirs. Your job is to <strong>describe the word</strong> so they can guess it.</p><div class="info-block"><div class="info-block-emoji">💬</div><div class="info-block-content"><div class="info-block-title">Give clues, but never say the word</div><div class="info-block-text">Use synonyms, examples, gestures, sound effects — anything. But <strong>never say the word itself</strong> or obvious parts of it (no spelling, no rhyming the whole word).</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">No time pressure</div><div class="info-block-text">There's no clock. The hot seat takes as long as they need to guess. The result screen will show how long the round lasted — just for fun.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">When they say the right word</div><div class="info-block-text">The moment you hear the hot seat say the correct word, tap <strong>"Hot seat got it!"</strong>. First helper to tap wins it for them — they score <strong>+1 win</strong>.</div></div></div><div class="info-block"><div class="info-block-emoji">🏳️</div><div class="info-block-content"><div class="info-block-title">If they give up</div><div class="info-block-text">If the hot seat taps "I give up" on their phone, the round ends with no win. The game then moves on to the next player's turn.</div></div></div></div>`,
+
+        // Mode-specific info bodies. Same .info-blocks structure as classic so the sheet feels
+        // consistent; only the copy diverges to match each mode's rules.
+        'info.hotSeatBody_silent': `<div class="info-blocks"><p class="info-intro">Your friends can see a secret word on their phones — you can't see it on yours. In Silent mode they can't say a thing — they'll <strong>mime, gesture, and act it out</strong>. Your job is to <strong>guess the word</strong>.</p><div class="info-block"><div class="info-block-emoji">🤫</div><div class="info-block-content"><div class="info-block-title">Watch closely — no clues will be spoken</div><div class="info-block-text">Friends will mime, point, and act out the word. Watch their gestures and faces carefully. Say each guess <strong>out loud</strong>.</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">No timer — take your time</div><div class="info-block-text">There's no clock. Mime can take a moment to read — be patient with your friends.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">When you say the right word</div><div class="info-block-text">A friend will tap <strong>"Hot seat got it!"</strong> on their phone the moment you say the word. You score <strong>+1 win</strong>.</div></div></div><div class="info-block"><div class="info-block-emoji">🏳️</div><div class="info-block-content"><div class="info-block-title">If you're truly stuck</div><div class="info-block-text">Tap <strong>"I give up"</strong> to forfeit this round. The game continues with the next player.</div></div></div></div>`,
+        'info.helperBody_silent': `<div class="info-blocks"><p class="info-intro">You can see a secret word on your phone — the hot seat can't. In Silent mode you can't talk — your job is to <strong>act the word out</strong> without saying a single word.</p><div class="info-block"><div class="info-block-emoji">🤫</div><div class="info-block-content"><div class="info-block-title">Mime, don't speak</div><div class="info-block-text">Use gestures, facial expressions, movement. <strong>No talking, no sound effects, no lip-syncing.</strong> Get creative.</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">No time pressure</div><div class="info-block-text">The hot seat takes as long as they need. Pace yourself — mime well rather than fast.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">When they say the right word</div><div class="info-block-text">Tap <strong>"Hot seat got it!"</strong> the moment you hear the correct word. First helper to tap wins it for them.</div></div></div></div>`,
+      },
+      tr: {
+        // Common buttons / actions
+        'common.save': 'Kaydet',
+        'common.cancel': 'İptal',
+        'common.gotIt': 'Anladım',
+        'common.next': 'İleri',
+        'common.back': 'Geri',
+        'common.close': 'Kapat',
+        'common.refresh': 'Yenile',
+        'common.mute': 'Sesi kapat',
+        'common.unmute': 'Sesi aç',
+        'common.share': 'Paylaş',
+        'common.more': 'Daha fazla',
+        'common.quit': 'Çık',
+        'common.applied': 'Uygulandı',
+        'common.syncFailed': 'Eşitlenemedi — bağlantını kontrol et.',
+        'net.reconnecting': 'Yeniden bağlanılıyor…',
+        'net.backOnline': 'Bağlantı geri geldi',
+
+        // Nav
+        'nav.games': 'Oyunlar',
+        'nav.friends': 'Arkadaşlar',
+        'nav.profile': 'Profil',
+
+        // Login
+        'login.welcomeBack': 'Tekrar hoş geldin',
+        'login.createTitle': 'Hesap oluştur',
+        'login.createSub': 'Bir kullanıcı adı seç — arkadaşların seni bununla ekleyecek.',
+        'login.createAccountBtn': 'Hesap oluştur',
+        'login.haveAccount': 'Zaten hesabın var mı?',
+        'login.signInLink': 'Giriş yap',
+        'login.username': 'Kullanıcı adı',
+        'login.signingIn': 'Giriş yapılıyor…',
+        'login.creatingAccount': 'Hesap oluşturuluyor…',
+        'login.missingFields': 'Lütfen e-posta ve parolayı doldur.',
+        'login.invalidEmail': 'Bu e-posta doğru görünmüyor.',
+        'login.invalidCredentials': 'Yanlış e-posta veya parola. Tekrar dene.',
+        'login.alreadyRegistered': 'Bu e-posta zaten kayıtlı. Giriş yapmayı dene.',
+        'login.passwordTooShort': 'Parola en az 6 karakter olmalı.',
+        'login.signInFailed': 'Giriş yapılamadı. Bağlantını kontrol et.',
+        'login.confirmEmailFirst': 'Hesap oluşturuldu. E-postandaki doğrulama bağlantısını tıkla, sonra dön ve giriş yap.',
+        'login.supabaseDown': 'Bağlantı sorunu. Yenile ve tekrar dene.',
+        'login.rateLimited': 'Çok fazla deneme. Bir dakika bekleyip tekrar dene.',
+        'login.rateLimitedSec': 'Çok fazla deneme. {n} saniye bekleyip tekrar dene.',
+        'login.forgotLink': 'Parolanı mı unuttun?',
+        'login.forgotTitle': 'Parolanı sıfırla',
+        'login.forgotSub': 'Hesabının e-postasını gir. Sana sıfırlama bağlantısı göndereceğiz.',
+        'login.sendResetLink': 'Sıfırlama bağlantısı gönder',
+        'login.sendingResetLink': 'Gönderiliyor…',
+        'login.resetLinkSent': 'Bağlantı gönderildi! E-postanı kontrol et.',
+        'login.missingEmail': 'Lütfen e-postanı gir.',
+        'login.rememberPassword': 'Hatırladın mı?',
+        'login.resetTitle': 'Yeni parola belirle',
+        'login.resetSub': 'Yeni bir parola seç (en az 6 karakter).',
+        'login.setNewPassword': 'Yeni parolayı kaydet',
+        'login.savingPassword': 'Kaydediliyor…',
+        'login.sub': 'Arkadaşlarınla oynamak için giriş yap.',
+        'login.email': 'E-posta',
+        'login.emailPlaceholder': 'ornek@eposta.com',
+        'login.password': 'Parola',
+        'login.signIn': 'Giriş yap',
+        'login.or': 'veya',
+        'login.continueGoogle': 'Google ile devam et',
+        'login.continueGuest': 'Misafir olarak devam et',
+        'login.googleUnavailable': 'Google ile giriş şu anda kullanılamıyor. Tekrar deneyin.',
+        'login.googleFailed': 'Google ile giriş başarısız. Tekrar deneyin.',
+        'login.newHere': 'Yeni misin?',
+        'login.createAccount': 'Hesap oluştur',
+        // Username setup (first sign-in via Google)
+        'username.pickTitle': 'Kullanıcı adı seç',
+        'username.pickSub': 'Arkadaşların seni Roundlly\'de böyle bulacak.',
+        'login.tagline': 'Arkadaşların ve ailenle oyna.',
+        'login.fineprint': 'Devam ederek nazik oynamayı kabul etmiş olursun.',
+        'username.placeholder': 'kullanici_adi',
+        'username.available': 'Uygun',
+        'username.taken': 'Bu kullanıcı adı alınmış',
+        'username.invalid': '3–20 küçük harf, rakam veya _ kullan',
+        'username.checking': 'Kontrol ediliyor…',
+        'username.saving': 'Kaydediliyor…',
+        'username.confirm': 'Devam et',
+
+        // Games
+        'games.notifications': 'Bildirimler',
+        'games.pickGame': 'Bir oyun seç',
+        'games.classic': 'Sıcak Koltuk',
+        'games.fastestWins': 'En hızlı kazanır',
+        'games.classicDesc': 'Biri tahmin eder, diğerleri ipucu verir. En hızlı doğru tahmin kazanır.',
+        'games.classicMeta': '2–8 oyuncu · Süre yok',
+        'games.chameleon': 'Bukalemun',
+        'games.bluff': 'Blöf & yakala',
+        'games.chameleonDesc': 'Bir oyuncu sırrı bilmiyor. Saklanmadan önce onu bul.',
+        'games.chameleonMeta': '3–8 oyuncu · Hızlı turlar',
+        'games.liar': 'Yalancı Bardağı',
+        'games.liarDesc': 'Kartları kapalı oyna. Ne olduklarını yalan söyle. Yakalanırsan — uğursuz bardaktan bir yudum al.',
+        'games.liarMeta': '2–8 oyuncu · Blöf yap & hayatta kal',
+        'games.mafia': 'Mafya',
+        'games.mafiaBadge': 'Katili yakala',
+        'games.mafiaDesc': 'Aranızda gizlenen katili bulun. Bir kişi ekrandaki yönergelerle anlatıcı olur.',
+        'games.mafiaMeta': '6–9 arkadaş · 1 kişi anlatır',
+        'games.mafiaCards': 'Mafya',
+        'games.mafiaCardsBadge': 'Katili yakala',
+        'games.mafiaCardsDesc': 'Aranızda saklanan katili bulun. Bir kişi anlatıcılık yapar ve gece aşamalarını yönetir — roller dağıtıldıktan sonra telefonlar cepte kalır.',
+        'games.mafiaCardsMeta': '6–9 arkadaş · 1 kişi anlatır',
+        'mafiaCards.placeholder.title': 'Oyun yakında',
+        'mafiaCards.placeholder.body': 'Roller dağıtıldı — kart tarzı oyun arayüzü bir sonraki aşamada gelecek. Şimdilik bu yer tutucu, lobi + başlatma akışının çalıştığını doğruluyor.',
+        'mafiaCards.role.hiddenTitle': 'Rolün gizli',
+        'mafiaCards.role.hiddenSub': 'Rolünü görmeye hazır olduğunda "Rolü Göster"e dokun.',
+        'mafiaCards.role.revealBtn': 'Rolü Göster',
+        'mafiaCards.role.hideBtn': 'Rolü Gizle',
+        'mafiaCards.role.status': 'Anlatıcıyı dinle. Oyunu o yönetecek.',
+        'mafiaCards.narrator.phaseNight': 'Gece',
+        'mafiaCards.narrator.phaseDay': 'Gündüz',
+        'mafiaCards.narrator.playersTitle': 'Oyuncular',
+        'mafiaCards.narrator.loadingRoles': 'Roller yükleniyor…',
+        'mafiaCards.narrator.help': 'Bir oyuncuya dokunarak elendi olarak işaretle. Pile dokun, Gece ↔ Gündüz arası geç.',
+        'mafiaCards.narrator.statsAliveOut': '{alive} hayatta · {out} elendi',
+        'mafiaCards.narrator.endGame': 'Oyunu bitir',
+        'mafiaCards.narrator.endGameConfirm': 'Oyunu bitirmek istediğine emin misin? Kazananı sözlü olarak ilan edip yeni oyun başlatabilirsin.',
+        'mafiaCards.narrator.endedTitle': 'Oyun sona erdi',
+        'mafiaCards.narrator.endedBody': 'Sekme kapatıldığında oyunun ilerleyişi kayboldu. Yeni bir tur için Oyunu bitir’e dokun.',
+        'mafiaCards.script.summary': 'Ne diyeceğim?',
+        'mafiaCards.script.kindOnce': 'Bir kez oku',
+        'mafiaCards.script.kindEveryRound': 'Her turda oku',
+        'mafiaCards.script.kindEndgame': 'Oyun bitince',
+        'mafiaCards.script.openingTitle': 'Kurulum ve tanışma gecesi',
+        'mafiaCards.script.roundLoopTitle': 'Her tur (gece → gündüz)',
+        'mafiaCards.script.subNight': 'Gece',
+        'mafiaCards.script.subDay': 'Gündüz',
+        'mafiaCards.script.endgameTitle': 'Kazanma koşulları',
+        'mafiaCards.script.detectiveHint': 'Kime işaret ettiğine bak. Rol listene göz at, Mafyaysa baş parmağı yukarı, değilse aşağı göster.',
+        'mafiaCards.script.dayRevealHint': 'Kimin öldüğünü duyur (veya kimsenin ölmediğini). Panoda kartına dokunarak elendi olarak işaretle.',
+        'mafiaCards.script.voteCardsLine': 'Oylama zamanı. El kaldırın — kimden şüpheleniyorsunuz?',
+        'mafiaCards.script.endgameTownWins': 'Tüm Mafyalar oylanarak elendiğinde köy kazanır.',
+        'mafiaCards.script.endgameMafiaWins': 'Mafya, sayıları köylüleri eşitler veya geçerse kazanır.',
+        'mafiaCards.rules.summary': 'Anlatıcı kuralları',
+        'mafiaCards.rules.r1.title': 'Gece dikkatli izle',
+        'mafiaCards.rules.r1.body': 'Her oyuncunun gözleri kapalı ve hareketsiz olduğundan emin ol. Bakan birini görürsen sesli olarak uyar — bakmak oyunu herkes için bozar.',
+        'mafiaCards.rules.r2.title': 'Dedektif nasıl çalışır',
+        'mafiaCards.rules.r2.body': '"Dedektif, uyan" dediğinde, Dedektif gözlerini açar ve sessizce <strong>bir oyuncuyu işaret eder</strong> — araştırmak istediği kişiyi. Rol listene bakıp o oyuncunun rolünü kontrol et. Sonra Dedektife <strong>Mafyaysa baş parmak yukarı</strong>, <strong>değilse aşağı</strong> göster. Sadece Dedektifin görmesi için elini alçakta tut.<br><br><strong>İstisna — Mafya Lideri:</strong> Oyunda Mafya Lideri varsa ve Dedektif Mafya Liderini işaret ederse, <strong>YALAN SÖYLEMEK ZORUNDASIN</strong>. Mafya olmasına rağmen baş parmak aşağı (sivil) göster. Mafya Lideri Dedektifin araştırmasından gizlidir — bu onun özel gücüdür.',
+        'mafiaCards.rules.r3.title': 'Senin sözün son',
+        'mafiaCards.rules.r3.body': 'Masa bir oylama veya ölüm üzerinde tartışırsa, sen karar verirsin. Tartışma — kararını açıkla ve devam et. Anlatıcı kararlı olduğunda oyun daha akıcı geçer.',
+        'games.mafiaComingSoon': 'Mafya lobisi sonraki adımda geliyor. Tıkladığınız kart bağlı ve çalışıyor — ama lobi ekranı sonraki sürümde.',
+        // Mafya (Game #4) — lobi metinleri
+        'mafia.howToPlay': 'Nasıl oynanır',
+        'mafia.rulesBtn': 'Kurallar',
+        'mafia.help.title': 'Mafya Nasıl Oynanır',
+        'mafia.help.body': '<div class="info-blocks"><p class="info-intro">Köylüler konuşarak ve oy vererek Mafyayı bulur. Mafya geceleri köylüleri öldürür. Ayakta kalan taraf kazanır.</p><div class="info-block"><div class="info-block-emoji">🎭</div><div class="info-block-content"><div class="info-block-title">Roller</div><div class="info-block-text"><strong>🔪 Mafya</strong> — Her gece sessizce bir oyuncuyu öldürmek için anlaşır. Köylülerden çoğunlukta olunca kazanır.<br><br><strong>🩺 Doktor</strong> — Her gece sessizce bir oyuncuyu korur. Kendini de koruyabilir.<br><br><strong>🕵️ Dedektif</strong> — Her gece bir oyuncuyu işaret eder. Anlatıcı sessizce baş parmağını yukarı (Mafya) veya aşağı (değil) gösterir.<br><br><strong>👤 Köylü</strong> — Özel gücü yok. Konuş, dinle ve oy vererek Mafyayı ortaya çıkar.</div></div></div><div class="info-block"><div class="info-block-emoji">🌙</div><div class="info-block-content"><div class="info-block-title">Her Tur</div><div class="info-block-text"><strong>Gece.</strong> Gözler kapalı. Mafya hedef seçer. Doktor korunacak birini seçer. Dedektif bir oyuncuyu araştırır.<br><br><strong>Gündüz.</strong> Anlatıcı ne olduğunu duyurur. Herkes tartışır.<br><br><strong>Oylama.</strong> Çoğunluğu alan elenir — rolü açıklanır.</div></div></div><div class="info-block"><div class="info-block-emoji">🏆</div><div class="info-block-content"><div class="info-block-title">Kazanma</div><div class="info-block-text">Tüm Mafyalar oylanarak elendiğinde köylüler kazanır.<br>Sayıları köylüleri eşitler veya geçerse Mafya kazanır.</div></div></div><div class="info-block"><div class="info-block-emoji">💡</div><div class="info-block-content"><div class="info-block-title">Hızlı İpuçları</div><div class="info-block-text">• Rolünü gizli tut.<br>• Rolünü ezberledikten sonra telefonu yüzüstü koy.<br>• Gece bakma — Mafya da dinliyor.<br>• Anlatıcının sözü kesindir.</div></div></div></div>',
+        'mafia.howToSub': 'İlk kez mi? 1 dakikalık okuma',
+        'mafia.prototypeHint': '<strong>Herkes kendi telefonunda.</strong> Bir kişi anlatıcı olur — oyunu ekrandaki yönergelerle yönetir ama oynamaz. 5–8 oyuncu + 1 anlatıcı gerekir.',
+        'mafia.narratorLabel': 'Anlatıcı',
+        'mafia.narratorNotSet': 'Anlatıcı seçmek için dokun',
+        'mafia.narratorNotSetGuest': 'Host\'un anlatıcı seçmesi bekleniyor',
+        'mafia.narratorSub': 'Oyunu ekrandaki yönergelerle yönetir. Oynamaz.',
+        'mafia.narratorAssignedSub': 'Oyunu bu cihazdan yönetecek.',
+        'mafia.narratorIsYou': 'Anlatıcı sensin',
+        'mafia.narratorTagline': 'Anlatıcı',
+        'mafia.unknownPlayer': 'Oyuncu',
+        'mafia.narratorPickerTitle': 'Anlatıcıyı seç',
+        'mafia.narratorPickerSub': 'Oyunu kim yönetir? Oynamayacak — sadece yönergeleri okuyacak.',
+        'mafia.narratorPickerEmpty': 'Henüz oyuncu yok. Oda kodunu paylaş.',
+        'mafia.narratorPickThis': 'Anlatıcı yapmak için dokun',
+        'mafia.narratorCurrent': 'Mevcut anlatıcı',
+        'mafia.you': 'sen',
+        'mafia.rolemixTitle': 'Rol dağılımı · oto-dengeli',
+        'mafia.optional.title': 'Opsiyonel roller',
+        'mafia.optional.sub': 'Oyuna renk katmak için güçler ekle. Herhangi bir kombinasyonu açıp kapatabilirsin.',
+        'mafia.optional.detective.name': 'Dedektif',
+        'mafia.optional.detective.desc': 'Her gece bir oyuncuyu araştır. Anlatıcı baş parmakla cevap verir.',
+        'mafia.optional.child.name': 'Çocuk',
+        'mafia.optional.child.desc': 'Köylü olarak oynar ama öldüğünde (oyla veya Mafya tarafından) yanında bir oyuncuyu götürür.',
+        'mafia.optional.mafiaLeader.name': 'Mafya Lideri',
+        'mafia.optional.mafiaLeader.desc': 'Bir Mafyanın yerini alır. Dedektife MASUM görünür — anlatıcı baş parmak aşağı yapar.',
+        'mafia.rolemixWaiting': 'Dengeli oyun için 5–8 oyuncu gerekir.',
+        'mafia.role.mafia': 'Mafya',
+        'mafia.role.mafia_leader': 'Mafya Lideri',
+        'mafia.role.mafiaLeader': 'Mafya Lideri',
+        'mafia.role.detective': 'Dedektif',
+        'mafia.role.doctor': 'Doktor',
+        'mafia.role.child': 'Çocuk',
+        'mafia.role.villager': 'Köylü',
+        'mafia.cheatSheet.mafiaLeader': 'Mafya Lideri (Dedektife masum görünür)',
+        'mafia.players': 'Oyuncular',
+        'mafia.playerN': 'Oyuncu {n}',
+        'mafia.emptySeat': 'Boş koltuk',
+        'mafia.tapToJoin': 'Katılmak için dokun',
+        'mafia.inviteFriend': 'Arkadaş davet et',
+        'mafia.statusYou': 'Sen',
+        'mafia.statusClaimed': 'Katıldı',
+        'mafia.statusNarrator': 'Anlatıcı',
+        'mafia.hintNeedMorePlayers': 'Başlamak için {n} oyuncu daha gerek.',
+        'mafia.hintNeedNarrator': 'Host\'un başlamadan önce anlatıcı seçmesi gerek.',
+        'mafia.hintTooMany': 'Çok fazla oyuncu. Maks 8.',
+        'mafia.hintReady': '{n} oyuncu ile başlamaya hazır.',
+        'mafia.startWaitingHost': 'Host bekleniyor…',
+        'mafia.startedComingSoon': 'Sunucuda oyun başladı! Rol kartları ve anlatıcı ekranı sonraki adımda geliyor.',
+        'mafia.starting': 'Başlatılıyor…',
+        'mafia.startFailed': 'Oyun başlatılamadı: {msg}',
+        // Rol kartı (Adım 4)
+        'mafia.roleCard.loading': 'Rolün yükleniyor…',
+        'mafia.roleCard.hideBtn': 'Rolü gizle',
+        'mafia.roleCard.showBtn': 'Rolü göster',
+        'mafia.roleCard.hiddenPrompt': 'Bakmak için "Rolü göster"e dokun',
+        'mafia.roleCard.listenForNarrator': 'Anlatıcının yönergelerini dinle.',
+        'mafia.roleCard.itsNight': 'Gece oldu. Gözler kapalı. Anlatıcıyı bekle.',
+        'mafia.roleCard.itsDay': 'Gündüz oldu. Tartışın ve birlikte karar verin.',
+        'mafia.roleCard.teammatesLabel': 'Takım arkadaşların:',
+        'mafia.roleCard.mafia.title': 'Sen Mafyasın',
+        'mafia.roleCard.mafia.desc': 'Geceleri köylüleri öldür. Gündüz oy verilip elenmemeye dikkat et. Sessizce ekibinle çalış.',
+        'mafia.roleCard.mafiaLeader.title': 'Sen Mafya Lidersin',
+        'mafia.roleCard.mafiaLeader.desc': 'Mafya takımındasın. Dedektif seni MASUM görür — anlatıcı senin için yalan söyler. Geceleri öldürmeyi takımınla koordine et.',
+        'mafia.roleCard.child.title': 'Sen Çocuksun',
+        'mafia.roleCard.child.desc': 'Köylü gibi oynarsın — özel bir gece gücün yok. Ama öldüğünde (oyla VEYA Mafya tarafından), yanında bir oyuncuyu götürürsün. Şüphelendiğin birini seç.',
+        'mafia.roleCard.detective.title': 'Sen Dedektifsin',
+        'mafia.roleCard.detective.desc': 'Her gece bir oyuncuyu araştır. Anlatıcı, parmak işaretiyle Mafya olup olmadığını söyleyecek.',
+        'mafia.roleCard.doctor.title': 'Sen Doktorsun',
+        'mafia.roleCard.doctor.desc': 'Her gece birini korumak için seç. Mafya ona saldırırsa hayatta kalır. Kendini de koruyabilirsin.',
+        'mafia.roleCard.villager.title': 'Sen Köylüsün',
+        'mafia.roleCard.villager.desc': 'Konuşarak ve oy vererek Mafyayı bul. Özel bir gücün yok — sadece sezgin var.',
+        // Anlatıcı taslağı (Adım 5 değişecek — geri uyumluluk için bir tur saklı)
+        'mafia.narratorStub.title': 'Sen anlatıcısın',
+        'mafia.narratorStub.sub': 'Oyun başladı. Sesli okunan tam anlatıcı betiği sonraki adımda geliyor.',
+        'mafia.narratorStub.phaseLine': 'Aşama: {phase} · Tur {round}',
+        // Anlatıcı ekranı (Adım 5)
+        'mafia.narrator.readAloud': 'Sesli oku',
+        'mafia.narrator.continue': 'Devam →',
+        'mafia.narrator.advancing': 'İlerletiliyor…',
+        'mafia.narrator.startVote': 'Oylama başlat',
+        'mafia.narrator.unknownBeat': 'Bilinmeyen sahne: {beatId}. Çıkıp yeni oyun başlat.',
+        'mafia.narrator.advanceFailed': 'İlerletilemedi: {msg}',
+        'mafia.narrator.aliveLabel': 'Hayatta',
+        'mafia.narrator.deadLabel': 'Elenmiş',
+        'mafia.narrator.roundLabel': 'Tur',
+        'mafia.narrator.stubHint': 'Sonraki adımda bağlanacak. Devam şu an kapalı.',
+        'mafia.narrator.phaseNight': 'GECE {round}',
+        'mafia.narrator.phaseDay': 'GÜNDÜZ {round}',
+        'mafia.narrator.phaseVote': 'OYLAMA',
+        'mafia.narrator.phaseLobby': 'LOBİ',
+        'mafia.narrator.modeOpening': 'Açılış',
+        'mafia.narrator.modeMiddle': 'Orta',
+        'mafia.narrator.modeEndgame': 'Final',
+        // Adım 6 — gece eylemleri
+        'mafia.narrator.targetHintMafia': 'Mafyanın sessizce işaret ettiği oyuncuya dokun.',
+        'mafia.narrator.targetHintDetective': 'Dedektifin işaret ettiği oyuncuya dokun. Uygulama sana 👍 veya 👎 gösterecek.',
+        'mafia.narrator.targetHintDoctor': 'Doktorun sessizce işaret ettiği oyuncuya dokun.',
+        'mafia.narrator.actionFailed': 'İşlem başarısız: {msg}',
+        'mafia.narrator.resolving': 'Gece çözülüyor…',
+        'mafia.narrator.resolveFailed': 'Gece çözülemedi: {msg}',
+        'mafia.narrator.thumbMafiaTitle': '👍 {name} Mafya',
+        'mafia.narrator.thumbMafiaSub': 'Dedektife sessizce 👍 göster — sadece o görmeli.',
+        'mafia.narrator.thumbNotMafiaTitle': '👎 {name} Mafya değil',
+        'mafia.narrator.thumbNotMafiaSub': 'Dedektife sessizce 👎 göster — sadece o görmeli.',
+        'mafia.narrator.thumbCountdown': 'Otomatik geçiş',
+        'mafia.narrator.thumbSeconds': 'sn',
+        // Adım 7 — gündüz aşaması + oylama
+        'mafia.narrator.startingVote': 'Oylama başlatılıyor…',
+        'mafia.narrator.revealResult': 'Sonucu göster',
+        'mafia.narrator.revealing': 'Gösteriliyor…',
+        'mafia.narrator.tallyEmpty': 'Henüz oy yok — oyuncuların dokunması bekleniyor.',
+        'mafia.narrator.votesProgress': '{total} oyundan {cast} verildi',
+        // Dinamik sahne metni
+        'mafia.script.middle.dayRevealSaved': 'Sabah oldu. Doktor dün gece bir hayat kurtardı — kimse ölmedi.',
+        'mafia.script.middle.dayRevealKilledRole': 'Sabah oldu. {name} gitti — gece öldürüldü. Rolü: {role}.',
+        'mafia.script.middle.dayRevealKilledNoRole': 'Sabah oldu. {name} gitti — gece öldürüldü.',
+        'mafia.script.middle.voteRevealOutRole': '{name} oylanarak elendi. Rolü: {role}.',
+        'mafia.script.middle.voteRevealOutNoRole': '{name} oylanarak elendi.',
+        'mafia.script.middle.voteTie.text': 'Berabere kaldı. Yeniden oylama — sadece beraberlik kalan oyuncular arasında.',
+        'mafia.script.middle.voteTieBetween': '{names} arasında berabere. Yeniden oylama — sadece bu ikisi arasında.',
+        // Oylama ekranı (hayatta olan oyuncular)
+        'mafia.vote.title': 'Oylama zamanı',
+        'mafia.vote.sub': 'Elenmesini istediğin oyuncuya dokun. Oyunu değiştiremezsin.',
+        'mafia.vote.tieRevotePill': 'Yeniden oylama — sadece beraberlik kalanlar',
+        'mafia.vote.tapToLock': 'Oyunu kilitlemek için bir oyuncuya dokun.',
+        'mafia.vote.lockedTitle': 'Oy verildi: {name}',
+        'mafia.vote.lockedSub': 'Diğerlerinin oy vermesini bekle. Anlatıcı sonucu açıklayacak.',
+        'mafia.vote.noCandidates': 'Oy verilecek kimse yok. Anlatıcıyı bekle.',
+        'mafia.vote.failed': 'Oy başarısız: {msg}',
+        // Elenme ekranı
+        'mafia.out.title': 'Elendiniz',
+        'mafia.out.sub': 'Sessiz kal. İpucu, jest veya tepkiyle takımına yardım etme. Oyun sensiz devam ediyor.',
+        // Adım 8 — final sonuç
+        'mafia.result.townWinsTitle': 'Köy kazandı!',
+        'mafia.result.townWinsSub': 'Mafya yakalandı. Köy için adalet.',
+        'mafia.result.mafiaWinsTitle': 'Mafya kazandı',
+        'mafia.result.mafiaWinsSub': 'Mafya artık köyden fazla. Köy düştü.',
+        'mafia.result.gameOver': 'Oyun bitti',
+        'mafia.result.rolesLabel': 'Rol açıklaması',
+        'mafia.result.statusAlive': 'Hayatta',
+        'mafia.result.statusOut': 'Elenmiş',
+        'mafia.result.playAgain': 'Aynı kadroyla tekrar oyna',
+        'mafia.result.playAgainFailed': 'Sıfırlanamadı: {msg}',
+        'mafia.result.resetting': 'Sıfırlanıyor…',
+        'mafia.result.rotateHint': 'İpucu: bir sonraki oyunda anlatıcıyı değiştir ki herkes oynayabilsin.',
+        'mafia.result.waitingHost': 'Host aynı kadroyla yeni oyun başlatabilir.',
+        'mafia.result.backToGames': 'Oyunlara dön',
+        // Betik — AÇILIŞ modu (Tur 1, Gün 0)
+        'mafia.script.opening.setup.text': 'Mafyaya hoş geldiniz. Oyunu ben yöneteceğim — telefonunuz size ne diyeceğimi tam olarak söylüyor. Her birinizin telefonunda gizli bir rol var. Ezberle, sonra telefonunu yüzüstü koy.',
+        'mafia.script.opening.setup.stageDir': 'Herkes rolünü ezberleyip telefonunu yüzüstü koyana kadar bekle.',
+        'mafia.script.opening.roles.text': 'Kısa bir hatırlatma. Köylüler konuşarak ve oy vererek Mafyayı bulur. Mafya geceleri köylüleri öldürür. Dedektif her gece bir oyuncuyu araştırır — Mafyaysa parmak işaretiyle söylerim. Doktor her gece bir oyuncuyu korur.',
+        'mafia.script.opening.night1Open.text': 'Gece oldu. Herkes gözlerini kapatsın. Bakmayın, fısıldamayın — Mafya dinliyor.',
+        'mafia.script.opening.night1Open.stageDir': 'Herkesin gözleri kapalı ve başı önde olana kadar bekle. Sakin 3 saniye bekle.',
+        'mafia.script.opening.night1MafiaMeet.text': 'Mafya, gözlerini aç. Takım arkadaşlarını ezberle. Sessizce başınla onayla.',
+        'mafia.script.opening.night1MafiaMeet.stageDir': '4–5 saniye bekle. Mafyanın gözlerini açıp birbirini gördüğünden emin ol.',
+        'mafia.script.opening.night1MafiaSleep.text': 'Mafya, gözlerini kapat. Bu gece sadece tanışma için — kimse ölmüyor.',
+        'mafia.script.opening.day0Morning.text': 'Sabah oldu. Herkes uyansın. Kimse ölmedi — bir dakika birbirinizi tanıyın. Bu gece öldürmeler başlıyor.',
+        // Betik — ORTA modu (Tur 2+)
+        'mafia.script.middle.nightOpen.text': 'Gece oldu. Gözler kapalı.',
+        'mafia.script.middle.mafiaWake.text': 'Mafya, uyan. Hedefini seç.',
+        'mafia.script.middle.mafiaWake.stageDir': 'Mafya kurbanı seçerken sessizce izle.',
+        'mafia.script.middle.mafiaSleep.text': 'Mafya, gözlerini kapat.',
+        'mafia.script.middle.detectiveWake.text': 'Dedektif, uyan. Araştıracak birini seç.',
+        'mafia.script.middle.detectiveWake.stageDir': 'Rol listene bak, sonra Dedektife sessizce Mafya ise 👍, değilse 👎 işareti ver.',
+        'mafia.script.middle.detectiveSleep.text': 'Dedektif, gözlerini kapat.',
+        'mafia.script.middle.leaderHint.text': 'Hatırlatma: Dedektif Mafya Liderini gösterirse, baş parmak AŞAĞI (masum) yap.',
+        'mafia.script.middle.doctorWake.text': 'Doktor, uyan. İstediğini koru — kendin dahil.',
+        'mafia.script.middle.doctorWake.stageDir': 'Doktor seçim yaparken sessizce izle.',
+        'mafia.script.middle.doctorSleep.text': 'Doktor, gözlerini kapat.',
+        'mafia.script.middle.childNightDeath.text': 'Mafya bu gece Çocuğu öldürdüyse, Çocuktan bir oyuncuyu göstermesini iste — o oyuncu da ölür.',
+        'mafia.script.middle.childVoteDeath.text': 'Çocuk oyla elendiyse, bir oyuncuyu göstermesini iste — o oyuncu da ölür.',
+        'mafia.script.middle.dayReveal.text': 'Sabah oldu. Kasaba uyanıyor…',
+        'mafia.script.middle.dayReveal.stageDir': 'Kimin öldüğünü duyur (veya kimsenin ölmediğini) — sonra kartına dokunarak işaretle.',
+
+        // Oyun öncesi kurallar sayfası (Başla'ya basıldığında herkese gösterilir).
+        'mafia.rules.title': 'Mafya Nasıl Oynanır',
+        'mafia.rules.intro': 'Birlikte okuyun. Hazır olduğunuzda "Hazırım"a dokunun — herkes hazır olunca oyun başlar.',
+        'mafia.rules.goalHeader': 'Amaç',
+        'mafia.rules.goalText': 'Köylüler konuşarak ve oy vererek Mafyayı bulur. Mafya geceleri köylüleri gizlice öldürür. Ayakta kalan taraf kazanır.',
+        'mafia.rules.rolesHeader': 'Roller',
+        'mafia.rules.role.mafia.name': 'Mafya',
+        'mafia.rules.role.mafia.desc': 'Her gece, diğer Mafyalarla sessizce anlaşıp bir oyuncuyu öldürürsünüz. Köyden çoğunlukta olunca kazanırsınız.',
+        'mafia.rules.role.doctor.name': 'Doktor',
+        'mafia.rules.role.doctor.desc': 'Her gece sessizce bir oyuncuyu seçip korursun. Mafya o oyuncuya saldırırsa hayatta kalır. Kendini de koruyabilirsin.',
+        'mafia.rules.role.detective.name': 'Dedektif',
+        'mafia.rules.role.detective.desc': 'Her gece araştırmak istediğin bir oyuncuyu işaret et. Anlatıcı, oyuncu Mafyaysa sessizce baş parmağını yukarı, değilse aşağı gösterir.',
+        'mafia.rules.role.villager.name': 'Köylü',
+        'mafia.rules.role.villager.desc': 'Özel bir gücün yok — sadece içgüdülerin. Konuş, dinle ve Mafyayı kasabayı yok etmeden önce ortaya çıkar.',
+        'mafia.rules.role.child.name': 'Çocuk',
+        'mafia.rules.role.child.desc': 'Oyun boyunca Köylü olarak oynar. Çocuk öldüğünde (oyla veya Mafya tarafından), yanında seçtiği bir oyuncuyu götürür.',
+        'mafia.rules.role.mafiaLeader.name': 'Mafya Lideri',
+        'mafia.rules.role.mafiaLeader.desc': 'Mafya takımındadır ama Dedektife MASUM görünür. Anlatıcı, Dedektif onu araştırdığında baş parmak aşağı işareti yapar.',
+        'mafia.rules.roundHeader': 'Her Tur',
+        'mafia.rules.round.night.label': 'Gece.',
+        'mafia.rules.round.night.desc': 'Herkes gözlerini kapatır. Mafya sessizce bir hedef seçer. Doktor gizlice birini korur.',
+        'mafia.rules.round.day.label': 'Gündüz.',
+        'mafia.rules.round.day.desc': 'Gözler açılır. Anlatıcı kimin öldüğünü duyurur. Herkes tartışır ve suçlar.',
+        'mafia.rules.round.vote.label': 'Oylama.',
+        'mafia.rules.round.vote.desc': 'Herkes bir şüpheli için oy verir. Çoğunluğu alan elenir — rolü açıklanır.',
+        'mafia.rules.winHeader': 'Kazanma',
+        'mafia.rules.winText': 'Tüm Mafyalar oy birliğiyle elendiğinde köylüler kazanır. Sayıları köylüleri eşitler veya geçerse Mafya kazanır.',
+        'mafia.rules.tipsHeader': 'Hızlı İpuçları',
+        'mafia.rules.tip1': 'Rolünü gizli tut. Sadece anlatıcı herkesi bilir.',
+        'mafia.rules.tip2': 'Rolünü ezberledikten sonra telefonu yüzüstü koy.',
+        'mafia.rules.tip3': 'Gece bakma. Mafya da ipuçları için dinliyor.',
+        'mafia.rules.tip4': 'Anlatıcının sözü kesindir.',
+        'mafia.rules.readyBtn': 'Hazırım',
+        'mafia.rules.readyDone': 'Hazırsınız',
+        'mafia.rules.readyCount': '{total} kişiden {count} hazır',
+        'mafia.script.middle.dayDiscuss.text': 'Konuşun. Hazır olunca oylayın.',
+        'mafia.script.middle.voteProgress.text': 'Telefonlarınızdan oylayın.',
+        'mafia.script.middle.voteProgress.stageDir': 'Sadece yaşayan oyuncular oy verir. Herkes oy verdiğinde sonucu aç.',
+        'mafia.script.middle.voteReveal.text': 'Oylar geldi. Sonucu sesli oku.',
+        // Betik — FİNAL modu
+        'mafia.script.endgame.transition.text': 'Az kaldınız. Dikkatli seçin.',
+        'mafia.script.endgame.nightOpen.text': 'Gece oldu. Gözler kapalı. Bu son gece olabilir.',
+        'mafia.script.endgame.dayDiscuss.text': 'Konuşun. Oylayın. Bu oy oyunu bitirebilir.',
+        'mafia.script.endgame.winTown.text': 'Son Mafya yakalandı. Kasaba kazandı!',
+        'mafia.script.endgame.winMafia.text': 'Mafya artık kasabadan fazla. Mafya kazandı.',
+        'mafia.howToComingSoon': 'Tam nasıl-oynanır sayfası sonraki adımlarda geliyor. Kısa özet: bir anlatıcı oyunu yönetir, diğerleri konuşarak ve oy vererek Mafyayı bulur.',
+        'mafia.toastReconnectStale': 'Bu oyun artık çalışmıyor. Oyun listesine dönülüyor.',
+        // The Chameleon
+        'cham.howToPlay': 'Nasıl oynanır',
+        'cham.howToSub': 'Hızlı kurallar',
+        'cham.howToTitle': 'Bukalemun nasıl oynanır',
+        'cham.howToBody': '<div class="info-blocks"><p class="info-intro">Blöf oyunu. Uygulama ızgaradan bir <strong>gizli kelime</strong> ve bir oyuncuyu <strong>Bukalemun</strong> olarak seçer. Bukalemun hangi kelimenin gizli olduğunu göremez. Diğer herkes görür. Görevin onu bulmak.</p><div class="info-block"><div class="info-block-emoji">🎯</div><div class="info-block-content"><div class="info-block-title">Her oyuncu TEK kelime söyler</div><div class="info-block-text">Sırrı bildiğini kanıtlayan bir ipucu — ama Bukalemun\'un kopyalayamayacağı kadar kapalı.</div></div></div><div class="info-block"><div class="info-block-emoji">🗳️</div><div class="info-block-content"><div class="info-block-title">Sonra herkes oy verir</div><div class="info-block-text">Sence kim bilmiyor? Telefonunda yüzüne dokun.</div></div></div><div class="info-block"><div class="info-block-emoji">🏆</div><div class="info-block-content"><div class="info-block-title">Kim kazanır</div><div class="info-block-text">Bukalemun\'u oyla → <strong>Oyuncular kazanır</strong>. Yanlış kişiyi oyla → <strong>Bukalemun kazanır</strong>.</div></div></div></div>',
+        'cham.topicLabel': 'Konu',
+        'cham.topicSub': 'Bu oyunun konusunu seç, ya da her tur rastgele için Karışık.',
+        'cham.topic.mixed': 'Karışık',
+        'cham.topic.dogs': 'Köpek Cinsleri',
+        'cham.topic.zoo': 'Hayvanat Bahçesi',
+        'cham.topic.sea': 'Deniz Canlıları',
+        'cham.topic.birds': 'Kuşlar',
+        'cham.topic.farm': 'Çiftlik Hayvanları',
+        'cham.topic.pizza': 'Pizza Malzemeleri',
+        'cham.topic.fruits': 'Meyveler',
+        'cham.topic.veggies': 'Sebzeler',
+        'cham.topic.desserts': 'Tatlılar',
+        'cham.topic.drinks': 'İçecekler',
+        'cham.topic.turkish': 'Türk Yemekleri',
+        'cham.topic.breakfast': 'Kahvaltı',
+        'cham.topic.disney': 'Disney Karakterleri',
+        'cham.topic.heroes': 'Süper Kahramanlar',
+        'cham.topic.ballsports': 'Top Sporları',
+        'cham.topic.olympic': 'Olimpiyat Sporları',
+        'cham.topic.instruments': 'Müzik Aletleri',
+        'cham.topic.hospital': 'Hastane Meslekleri',
+        'cham.topic.trades': 'Zanaatlar',
+        'cham.topic.landmarks': 'Anıtlar',
+        'cham.topic.kitchen': 'Mutfak Eşyaları',
+        'cham.topic.clothes': 'Kıyafetler',
+        'cham.youAreChameleon': 'Sen Bukalemunsun',
+        'cham.youArePlayer': 'Sırrı biliyorsun',
+        'cham.roleBannerChameleon': '<b>Bukalemun</b> sensin',
+        'cham.roleBannerPlayer': 'Bukalemun <b>değilsin</b>',
+        'cham.yourJobLabel': 'Görevin',
+        'cham.yourJobPlayer': 'Sırrı ima eden <b>tek kelime</b> söyle. Çok bariz olmasın.',
+        'cham.yourJobChameleon': 'Sırrı bilmiyorsun. İpuçlarını dinle ve uyum sağlayan <b>tek kelime</b> söyle.',
+        'cham.secretIs': 'Sır: {word}',
+        'cham.roundOf': 'Tur {current} / {total}',
+        'cham.youStart': 'Sen başla. Saat yönünde.',
+        'cham.nameStarts': 'Başlayan: {name}. Saat yönünde.',
+        'cham.cuePlayer': 'Vurgulanan sırrı ima eden <b>tek kelime</b> söyle. Çok bariz olmasın.',
+        'cham.cueChameleon': 'İpuçlarını dinle. Uyum sağlamak için <b>tek kelime</b> söyle.',
+        'cham.doneHints': 'Bitti — oylamaya hazır',
+        'cham.voteTitle': 'Bukalemun kim?',
+        'cham.voteSub': 'Bukalemun olduğunu düşündüğün oyuncuya dokun. İstersen önce konuş — acele yok.',
+        'cham.lockInVote': 'Oyu kesinleştir',
+        'cham.voteForName': 'Oyla: {name}',
+        'cham.tallyTitle': 'Oy sayımı',
+        'cham.tallySub': 'Bu turda oylar nasıl gitti',
+        'cham.leaderboardTitle': 'Toplam galibiyet',
+        'cham.leaderboardSub': 'Bu oyunda tüm turlar boyunca',
+        'cham.voteCount': '{n} oy',
+        'cham.voteCountOne': '1 oy',
+        'cham.gameOver': 'Oyun bitti',
+        'cham.roundComplete': 'Tur {n} tamamlandı',
+        'cham.chameleonWins': 'Bukalemun kazandı!',
+        'cham.playersWin': 'Oyuncular kazandı!',
+        'cham.resultEscaped': 'Bukalemun ({name}) hiç yakalanmadı.',
+        'cham.resultCaught': 'Bukalemun: {name} — yakalandı!',
+        'cham.theSecretWas': 'Sır: {word}',
+        'cham.scoreWins': '{n} galibiyet',
+        'cham.scoreWinsOne': '1 galibiyet',
+        'cham.toastPlayerLeft': '{name} oyundan ayrıldı.',
+        // Yalancı Bardağı (Liar's Cup)
+        'liar.howToPlay': 'Nasıl oynanır',
+        'liar.howToSub': 'İlk kez mi? Bunu oku — 1 dakikada anlatıyor',
+        // Oyun içi yardım sayfası — her oyun ekranındaki başlıktan tek dokunuşla açılır.
+        'liar.help.title': 'Nasıl oynanır',
+        'liar.help.body': '<div class="info-blocks"><p class="info-intro">Arkadaşlarını blöfle, yalancıları yakala, bardaktan sağ kurtul.<br>Oyunda kalan son oyuncu kazanır.</p><div class="info-block"><div class="info-block-emoji">🎯</div><div class="info-block-content"><div class="info-block-title">Gerçek Kart</div><div class="info-block-text">Her turun başında, oyun bir <strong>Gerçek Kart</strong> seçer (Papaz, Kız ya da As).<br><br>• Gerçek Kart\'ı oynamak = doğru söylemek<br>• Başka bir kart = yalan söylemek<br>• Jokerler her zaman Gerçek Kart sayılır</div></div></div><div class="info-block"><div class="info-block-emoji">🃏</div><div class="info-block-content"><div class="info-block-title">Senin Sıran</div><div class="info-block-text">1. Elinden 1–3 kart seç<br>2. <strong>Kapalı Oyna</strong>\'ya bas<br>3. Ne oynadığını herkese söyle<br><br>Doğru söyleyebilirsin… ya da blöf yapabilirsin.<br><br>Diğer oyuncular sadece kaç kart oynadığını görür, hangi kartlar olduğunu değil.</div></div></div><div class="info-block"><div class="info-block-emoji">👀</div><div class="info-block-content"><div class="info-block-title">Yalancı De</div><div class="info-block-text">Son oynanan blöf mü?<br><strong>Turda kalan herkes</strong> (henüz oynayan kişi hariç) <strong>YALANCI DE</strong>\'ye basabilir — kendi sıranı beklemen gerekmiyor.<br><br>İlk basan kazanır. Kartlar çevrilir:<br>• Yalan söylediyse → bardağa gider<br>• Doğru söylediyse → suçlayan bardağa gider<br><br>Çağrıyı kazanan bir sonraki tura liderlik eder.</div></div></div><div class="info-block"><div class="info-block-emoji">🎡</div><div class="info-block-content"><div class="info-block-title">Çark</div><div class="info-block-text">Kaybeden bir çark döndürür — <strong>6 odacık</strong>, bazıları DÖKÜLME.<br><br>• Güvenli odacığa inerse = oyunda kal<br>• Dökülmeye inerse = elendin<br><br>Her tur bir dökülme odacığı daha eklenir; çark, oyun ilerledikçe daha tehlikeli olur.</div></div></div><div class="info-block"><div class="info-block-emoji">🏆</div><div class="info-block-content"><div class="info-block-title">Oyunu Kazan</div><div class="info-block-text">Oyunda kalan son oyuncu ol.<br><br>Akıllı blöf yap. Yalancıları yakala. Bardaktan sağ kurtul.</div></div></div></div>',
+        'liar.help.aria': 'Nasıl oynanır',
+        'liar.rulesBtn': 'Kurallar',
+        'liar.howToTitle': 'Yalancı Bardağı nasıl oynanır',
+        'liar.howToBody': '<div class="info-blocks"><p class="info-intro">3–6 arkadaş için aynı masada oynanan bir blöf kart oyunu. <strong>Her oyuncu kendi telefonunu kullanır</strong> — kartların sana özeldir. Herkes aynı anda oyunda, sırayla hareket eder, blöfü canlı izler.</p><div class="info-block"><div class="info-block-emoji">📱</div><div class="info-block-content"><div class="info-block-title">Herkes odaya katılır</div><div class="info-block-text">Bir kişi Huddle\'ı açıp Yalancı Bardağı\'na gider. Telefonunda bir <strong>oda kodu</strong> görünür. Diğerleri kendi telefonlarında bunu tarar (veya yazar), sonra herkes yerini seçer (Jordan / Alex / Maria / Kenji). 3+ yer dolduğunda Başlat\'a dokun.</div></div></div><div class="info-block"><div class="info-block-emoji">🃏</div><div class="info-block-content"><div class="info-block-title">Elindeki kartlar ve masa kartı</div><div class="info-block-text">Her tur uygulama BİR kartı — örneğin <strong>PAPAZ</strong> — masa kartı olarak seçer. Papazlar (ve Jokerler) <strong>GERÇEK</strong>. Aslar ve Kızlar <strong>YALAN</strong>. Telefonunda 3–5 kart görürsün. <strong>Diğerleri senin kartlarını göremez</strong> — sadece sen görürsün.</div></div></div><div class="info-block"><div class="info-block-emoji">🎲</div><div class="info-block-content"><div class="info-block-title">Sıran — kart oyna</div><div class="info-block-text"><strong>1, 2 veya 3 kartı kapalı oyna</strong> ve sesli olarak <em>"İki Papaz oynuyorum"</em> de. Diğerleri "2 kart oynadın"ı görür — ama HANGİ kartlar olduğunu görmez. Sonra sıra bir sonraki oyuncuya geçer.</div></div></div><div class="info-block"><div class="info-block-emoji">📣</div><div class="info-block-content"><div class="info-block-title">YALANCI de — her an, herkes</div><div class="info-block-text"><strong>Turda kalan herkes</strong> (henüz oynayan kişi hariç) son oynanan eli için YALANCI diyebilir. Kendi sıranı beklemen gerekmiyor. İlk basan kazanır.</div></div></div><div class="info-block"><div class="info-block-emoji">🤥</div><div class="info-block-content"><div class="info-block-title">YALANCI denildiğinde</div><div class="info-block-text">Her telefon son kartları çevrir.<br>• <strong>Herhangi biri</strong> masa kartı değilse (Jokerler her şey sayılır) → <strong>oyuncu yalan söylüyordu</strong> → kaybetti.<br>• <strong>Hepsi</strong> geçerliyse → <strong>suçlayan yanıldı</strong> → kaybetti.</div></div></div><div class="info-block"><div class="info-block-emoji">🎡</div><div class="info-block-content"><div class="info-block-title">Uğursuz çark</div><div class="info-block-text">Çark kaybedenin telefonunda kendiliğinden döner (diğerleri kendi telefonlarından izler) — <strong>6 odacık</strong>, bir tanesi "dökülme."<br>• Dökülmeye iniş → <strong>OYUN DIŞI</strong>.<br>• Güvenli iniş → oyunda kal, ama bir sonraki sefer çarkta <strong>İKİ</strong> dökülme. Sonra üç. Oyun uzadıkça kötüleşir.</div></div></div><div class="info-block"><div class="info-block-emoji">🏆</div><div class="info-block-content"><div class="info-block-title">Kazanmak</div><div class="info-block-text"><strong>Son ayakta kalan kazanır.</strong> Sert blöf yap. Akıllı suçla. Bardakta şansın yaver gitsin.</div></div></div><p class="info-intro" style="margin-top:18px"><strong>Hızlı örnek:</strong> Masa kartı PAPAZ. Maria telefonunda 2 kart seçip "Kapalı oyna"ya dokunur — sesli olarak <em>"iki Papaz"</em> der. Alex kendi telefonunda "Maria 2 kart oynadı"yı görür. İnanmaz ve YALANCI DE\'ye dokunur. Her telefon kartları çevirir: bir Papaz ve bir Kız. Maria yalan söylemiş — telefonu bardağa gider, diğerleri izler.</p></div>',
+        'liar.tableCardLabel': 'Bu turun masa kartı',
+        'liar.tableCardSub': 'Bu rütbe ve Jokerler GERÇEK. Diğerleri YALAN.',
+        'liar.tableCardGo': 'Kartları dağıt',
+        'liar.tableCardShort': 'Masa kartı:',
+        'liar.rank.A': 'AS',
+        'liar.rank.K': 'PAPAZ',
+        'liar.rank.Q': 'KIZ',
+        'liar.playHeader': 'Sıran',
+        'liar.handEmpty': 'Kart kalmadı — YALANCI demek zorundasın.',
+        'liar.statusFirstTurn': 'Turu sen başlatıyorsun. 1, 2 veya 3 kartı kapalı oyna — hepsinin <strong>{tableCard}</strong> olduğunu iddia et.',
+        'liar.statusFollow': '<strong>{name}</strong> az önce <strong>{count}</strong> oynadı. Sıra sende — kendi kartlarını oyna ya da YALANCI de.',
+        'liar.statusYouEmpty': 'Kart yok. Son oynanana YALANCI demek için dokun.',
+        'liar.callLiar': 'YALANCI DE!',
+        'liar.playFaceDown': 'Kapalı oyna',
+        'liar.cardsInPile': 'Destede {n} kart',
+        'liar.cardsInPileOne': 'Destede 1 kart',
+        'liar.pileEmpty': 'Henüz kart oynanmadı — turu başlat.',
+        'liar.claimNamePlayed': '<span class="liar-pile-claim-name">{name} oynadı:</span> <strong>{count} {tableCard}</strong>',
+        'liar.revealHeader': 'Gerçek',
+        'liar.revealLabel': '{name}: "{count} {tableCard}" dedi',
+        'liar.revealTitle': 'Öyle miydi?',
+        'liar.verdictLied': '<strong>{name} YALAN söylüyordu.</strong> Tüm kartlar {tableCard} değildi. Bardağa gidiyor.',
+        'liar.verdictWrongAccuse': '<strong>{accuser} yanlış suçladı!</strong> {name} doğru söylüyordu. {accuser} bardağa gidiyor.',
+        'liar.cupChambersHint': '6 odacığın {spills} tanesi dökülme',
+        'liar.cupChambersHintOne': '6 odacığın 1 tanesi dökülme',
+        'liar.cupSafeTitle': 'Kurtuldun!',
+        'liar.cupSafeText': 'Bardak dökülmedi. Oyunda kalıyorsun — ama bir sonraki sefer bardakta <strong>{nextSpills}</strong> dökülme olacak.',
+        'liar.cupSpilledTitle': 'DÖKÜLDÜ!',
+        'liar.cupSpilledText': '<strong>{name}</strong> oyun dışı. Tur bitti.',
+        'liar.resultHeader': 'Oyun bitti',
+        'liar.winTitle': '{name} kazandı!',
+        'liar.winSub': 'Son ayakta kalan.',
+        'liar.leaderboardTitle': 'Herkes nasıl geçti',
+        'liar.playAgain': 'Tekrar oyna',
+        'liar.statusOut': 'DIŞARIDA',
+        'liar.statusAlive': '{n} kart',
+        'liar.statusAliveOne': '1 kart',
+        'liar.handCountAria': 'Elinde {n} kart',
+        // Multiplayer seat picker + bekleme metinleri
+        'liar.pickSeatTitle': 'Yerini seç',
+        'liar.players': 'Oyuncular',
+        'liar.seatInviteTap': 'Arkadaş davet et',
+        'liar.seatEmpty': 'Boş yer',
+        'lobby.inviteSheetTitle': 'Bir arkadaşını davet et',
+        'lobby.inviteOnline': 'Çevrimiçi',
+        'lobby.inviteOffline': 'Çevrimdışı',
+        'lobby.inviteSearchPlaceholder': 'Arkadaş ara',
+        'lobby.inviteNoMatch': '"{q}" ile eşleşen arkadaş yok',
+        'lobby.inviteShareInstead': 'Veya bu oda kodunu paylaş:',
+        'lobby.inviteSignInPrompt': 'Arkadaşlarını davet etmek için giriş yap.',
+        'liar.prototypeHint': '<strong>Her oyuncu kendi telefonunda.</strong> Oda kodunu veya QR\'yi arkadaşlarınla paylaş — katıldıklarında yerlerinin aşağıda dolduğunu göreceksin. Başlamak için 3+ yer gerekiyor.',
+        'joinCode.tileTitle': 'Kodla katıl',
+        'joinCode.tileSub': 'Arkadaşının oda kodu mu var? Buraya gir',
+        'joinCode.title': 'Kodla katıl',
+        'joinCode.sub': 'Arkadaşının paylaştığı oda kodunu yapıştır.',
+        'joinCode.placeholder': 'ABCD-EFGH',
+        'joinCode.btn': 'Katıl',
+        'joinCode.checking': 'Oda aranıyor…',
+        'joinCode.notFound': 'Oda bulunamadı. Kodu arkadaşınla bir daha kontrol et.',
+        'joinCode.networkError': 'Sunucuya ulaşılamadı. Bağlantını kontrol edip tekrar dene.',
+        'joinCode.enterCode': 'Önce bir kod gir.',
+        'liar.seatTapToClaim': 'Seçmek için dokun',
+        'liar.seatYou': 'Sen',
+        'liar.seatTaken': 'Dolu',
+        'liar.seatsHintNotPicked': 'Oyuna katılmak için bir yer seç.',
+        'liar.seatsHintNeedMore': '{n} oyuncunun daha yer seçmesi bekleniyor…',
+        'liar.seatsHintReady': 'Tüm yerler hazır görünüyor. Herkes seçtiğinde Başlat\'a dokun.',
+        'liar.waitingFor': '{name} bekleniyor…',
+        'liar.waitingForToAct': '{name} oynamayı veya YALANCI demeyi bekliyor…',
+        'liar.revealWaiting': '{name} bardağa gidiyor… bir sonraki ekranı izleyin.',
+        'liar.toastPlayerLeft': '{name} oyundan ayrıldı.',
+        'liar.toastReconnectStale': 'Bu oyun bitti — ana sayfaya dönüyorsun.',
+        'common.otherPlayer': 'Oyuncu',
+        'liar.otherPlayerLeft': 'Diğer oyuncu ayrıldı — oyun bitiyor…',
+        'liar.otherPlayerLeftStatus': 'Diğer oyuncu oyundan ayrıldı. Birazdan bitecek…',
+        'liar.stampBusted': 'YAKALANDI!',
+        'liar.stampWrongCall': 'YANLIŞ SUÇLAMA!',
+        'liar.stampPhew': 'KURTULDU! 😅',
+        'liar.stampSpilled': '💧 DÖKÜLDÜ!',
+        'liar.autoNextTruthYou': 'Bardağa gidiyorsun…',
+        'liar.autoNextTruthOther': '{name} bardağa gidiyor…',
+        'liar.autoNextRound': 'Bir saniye, sonraki tur…',
+        'liar.autoNextWinner': 'Kazanan açıklanıyor…',
+        'liar.youAreOut': 'Oyun dışındasın — oyunun geri kalanını izle.',
+        'liar.noSeatClaimed': 'Bu oyunda yoksun. Çıkmak için × tuşuna bas.',
+        // Shared
+        'splash.tapToContinue': 'Devam etmek için dokun',
+        'result.nextRound': 'Sonraki tur',
+        'games.moreSoon': 'Yakında daha fazlası',
+        'games.moreSoonSub': 'Yolda yeni oyunlar var.',
+        'games.tellUsNext': 'Sırada ne olsun, bize söyle.',
+
+        // Friends
+        'friends.title': 'Arkadaşlar',
+        'friends.addFriend': 'Arkadaş ekle',
+        'friends.search': 'Kullanıcı adıyla arkadaş ekle',
+        'friends.searchPlaceholder': 'Kullanıcı adıyla arkadaş ekle',
+        'friends.searchMinChars': 'En az 2 karakter yaz',
+        'friends.searchNoResults': '"{q}" ile eşleşen kullanıcı yok',
+        'friends.all': 'Tümü',
+        'friends.online': 'Çevrimiçi',
+        'friends.offline': 'Çevrimdışı',
+        'friends.requests': 'İstekler',
+        'friends.tabAll': 'Tümü',
+        'friends.tabOnline': 'Çevrimiçi',
+        'friends.tabRequests': 'İstekler',
+        'friends.onlineCount': 'Çevrimiçi',
+        'friends.offlineCount': 'Çevrimdışı',
+        'friends.invite': 'Davet et',
+        'friends.message': 'Mesaj at',
+        'friends.actionAdd': 'Ekle',
+        'friends.actionSent': 'Gönderildi',
+        'friends.actionAccept': 'Kabul et',
+        'friends.actionDecline': 'Reddet',
+        'friends.actionCancel': 'İptal',
+        'friends.actionFriends': 'Arkadaşlar',
+        'friends.actionRemove': 'Sil',
+        'friends.removeConfirm': '{name} arkadaşlardan çıkarılsın mı?',
+        'friends.sectionFriends': 'Arkadaşlar',
+        'friends.sectionIncoming': 'Gelen istekler',
+        'friends.sectionSent': 'Gönderilen istekler',
+        'friends.emptyList': 'Arkadaş listen boş. Yukarıdan kullanıcı adıyla arkadaş ekleyebilirsin.',
+        'friends.emptyRequests': 'Şu anda arkadaşlık isteği yok.',
+        'friends.heroTitle': 'Arkadaşlarını bul',
+        'friends.heroSub': 'Yukarıdaki arama kutusuna arkadaşının kullanıcı adını yaz ve istek gönder.',
+        'friends.heroArrow': 'Yukarıdan ara',
+        'friends.removeTitle': '{name} kaldırılsın mı?',
+        'friends.removeBody': 'Bu kişi arkadaş listende artık görünmeyecek. İstediğin zaman yeniden ekleyebilirsin.',
+        'friends.thisFriend': 'bu arkadaş',
+        'common.confirm': 'Onayla',
+        'friends.onlineSoon': 'Çevrimiçi durumu yakında — arkadaşların oynarken tekrar bak.',
+        'friends.requestSent': 'İstek gönderildi',
+        'friends.signInPrompt': 'Arkadaşlarını görmek için giriş yap.',
+        'friends.statusInGame': 'Çevrimiçi · oyunda',
+        'friends.statusOnline': 'Çevrimiçi',
+        'friends.statusLastSeen': 'Son görülme {when}',
+        'friends.timeHoursAgo': '{n} saat önce',
+        'friends.timeYesterday': 'dün',
+        'friends.timeDaysAgo': '{n} gün önce',
+        'friends.timeWeekAgo': 'bir hafta önce',
+
+        // Lobby — Invite friends (Phase 4)
+        'lobby.inviteFriends': 'Arkadaşları davet et',
+        'lobby.inviteNoFriendsYet': 'Henüz arkadaşın yok — Arkadaşlar sekmesinden ekle.',
+        'invite.invite': 'Davet et',
+        'invite.invited': 'Davet edildi',
+        'invite.joined': 'Katıldı',
+        'invite.declined': 'Reddedildi',
+        'invite.cancel': 'İptal',
+        'invite.join': 'Katıl',
+        'invite.decline': 'Reddet',
+        'invite.banner': '{name} seni {game} oyununa davet etti',
+        'invite.sectionTitle': 'Oyun davetleri',
+        'game.hotseat': 'Hot Seat',
+        'game.chameleon': 'Bukalemun',
+        'game.liar': 'Yalancı Kupası',
+
+        // Profile
+        'profile.title': 'Profil',
+        'profile.editAria': 'Profili düzenle',
+        'profile.statGames': 'Oyun',
+        'profile.statWins': 'Galibiyet',
+        'profile.statFriends': 'Arkadaş',
+        'profile.account': 'Hesap',
+        'profile.editProfile': 'Profili düzenle',
+        'profile.preferences': 'Tercihler',
+        'profile.theme': 'Tema',
+        'profile.language': 'Dil',
+        'profile.support': 'Destek',
+        'profile.about': 'Roundlly Hakkında',
+        'profile.feedback': 'Geri bildirim gönder',
+        'profile.signedInAs': 'Giriş yapılan hesap',
+        'profile.signOut': 'Çıkış yap',
+
+        // Feedback sheet
+        'feedback.title': 'Geri bildirim gönder',
+        'feedback.sub': 'Ne paylaşmak istersin? Bir sonraki adımda detayları yazarsın.',
+        // Compose popup
+        'feedback.compose.title_bug': 'Hata bildir',
+        'feedback.compose.title_idea': 'Fikrini paylaş',
+        'feedback.compose.title_word': 'Bir kelime yanlış geldi',
+        'feedback.compose.title_other': 'Not gönder',
+        'feedback.compose.sub_bug': 'Ne kırıldı? Bulabilmemiz için detay ekle.',
+        'feedback.compose.sub_idea': 'Roundlly\'yi daha iyi yapacak şey ne olur?',
+        'feedback.compose.sub_word': 'Hangi kategori, hangi kelime ve neden uymuyor?',
+        'feedback.compose.sub_other': 'Bize iletmek istediğin her şey.',
+        'feedback.compose.placeholder_bug': 'örn. iPhone\'da sandalye simgesi tuhaf görünüyor…',
+        'feedback.compose.placeholder_idea': 'örn. Sadece filmlerden oluşan bir gece modu eklensin…',
+        'feedback.compose.placeholder_word': 'örn. Hayvanlar\'da "ornitorenk" çok bilinmez geldi…',
+        'feedback.compose.placeholder_other': 'Notunu buraya yaz…',
+        'feedback.compose.post': 'Gönder',
+        'feedback.compose.save': 'Kaydet',
+        'feedback.compose.editTitle': 'Gönderiyi düzenle',
+        'feedback.compose.editSub': 'Gönderini güncelle ve Kaydet\'e dokun.',
+        // Board
+        'feedback.board.title': 'Geri bildirim panosu',
+        'feedback.board.newAria': 'Yeni gönderi',
+        'feedback.board.tab.bug': 'Hatalar',
+        'feedback.board.tab.idea': 'Fikirler',
+        'feedback.board.tab.word': 'Kelimeler',
+        'feedback.board.tab.other': 'Diğer',
+        // Sekmelerin altında kalıcı olarak görünen açıklama
+        'feedback.board.desc_bug': 'Bir şey bozuk mu, garip mi davranıyor? Buradan bildir, düzeltelim.',
+        'feedback.board.desc_idea': 'Roundlly\'de görmek istediğin özellikleri ve iyileştirmeleri öner.',
+        'feedback.board.desc_word': 'Bir oyunda gördüğün yanlış veya kafa karıştırıcı kelimeleri bildir — hangi oyun ve hangi kelime olduğunu söyle.',
+        'feedback.board.desc_other': 'Diğer sekmelere uymayan her şey — düşünce, soru, not.',
+        'feedback.board.empty_bug': 'Henüz hata bildirimi yok.',
+        'feedback.board.empty_idea': 'Henüz fikir yok.',
+        'feedback.board.empty_word': 'Henüz kelime geri bildirimi yok.',
+        'feedback.board.empty_other': 'Henüz bir şey yok.',
+        'feedback.board.emptySub': 'Paylaştığın gönderiler burada görünür.',
+        'feedback.board.firstPost': 'İlk sen ol',
+        'feedback.board.edit': 'Düzenle',
+        'feedback.board.delete': 'Sil',
+        'feedback.board.deleteTitle': 'Bu gönderi silinsin mi?',
+        'feedback.board.deleteBody': 'Gönderi kaldırılacak. Bu işlem geri alınamaz.',
+        'feedback.board.edited': 'düzenlendi',
+        'feedback.board.likeAria': 'Bu gönderiyi beğen',
+        'feedback.board.unlikeAria': 'Beğeniyi kaldır',
+        'feedback.board.moreAria': 'Diğer seçenekler',
+        'feedback.board.translating': 'Çevriliyor…',
+        'feedback.board.showOriginal': 'Orijinali göster',
+        'feedback.board.showTranslation': 'Çeviriyi göster',
+        'feedback.board.translateError': 'Çeviri kullanılamıyor',
+        'feedback.board.translateRetry': 'Tekrar dene',
+        'feedback.board.loading': 'Gönderiler yükleniyor…',
+        'feedback.board.errorTitle': 'Pano yüklenemedi',
+        'feedback.board.retry': 'Tekrar dene',
+        'feedback.board.saveError': 'Kaydedilemedi. Bağlantını kontrol edip tekrar dene.',
+        'profile.feedbackBoard': 'Geri bildirim panosu',
+        'profile.admin': 'Yönetici',
+        'profile.adminPill': 'Sahip',
+        'admin.title': 'Yönetici',
+        'admin.heroBadge': 'Sahip erişimi',
+        'admin.heroTitle': 'Kontrol odası',
+        'admin.heroSub': 'Roundlly\'yi sağlıklı tutacak araçlar. Her seferinde bir tane geliyor — yalnızca sıradaki açık.',
+        'admin.next': 'Sıradaki',
+        'admin.comingSoon': 'Yakında',
+        'admin.footnote': 'Yeni araçlar burada belirir. Her biri bir sonraki başlamadan önce tamamlanır.',
+        'admin.tile.feedback.title': 'Geri bildirim',
+        'admin.tile.feedback.desc': 'Panoyu yönet, kimin ne paylaştığını gör.',
+        'admin.tile.stats.title': 'İstatistik',
+        'admin.tile.stats.desc': 'Günlük kayıt, oda ve biten oyun sayıları.',
+        'admin.tile.users.title': 'Kullanıcılar',
+        'admin.tile.users.desc': 'Ara, son görülme, son odalar.',
+        'admin.tile.announce.title': 'Duyurular',
+        'admin.tile.announce.desc': 'Tüm oyunculara bir bildirim çıkar.',
+        'admin.tile.kill.title': 'Acil kapatma',
+        'admin.tile.kill.desc': 'Sorunlu oyunu yayına almadan kapat.',
+        'admin.tile.reports.title': 'Bildirimler',
+        'admin.tile.reports.desc': 'Oyuncuların işaretlediği içerik ve engellemeler.',
+        // Admin → Geri bildirim yönetimi
+        'adminFb.title': 'Geri bildirim',
+        'adminFb.filterNew': 'Yeni',
+        'adminFb.filterAll': 'Tümü',
+        'adminFb.filterDone': 'Bitti',
+        'adminFb.sortNewest': 'En yeni',
+        'adminFb.sortTop': 'En çok oy',
+        'adminFb.status_new': 'Yeni',
+        'adminFb.status_done': 'Bitti',
+        'adminFb.guest': 'Misafir',
+        'adminFb.unknownUser': 'Kullanıcı',
+        'adminFb.menuMarkDone': 'Bitti olarak işaretle',
+        'adminFb.menuMarkNew': 'Yeni olarak işaretle',
+        'adminFb.menuDelete': 'Gönderiyi sil',
+        'adminFb.deleteTitle': 'Bu gönderi silinsin mi?',
+        'adminFb.deleteBody': 'Gönderi herkes için kaldırılır — geri alınamaz.',
+        'adminFb.actionError': 'Güncellenemedi — bağlantını kontrol et ve tekrar dene.',
+        'adminFb.empty_new': 'Yeni geri bildirim yok. Süper — tüm kutu boş.',
+        'adminFb.empty_all': 'Henüz geri bildirim yok.',
+        'adminFb.empty_done': 'Henüz işlenmiş bir şey yok.',
+        'adminFb.badgeNew': 'yeni',
+        // Admin → İstatistik panosu
+        'adminStats.title': 'İstatistik',
+        'adminStats.period24h': '24 saat',
+        'adminStats.period7d': '7 gün',
+        'adminStats.period30d': '30 gün',
+        'adminStats.periodAll': 'Tümü',
+        'adminStats.heroLabel': 'Aktif oyuncular',
+        'adminStats.signups': 'Yeni kayıtlar',
+        'adminStats.lobbies': 'Açılan odalar',
+        'adminStats.gamesPlayed': 'Oynanan oyunlar',
+        'adminStats.feedback': 'Gelen geri bildirim',
+        'adminStats.byGameTitle': 'Oyuna göre',
+        'adminStats.byGameEmpty': 'Bu sürede henüz oda açılmamış.',
+        'adminStats.game.hotseat': 'Sıcak Sandalye',
+        'adminStats.game.chameleon': 'Bukalemun',
+        'adminStats.game.liar': 'Yalancı Kupası',
+        'adminStats.game.mafia': 'Mafya',
+        'adminStats.deltaVsPrev': 'önceki döneme göre',
+        'adminStats.deltaNoChange': 'Değişim yok',
+        'adminStats.deltaAllTime': 'Tüm zamanların toplamı',
+        'adminStats.updated': 'Güncellendi',
+        'adminStats.justNow': 'az önce',
+        'adminStats.ago': 'önce',
+        'adminStats.loading': 'Sayılar hesaplanıyor…',
+        'adminStats.errorTitle': 'İstatistikler yüklenemedi',
+        'adminStats.axisNow': 'şimdi',
+        'adminStats.axisEarliest': 'en eski',
+        'adminStats.axisMid': 'orta nokta',
+        'adminStats.summaryAvg': 'Ortalama',
+        'adminStats.summaryPeak': 'Zirve',
+        'adminStats.summaryLow': 'En düşük',
+        // Relative time
+        'time.justNow': 'az önce',
+        'time.minutesAgo': '{n}dk',
+        'time.hoursAgo': '{n}sa',
+        'time.daysAgo': '{n}g',
+        'feedback.bug': 'Bir şey çalışmıyor',
+        'feedback.bugSub': 'Hata ya da aksaklık',
+        'feedback.idea': 'Bir fikrim var',
+        'feedback.ideaSub': 'Özellik isteği ya da öneri',
+        'feedback.word': 'Bir kelime yanlış geliyor',
+        'feedback.wordSub': 'Kategorideki bir kelime hakkında',
+        'feedback.other': 'Başka bir şey',
+        'feedback.otherSub': 'Genel geri bildirim',
+        'feedback.subject_bug': 'Roundlly — Hata bildirimi',
+        'feedback.subject_idea': 'Roundlly — Öneri',
+        'feedback.subject_word': 'Roundlly — Kelime sorunu',
+        'feedback.subject_other': 'Roundlly — Geri bildirim',
+        'feedback.body_bug': 'Ne oldu:\n\n\nNe olmasını bekliyordum:\n\n',
+        'feedback.body_idea': 'Fikrim:\n\n\nNeden faydalı olur:\n\n',
+        'feedback.body_word': 'Kelime:\n\n\nNeden uygun değil:\n\n\nKategori (Karışık / Hayvanlar / Yiyecek / Filmler / Ünlüler):\n\n',
+        'feedback.body_other': 'Mesajım:\n\n',
+        'feedback.contextHeader': '— Uygulama bilgisi (sorunu çözebilmemiz için altındakileri silme) —',
+
+        // Edit profile
+        'editProfile.title': 'Profili düzenle',
+        'editProfile.shuffle': 'Beni şaşırt',
+        'editProfile.pickHint': 'veya aşağıdan sembol, renk ve stil seç',
+        'editProfile.displayName': 'Görünen ad',
+        'editProfile.namePlaceholder': 'Adın',
+        'editProfile.username': 'Kullanıcı adı',
+        'editProfile.usernamePlaceholder': 'kullanıcı_adı',
+        'editProfile.usernameTooShort': 'Kullanıcı adı en az 3 karakter olmalı.',
+        'editProfile.usernameBadChars': 'Sadece küçük harf, rakam ve alt çizgi.',
+        'editProfile.usernameTaken': 'Bu kullanıcı adı dolu. Başka bir tane dene.',
+        'editProfile.checkingUsername': 'Kontrol ediliyor…',
+        'editProfile.savingProfile': 'Kaydediliyor…',
+        'editProfile.saveFailed': 'Kaydedilemedi. Bağlantını kontrol et ve tekrar dene.',
+        'editProfile.tabSymbol': 'Sembol',
+        'editProfile.tabColour': 'Renk',
+        'editProfile.tabStyle': 'Stil',
+        'editProfile.bgColour': 'Arka plan rengi',
+        'editProfile.bgStyle': 'Arka plan stili',
+
+        // Symbol categories
+        'symbolCat.faces': 'Yüzler',
+        'symbolCat.animals': 'Hayvanlar',
+        'symbolCat.food': 'Yiyecek',
+        'symbolCat.hobbies': 'Hobiler',
+        'symbolCat.things': 'Nesneler',
+
+        // Avatar styles
+        'style.solid': 'Düz',
+        'style.gradient': 'Geçişli',
+        'style.soft': 'Yumuşak',
+        'style.half': 'Yarım',
+        'style.ring': 'Halka',
+        'style.dots': 'Noktalı',
+        'style.stripes': 'Çizgili',
+        'style.glow': 'Parıltı',
+        'style.pulse': 'Nabız',
+        'style.shimmer': 'Işıltı',
+        'style.halo': 'Hale',
+        'style.float': 'Süzülme',
+        'style.ripple': 'Dalga',
+
+        // About sheet
+        'about.title': 'Roundlly',
+        'about.body': 'Masadaki arkadaşlar için tasarlandı.\n\nRoundlly, aynı odadaki gruplar için bir parti oyunu — kafe, mutfak, yol gezisi. Her oyuncu kendi telefonunda. Bir kişi sıcak koltukta, diğerleri ipucu verir. En hızlı tahmin kazanır.\n\nYabancılarla oyun yok, rastgele eşleşme yok. Sadece yanındaki arkadaşlar.',
+
+        // Theme picker
+        'theme.title': 'Tema',
+        'theme.sub': 'Roundlly\'nin görünümünü seç. Sistem, cihazının ayarını izler.',
+        'theme.system': 'Sistem',
+        'theme.systemSub': 'Cihazımı takip et',
+        'theme.light': 'Açık',
+        'theme.lightSub': 'Parlak yüzey, koyu yazı',
+        'theme.dark': 'Koyu',
+        'theme.darkSub': 'Loş yüzey, gece için göze daha rahat',
+
+        // Language picker
+        'language.title': 'Dil',
+        'language.sub': 'Roundlly\'nin her yerde kullanacağı dili seç.',
+        'language.en': 'English',
+        'language.enSub': 'Use English',
+        'language.tr': 'Türkçe',
+        'language.trSub': 'Türkçe kullan',
+
+        // Lobby
+        'lobby.title': 'Sıcak Koltuk',
+        'lobby.roomCode': 'Oda kodu',
+        'lobby.scanToJoin': 'Katılmak için tara',
+        'lobby.refreshCode': 'Yeni oda kodu',
+        'lobby.qrFallback': 'QR yüklenemedi.\nKodu paylaşabilirsin.',
+        'lobby.howToPlay': 'Nasıl oynanır',
+        'lobby.howToSub': '20 saniyelik hızlı tanıtım',
+        'lobby.howToSub_silent': 'Sessiz mod kuralları',
+        // Per-mode slide overrides
+        'howTo.silent.slide2Title': 'Canlandır — konuşma yok',
+        'howTo.silent.slide2Sub': 'Sıcak koltuktaki kelimeyi göremez. Yardımcılar görür — ama tek kelime edemez. Canlandır, taklit et, işaret et.',
+        'lobby.settings': 'Ayarlar',
+        'lobby.useRecommended': 'Önerilen ayarları kullan',
+        'lobby.useRecommendedSub': 'Yeni oyuncular için iyi başlangıç',
+        'lobby.recommendedApplied': 'Önerilen ayarlar uygulandı',
+        'lobby.recommendedAppliedSub': 'Aşağıdan istediğini değiştirebilirsin',
+        'lobby.category': 'Kategori',
+        'category.sub': 'Hangi kelimelerle oynayacağını seç.',
+        // Mode
+        'lobby.mode': 'Mod',
+        'mode.sub': 'Bu Sıcak Koltuk turu nasıl oynansın seç.',
+        'mode.classic': 'Klasik',
+        'mode.silent': 'Sessiz',
+        'mode.sub_classic': 'Yardımcılar konuşur ve anlatır. Standart kurallar.',
+        'mode.sub_silent': 'Yardımcılar konuşamaz — sadece canlandırır.',
+        'mode.hint_silent': '<b>Sessiz mod —</b> Yardımcılar tek kelime edemez. Canlandır, taklit et, işaret et. Sıcak koltuktaki tahmini yüksek sesle söyler.',
+        // In-play mode pill
+        'play.modePill.silent': 'Konuşma yok — canlandır',
+        'lobby.rounds': 'Tur',
+        'lobby.order': 'Sıcak koltuk sırası',
+        'lobby.players': 'Oyuncular',
+        'lobby.playersCount': 'Oyuncular · {count}',
+        'lobby.startGame': 'Oyuna başla',
+        'lobby.host': 'Ev sahibi',
+        'lobby.seatTapToClaim': 'Yerini seç',
+        'lobby.seatYou': 'Sen',
+        'lobby.seatTaken': 'Katıldı',
+        'lobby.seatWaiting': 'Bekleniyor…',
+        'lobby.seatsHintNotPicked': 'Oynamak için yerini seç',
+        'lobby.seatsHintNeedMore': '{n} arkadaş daha bekleniyor',
+        'lobby.seatsHintReady': 'Hazır — host başlatabilir',
+        'lobby.seatsHintWaitingHost': 'Host başlatmasını bekliyor…',
+        'lobby.leaveRoom': 'Odadan ayrıl',
+        'lobby.leaveShort': 'Ayrıl',
+        'lobby.resetShort': 'Sıfırla',
+        'lobby.previousRoomGone': 'Önceki oda sona erdi — şimdi yeni bir odadasın.',
+        'lobby.joinFailed': 'Odaya katılınamadı. Davet süresi dolmuş, ev sahibi ayrılmış ya da oda henüz eşitlenmemiş olabilir.',
+        'lobby.hostClosedRoom': 'Sunucu oyundan ayrıldı',
+        'lobby.leaveTitle': 'Odadan ayrılınsın mı?',
+        'lobby.leaveBody': 'Host seni tekrar davet ederse veya QR\'yi tekrar tararsan dönebilirsin.',
+        'lobby.leaveConfirm': 'Ayrıl',
+        'common.leaveGame': 'Oyundan ayrıl',
+        'common.leaveMidRoundTitle': 'Bu turu bırakılsın mı?',
+        'common.leaveMidRoundBody': 'El sensiz devam edecek ve şu ana kadarki skorların kaydedildi. Host seni tekrar davet ederse dönebilirsin.',
+        'lobby.resetPlayers': 'Oyuncuları sıfırla',
+        'lobby.resetTitle': 'Diğer oyuncular sıfırlansın mı?',
+        'lobby.resetBody': 'Senin dışındaki tüm yerleri boşaltır. Eski oyuncular hâlâ listede ise işe yarar.',
+        'lobby.resetConfirm': 'Sıfırla',
+
+        // Categories
+        'cat.mixed': 'Karışık',
+        'cat.animals': 'Hayvanlar',
+        'cat.food': 'Yiyecek & İçecek',
+        'cat.movies': 'Film & Dizi',
+        'cat.famous': 'Ünlüler',
+        'cat.sports': 'Spor',
+        'cat.objects': 'Günlük Eşyalar',
+        'cat.places': 'Yerler & Simgeler',
+        'cat.activities': 'Etkinlikler',
+        'cat.music': 'Müzik',
+
+        // Order options
+        'order.rotating': 'Sırayla',
+        'order.random': 'Rastgele',
+        'order.host': 'Ev sahibi seçer',
+
+        // Splash
+        'splash.yourTurn': 'Sıra sende',
+        'splash.namesTurn': 'Sıra: {name}',
+        'splash.youAreHotSeat': 'Sıcak koltuktasın',
+        'splash.youAreHelper': 'Yardımcısın',
+        'splash.hotSeatContext': 'Arkadaşlarının ipuçlarını dikkatle dinle, sonra tahminini yüksek sesle söyle. Acele yok!',
+        'splash.helperContext': '{name} tahmin etsin diye yardım et. Kelimeyi tarif et — ama sakın söyleme!',
+        'splash.tapAnywhere': 'Başlamak için ekrana dokun',
+        'splash.turnOf': 'Sıra {n}/{total}',
+        'splash.roundTurn': 'Tur {round}/{rounds} · Sıra {n}/{total}',
+
+        // Play
+        'play.round': 'Tur {current}/{total}',
+        'play.yourTurnFire': '🔥 Sıra sende',
+        'play.helpName': '{name} tahmin etsin diye yardım et',
+        'play.statWins': 'Galibiyet',
+        'play.youreInHotSeat': 'Sıcak<br>koltuktasın',
+        'play.hotSeatSub': 'Arkadaşlarının ipuçlarını dinle, sonra tahminini yüksek sesle söyle. Acele yok.',
+        'play.giveCluesFor': 'Tarif et:',
+        'play.describeIt': '{name} için tarif et — ama sakın kelimeyi söyleme!',
+        'play.howDoesThis': 'Nasıl oynanır?',
+        'play.iGiveUp': '🏳️ Pas geçiyorum',
+        'play.hotSeatGotIt': '✓ Sıcak koltuk bildi!',
+
+        // Coach marks
+        'coach.hotSeatTip': '🔥 <strong>Sıcak koltuktasın.</strong> Arkadaşlarının ipuçlarını dinle, sonra tahminini yüksek sesle söyle. <strong>Süre yok</strong> — acele etme!',
+        'coach.hotSeatStuck': 'Tıkandın mı? <strong>🏳️ Pas geçiyorum</strong>\'a dokunup turu bırak. Bu turda galibiyet yok, ama daha çok turun var.',
+        'coach.helperTip': '👂 <strong>Bu gizli kelime.</strong> Sıcak koltuktakine tarif et — ama <strong>sakın kelimeyi söyleme!</strong>',
+        'coach.helperTap': 'Sıcak koltuktaki kelimeyi söyler söylemez <strong>✓ Sıcak koltuk bildi!</strong>\'e dokun. İlk dokunan yardımcı turu kazandırır.',
+        'coach.dismiss': 'Anladım, hadi oynayalım!',
+
+        // Result
+        'result.gameOver': 'Oyun bitti',
+        'result.namesTurn': 'Sıra: {name}',
+        'result.gotIt': '{name} bildi!',
+        'result.gaveUp': '{name} pas geçti',
+        'result.wordWasWin': 'Kelime: {word}. +1 galibiyet!',
+        'result.wordWasLose': 'Kelime: {word}. Bu turda galibiyet yok.',
+        'result.guessedIn': '⏱ {time} içinde bildi',
+        'result.lastedFor': '⏱ {time} sürdü',
+        'result.leaderboard': 'Sıralama · En hızlı',
+        'result.nextTurn': 'Sonraki tur',
+        'result.backToGames': 'Oyunlara dön',
+        'result.leaveGame': 'Oyundan ayrıl',
+        'result.playAgain': 'Tekrar oyna',
+        'result.waitingForHostNewGame': 'Sunucunun yeni oyunu başlatması bekleniyor…',
+
+        // How to play modal
+        'howTo.skip': 'Tanıtımı geç',
+        'howTo.slide1Title': 'Bir araya gel. Birlikte oyna.',
+        'howTo.slide1Sub': 'Her oyuncu aynı oda koduyla kendi telefonundan katılır.',
+        'howTo.slide2Title': 'Biri tahmin eder, diğerleri yardım eder',
+        'howTo.slide2Sub': 'Sıcak koltuktaki kişinin telefonu kelimeyi gizler. Diğer herkes görür ve yüksek sesle ipucu verir.',
+        'howTo.slide3Title': 'Turu kazan veya pas geç',
+        'howTo.slide3SubHtml': 'Sıcak koltuktaki bildiğinde, herhangi bir yardımcı <strong>Sıcak koltuk bildi!</strong> butonuna basar. Tıkanırsa <strong>pas geçebilir</strong> ve turu kaybeder.',
+        'howTo.slide4Title': 'En hızlı tahmin eden kazanır',
+        'howTo.slide4SubHtml': 'Her oyuncu sırayla sıcak koltuğa geçer. <strong>En hızlı doğru tahmini</strong> yapan oyuncu tacı alır.',
+        'howTo.tagHotSeat': 'Sıcak koltuk',
+        'howTo.tagHelper': 'Yardımcılar',
+        'howTo.giveCluesFor': 'Tarif et:',
+        'howTo.listenForClues': 'İpuçlarını dinle',
+        'howTo.dontSayWord': 'Sakın kelimeyi söyleme!',
+        'howTo.startPlaying': 'Oynamaya başla',
+
+        // Bukalemun — nasıl oynanır (4 slaytlı modal)
+        'cham.howTo.slide1Title': 'Bir araya gel. Birlikte oyna.',
+        'cham.howTo.slide1Sub': 'Her oyuncu aynı oda koduyla kendi telefonundan katılır.',
+        'cham.howTo.slide2Title': 'Biri kelimeyi bilmez',
+        'cham.howTo.slide2Sub': 'Bukalemun ızgarayı görür ama hangi kelimenin gizli olduğunu bilmez. Diğer herkes bilir — sahteyi bul.',
+        'cham.howTo.slide3Title': 'Her oyuncu TEK kelime söyler',
+        'cham.howTo.slide3Sub': 'Sırrı bildiğini kanıtlayan bir ipucu — ama Bukalemun\'un kopyalayamayacağı kadar kapalı.',
+        'cham.howTo.slide4Title': 'Bukalemun\'u oyla',
+        'cham.howTo.slide4SubHtml': 'Onu bul → <strong>Oyuncular kazanır</strong>. Yanlış tahmin → <strong>Bukalemun kazanır</strong>.',
+        'cham.howTo.tagCham': 'Bukalemun',
+        'cham.howTo.tagKnower': 'Bilenler',
+        'cham.howTo.topicAnimals': 'Hayvanlar',
+        'cham.howTo.youreCham': 'Sen Bukalemunsun',
+        'cham.howTo.secretIs': 'Sır: ASLAN',
+        'cham.howTo.clue1': '"Yele"',
+        'cham.howTo.clue2': '"Kükre"',
+        'cham.howTo.clue3': '"Vahşi"',
+        'cham.howTo.clue4': '"Sürü"',
+        'cham.howTo.clueTagCham': 'BUK',
+        'cham.howTo.chameleonCaught': 'Bukalemun yakalandı',
+        'cham.howTo.playersWin': 'Oyuncular kazanır',
+
+        // Yalancı Bardağı — nasıl oynanır (4 slaytlı modal)
+        'liar.howTo.slide1Title': 'Bir araya gel. Birlikte blöf yap.',
+        'liar.howTo.slide1Sub': '3 ya da 4 oyuncu, herkes kendi telefonunda. Kartların sana özeldir.',
+        'liar.howTo.slide2Title': 'Masanın etrafında otur',
+        'liar.howTo.slide2SubHtml': '<strong>Herkesin elindeki kart sayısını</strong> ve masa kartını görürsün. Kendi kartların telefonuna özel kalır.',
+        'liar.howTo.tableLabel': 'Masa',
+        'liar.howTo.othersCounts': 'Herkes sayıları görür',
+        'liar.howTo.seatMaria': 'Maria',
+        'liar.howTo.slide3Title': 'Kapalı oyna — ya da YALANCI de',
+        'liar.howTo.slide3SubHtml': 'Sırasında: 1–3 kart oyna ve sesli blöf yap. Ya da önceki oyuncuyu suçla.',
+        'liar.howTo.slide4Title': 'Tur kaybettin mi? Bardaktan iç.',
+        'liar.howTo.slide4SubHtml': 'Dökülme odacığına denk gel → <strong>oyun dışı</strong>. Hayatta kal → bir sonraki sefer şansın daha da kötüleşir.',
+        'liar.howTo.tableCard': 'Masa kartı',
+        'liar.howTo.cardKing': 'PAPAZ',
+        'liar.howTo.yourHand': 'Elin',
+        'liar.howTo.onlyYouSee': 'Bunları sadece SEN görürsün',
+        'liar.howTo.tagYourTurn': 'Senin sıran',
+        'liar.howTo.tagWatching': 'İzliyor',
+        'liar.howTo.tableKing': 'Masa: PAPAZ',
+        'liar.howTo.playFaceDown': 'Kapalı oyna',
+        'liar.howTo.sayItLoud': 'Sesli "iki Papaz" de',
+        'liar.howTo.mariaPlayed': 'Maria 2 oynadı',
+        'liar.howTo.believeHer': 'İnan mı?',
+        'liar.howTo.callLiar': 'YALANCI DE',
+        'liar.howTo.lastStanding': 'Son ayakta kalan',
+        'liar.howTo.wins': 'kazanır',
+
+        // Picker (host picks next)
+        'picker.title': 'Sıradaki sıcak koltuk kimde?',
+        'picker.sub': 'Ev sahibi olarak, sıradaki turda sıcak koltuğa geçecek oyuncuya dokun.',
+        'picker.you': 'Sen',
+
+        // Info sheets
+        'info.roundsTitle': 'Tur sayısı',
+        'info.roundsBody': 'Her oyuncunun sıcak koltuğa kaç kez geçeceğini belirler.\n\nÖrnek: 4 oyuncu ve 3 turla, herkes 3 kez sıcak koltuğa geçer — toplam 12 el.',
+        'info.orderTitle': 'Sıcak koltuk sırası',
+        'info.orderBody': 'Her turda sıcak koltuğa kim geçer.\n\n<strong>Sırayla</strong> — herkes sırasıyla geçer. Adil, herkes eşit oynar.\n\n<strong>Rastgele</strong> — uygulama rastgele bir oyuncu seçer. Sürpriz katar.\n\n<strong>Ev sahibi seçer</strong> — her turdan önce kimin geçeceğini sen seçersin.',
+        'info.hotSeatTitle': '🔥 Sıcak koltuktasın',
+        'info.hotSeatBody': `<div class="info-blocks"><p class="info-intro">Arkadaşların telefonlarında gizli bir kelime görüyor — sen göremiyorsun. Onların işi sana <strong>ipucu vermek</strong>. Senin işin ise <strong>kelimeyi tahmin etmek</strong>.</p><div class="info-block"><div class="info-block-emoji">🎧</div><div class="info-block-content"><div class="info-block-title">Dinle, sonra yüksek sesle tahmin et</div><div class="info-block-text">Arkadaşlarının ipuçlarına dikkat et, sonra her tahminini <strong>yüksek sesle</strong> söyle. İstediğin kadar tahminde bulunabilirsin.</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">Süre yok — acele etme</div><div class="info-block-text">Seni baskılayan bir saat yok. Ne kadar sürdüğünü sessizce takip edip sonuç ekranında gösteriyoruz — sadece eğlencelik bir bilgi. Skoruna etkisi yok.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">Doğru kelimeyi söylediğinde</div><div class="info-block-text">Arkadaşlarının telefonunda <strong>"Sıcak koltuk bildi!"</strong> butonu var. Kelimeyi söylediğin an birisi senin için dokunur. Sıralamada <strong>+1 galibiyet</strong> kazanırsın.</div></div></div><div class="info-block"><div class="info-block-emoji">🏳️</div><div class="info-block-content"><div class="info-block-title">Gerçekten tıkanırsan</div><div class="info-block-text">Kendi telefonunda <strong>"Pas geçiyorum"</strong> butonuna dokunup turu bırakabilirsin. Bu turda galibiyet yok ama oyun devam eder — daha çok turun olur.</div></div></div></div>`,
+        'info.helperTitle': '👂 Yardımcısın',
+        'info.helperBody': `<div class="info-blocks"><p class="info-intro">Telefonunda gizli bir kelime görüyorsun — sıcak koltuktaki kişi göremiyor. Senin işin kelimeyi onun tahmin edebilmesi için <strong>tarif etmek</strong>.</p><div class="info-block"><div class="info-block-emoji">💬</div><div class="info-block-content"><div class="info-block-title">İpucu ver, ama kelimeyi söyleme</div><div class="info-block-text">Eş anlamlı kelimeler, örnekler, jestler, ses efektleri — ne istersen. Ama <strong>sakın kelimenin kendisini</strong> ya da apaçık parçalarını söyleme (heceleme yok, kafiye yok).</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">Süre baskısı yok</div><div class="info-block-text">Saat yok. Sıcak koltuktaki kişi ne kadar sürerse o kadar tahmin eder. Sonuç ekranı tur ne kadar sürdüğünü gösterir — sadece eğlence için.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">Doğru kelimeyi söylediği anda</div><div class="info-block-text">Sıcak koltuktaki kişinin doğru kelimeyi söylediğini duyduğun an <strong>"Sıcak koltuk bildi!"</strong>\'e dokun. İlk dokunan yardımcı turu kazandırır — sıcak koltuktaki kişi <strong>+1 galibiyet</strong> alır.</div></div></div><div class="info-block"><div class="info-block-emoji">🏳️</div><div class="info-block-content"><div class="info-block-title">Pas geçerse</div><div class="info-block-text">Sıcak koltuktaki kişi telefonunda "Pas geçiyorum"a dokunursa tur galibiyetsiz biter. Oyun sonraki oyuncuya geçer.</div></div></div></div>`,
+
+        // Mode-specific info bodies — Turkish
+        'info.hotSeatBody_silent': `<div class="info-blocks"><p class="info-intro">Arkadaşların telefonlarında gizli bir kelime görüyor — sen göremiyorsun. Sessiz modda tek kelime edemezler — sadece <strong>taklit eder, jest yapar, canlandırırlar</strong>. Senin işin ise <strong>kelimeyi tahmin etmek</strong>.</p><div class="info-block"><div class="info-block-emoji">🤫</div><div class="info-block-content"><div class="info-block-title">Dikkatle izle — kimse konuşmayacak</div><div class="info-block-text">Arkadaşların kelimeyi taklit edip canlandıracak. Jestlerini ve mimiklerini dikkatle izle. Her tahminini <strong>yüksek sesle</strong> söyle.</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">Süre yok — acele etme</div><div class="info-block-text">Saat yok. Pandomim anlamak biraz zaman alabilir — arkadaşlarına sabırlı ol.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">Doğru kelimeyi söylediğinde</div><div class="info-block-text">Kelimeyi söylediğin an bir arkadaşın <strong>"Sıcak koltuk bildi!"</strong> butonuna dokunur. <strong>+1 galibiyet</strong> kazanırsın.</div></div></div><div class="info-block"><div class="info-block-emoji">🏳️</div><div class="info-block-content"><div class="info-block-title">Gerçekten tıkanırsan</div><div class="info-block-text"><strong>"Pas geçiyorum"</strong>a dokunup turu bırakabilirsin. Oyun sonraki oyuncuyla devam eder.</div></div></div></div>`,
+        'info.helperBody_silent': `<div class="info-blocks"><p class="info-intro">Telefonunda gizli bir kelime görüyorsun — sıcak koltuktaki kişi göremiyor. Sessiz modda konuşamazsın — senin işin tek kelime etmeden kelimeyi <strong>canlandırmak</strong>.</p><div class="info-block"><div class="info-block-emoji">🤫</div><div class="info-block-content"><div class="info-block-title">Canlandır, konuşma</div><div class="info-block-text">Jestler, mimikler, hareket kullan. <strong>Konuşmak yok, ses efekti yok, kelime şekli yapmak yok.</strong> Yaratıcı ol.</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">Süre baskısı yok</div><div class="info-block-text">Sıcak koltuktaki kişi ne kadar sürerse o kadar düşünür. Kendi hızında ilerle — hızlıdan iyi canlandır.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">Doğru kelimeyi söylediği anda</div><div class="info-block-text">Doğru kelimeyi duyduğun an <strong>"Sıcak koltuk bildi!"</strong>\'e dokun. İlk dokunan yardımcı turu kazandırır.</div></div></div></div>`,
+      },
+    };
+
+    const LANG_KEY = 'huddle.lang';
+    function getLang(){
+      try { return localStorage.getItem(LANG_KEY) || 'en'; } catch(e){ return 'en'; }
+    }
+    function t(key, params){
+      const lang = getLang();
+      let str = (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key;
+      if (params) {
+        Object.keys(params).forEach(k => {
+          str = str.split('{' + k + '}').join(params[k]);
+        });
+      }
+      return str;
+    }
+    function applyLang(){
+      const lang = getLang();
+      document.documentElement.lang = lang;
+      // text content
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        el.textContent = t(key);
+      });
+      // innerHTML (for strings containing inline markup)
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const key = el.dataset.i18nHtml;
+        el.innerHTML = t(key);
+      });
+      // placeholders
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
+        el.placeholder = t(key);
+      });
+      // aria-labels
+      document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+        const key = el.dataset.i18nAria;
+        el.setAttribute('aria-label', t(key));
+      });
+      // Sound-toggle icons depend on muted state AND localized aria text — refresh both.
+      document.querySelectorAll('[data-sound-toggle]').forEach(updateSoundToggleIcon);
+      // current-value labels
+      const tv = document.getElementById('theme-value-label');
+      if (tv) tv.textContent = t('theme.' + (typeof getThemePref === 'function' ? getThemePref() : 'system'));
+      const lv = document.getElementById('language-value-label');
+      if (lv) lv.textContent = t('language.' + lang);
+      // Login screen language pill — short 2-letter code so the chip stays compact.
+      const ll = document.getElementById('login-lang-label');
+      if (ll) ll.textContent = (lang || 'en').toUpperCase();
+      // refresh active state on language sheet
+      document.querySelectorAll('.lang-option').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+      });
+    }
+    function setLang(lang){
+      try { localStorage.setItem(LANG_KEY, lang); } catch(e){}
+      applyLang();
+      // Re-render screens with JS-built HTML so their dynamic text translates too.
+      if (typeof renderProfileScreen === 'function') renderProfileScreen();
+      if (typeof renderFriends === 'function') renderFriends();
+      if (typeof renderFeedbackBoard === 'function') renderFeedbackBoard();
+      if (typeof renderLobbyPlayers === 'function') renderLobbyPlayers();
+      if (typeof renderGamesStep === 'function') renderGamesStep();
+      if (typeof renderSettings === 'function') renderSettings();
+      if (typeof renderEditProfile === 'function' && typeof editDraft !== 'undefined' && editDraft) renderEditProfile();
+      // The how-to-play trigger sub is JS-managed (varies per state.mode), so applyLang won't
+      // touch it — re-apply it explicitly here so language switch updates it too.
+      if (typeof updateHowToTrigger === 'function') updateHowToTrigger();
+      // Mafia how-to is English-only today — re-check visibility on lang switch.
+      if (typeof mafiaUpdateHowToTrigger === 'function') mafiaUpdateHowToTrigger();
+      // Chameleon lobby's JS-built sections (settings, players grid) need the same treatment.
+      if (typeof chamRenderSettings === 'function') chamRenderSettings();
+      if (typeof chamRenderPlayers === 'function') chamRenderPlayers();
+      if (typeof renderChamLobbyPlayers === 'function') renderChamLobbyPlayers();
+    }
+
+    // ---------- Twemoji integration ----------
+    // After any avatar render, swap native emoji glyphs for Twemoji SVG.
+    // No-ops if the Twemoji script hasn't loaded yet — emoji fall back to
+    // native text. A DOMContentLoaded handler at the bottom re-parses the
+    // whole document once Twemoji is guaranteed to be loaded.
+    const TWEMOJI_OPTS = {
+      folder: 'svg',
+      ext: '.svg',
+      base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/',
+    };
+    function parseEmoji(el){
+      if (!el || !window.twemoji) return;
+      try { twemoji.parse(el, TWEMOJI_OPTS); } catch(e){}
+    }
+
+    // ---------- Sound effects (Web Audio synth — no asset files) ----------
+    // Lightweight SFX engine for the Liar's Cup drinking sequence. Sounds are
+    // synthesised on demand so the app stays a single self-contained HTML file.
+    // Respects the user's mute preference (localStorage `huddle.sound.muted`)
+    // and the OS-level `prefers-reduced-motion` hint (treated as a sound-off
+    // signal too, since the people who avoid motion often avoid surprise audio).
+    const SOUND_MUTED_KEY = 'huddle.sound.muted';
+    let __sfxCtx = null;
+    let __sfxSuspenseTimer = null;
+    let __sfxRumble = null;   // { src, gain } for the sustained low-rumble pad used during the roulette spin
+    function isSoundMuted(){
+      try {
+        if (localStorage.getItem(SOUND_MUTED_KEY) === '1') return true;
+      } catch(e){}
+      try {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+      } catch(e){}
+      return false;
+    }
+    function setSoundMuted(muted){
+      try { localStorage.setItem(SOUND_MUTED_KEY, muted ? '1' : '0'); } catch(e){}
+      if (muted) {
+        // Stop the sustained loops + suspend the AudioContext so in-flight
+        // one-shot oscillators (spillImpact tinkles, reverb tail, etc.) go
+        // silent immediately instead of ringing out for up to 1.4s.
+        sfxStopSuspense();
+        sfxStopRumble();
+        if (__sfxCtx && __sfxCtx.state === 'running') {
+          try { __sfxCtx.suspend(); } catch(e){}
+        }
+      } else {
+        // Resume so future sounds can play. sfxCtx() also handles this on
+        // demand, but doing it eagerly here removes first-sound latency.
+        if (__sfxCtx && __sfxCtx.state === 'suspended') {
+          try { __sfxCtx.resume(); } catch(e){}
+        }
+      }
+      // Re-render any visible sound toggle buttons so the icon flips.
+      document.querySelectorAll('[data-sound-toggle]').forEach(updateSoundToggleIcon);
+    }
+    function toggleSound(){ setSoundMuted(!isSoundMuted()); }
+    function updateSoundToggleIcon(btn){
+      const muted = isSoundMuted();
+      btn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+      btn.setAttribute('aria-label', muted ? t('common.unmute') : t('common.mute'));
+      btn.innerHTML = muted
+        ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>'
+        : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M19 5a8 8 0 0 1 0 14M16 9a4 4 0 0 1 0 6"/></svg>';
+    }
+    function sfxCtx(){
+      if (isSoundMuted()) return null;
+      if (!__sfxCtx) {
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return null;
+          __sfxCtx = new AC();
+        } catch(e){ return null; }
+      }
+      // Autoplay-policy: contexts can start suspended until user gesture.
+      if (__sfxCtx.state === 'suspended') {
+        try { __sfxCtx.resume(); } catch(e){}
+      }
+      return __sfxCtx;
+    }
+    // Internal: schedule a single sine tone with envelope.
+    function sfxTone(freq, dur, opts){
+      const ctx = sfxCtx(); if (!ctx) return;
+      opts = opts || {};
+      const t0 = ctx.currentTime + (opts.delay || 0);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = opts.type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      if (opts.freqTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1, opts.freqTo), t0 + dur);
+      const peak = opts.gain != null ? opts.gain : 0.18;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(peak, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0); osc.stop(t0 + dur + 0.02);
+    }
+    // Internal: short burst of filtered white noise (for splash / fizz).
+    function sfxNoise(dur, opts){
+      const ctx = sfxCtx(); if (!ctx) return;
+      opts = opts || {};
+      const t0 = ctx.currentTime + (opts.delay || 0);
+      const bufSize = Math.max(1, Math.floor(ctx.sampleRate * dur));
+      const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = opts.filterType || 'lowpass';
+      filter.frequency.value = opts.filterFreq || 800;
+      const gain = ctx.createGain();
+      const peak = opts.gain != null ? opts.gain : 0.22;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(peak, t0 + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      src.connect(filter).connect(gain).connect(ctx.destination);
+      src.start(t0); src.stop(t0 + dur + 0.02);
+    }
+    // Public SFX library — keep names descriptive so call sites read like prose.
+    const liarSfx = {
+      cardFlip(){ sfxTone(420, 0.06, { type:'triangle', gain:0.12 }); },
+      bustedStinger(){
+        // Two-note descending stinger: "duh-DUNN"
+        sfxTone(330, 0.18, { type:'sawtooth', gain:0.14 });
+        sfxTone(220, 0.55, { type:'sawtooth', gain:0.16, delay:0.18, freqTo:170 });
+        sfxNoise(0.25, { filterFreq:1400, gain:0.08, delay:0.18 });
+      },
+      wrongCallStinger(){
+        sfxTone(180, 0.22, { type:'square', gain:0.13 });
+        sfxTone(130, 0.5, { type:'square', gain:0.14, delay:0.18, freqTo:90 });
+      },
+      // Suspense heartbeat loop — two thumps every ~700ms, low frequency.
+      suspenseStart(){
+        sfxStopSuspense();
+        if (isSoundMuted()) return;
+        const beat = () => {
+          sfxTone(85, 0.12, { type:'sine', gain:0.22 });
+          sfxTone(75, 0.16, { type:'sine', gain:0.2, delay:0.13 });
+        };
+        beat();
+        __sfxSuspenseTimer = setInterval(beat, 700);
+      },
+      gulp(){
+        // Quick "gulp" — rising blip + small click
+        sfxTone(220, 0.13, { type:'sine', gain:0.18, freqTo:540 });
+        sfxNoise(0.05, { filterFreq:500, gain:0.06, delay:0.08 });
+      },
+      safe(){
+        // Cinematic safe resolution — opens with a bright 880Hz "ding" then
+        // a sustained C5+E5+G5+C6 chord that swells over ~0.9s. Was a quick
+        // 3-note arpeggio (~500ms) — felt rushed. Now it breathes.
+        sfxTone(880,    0.14, { type:'sine',     gain:0.10 });            // opening chime
+        sfxTone(523.25, 0.55, { type:'triangle', gain:0.18 });            // C5 root
+        sfxTone(659.25, 0.6,  { type:'triangle', gain:0.16, delay:0.08 });// E5
+        sfxTone(783.99, 0.65, { type:'triangle', gain:0.15, delay:0.16 });// G5
+        sfxTone(1046.5, 0.55, { type:'triangle', gain:0.11, delay:0.24 });// C6 sparkle
+      },
+      spill(){
+        // Splash: descending sweep + filtered noise + low thud
+        sfxTone(380, 0.28, { type:'sawtooth', gain:0.16, freqTo:90 });
+        sfxNoise(0.55, { filterFreq:2200, gain:0.18, delay:0.05 });
+        sfxTone(60, 0.4, { type:'sine', gain:0.22, delay:0.05 }); // body thud
+      },
+      // Roulette tick — warm "tock" each time the spotlight crosses a chamber.
+      // Triangle wave at 620Hz (was 1180Hz square — too clicky) with a small
+      // 190Hz body so it lands like a wooden ball hitting a metal divider.
+      // 75ms duration so each tick completes its envelope before the next.
+      rouletteTick(){
+        sfxTone(620, 0.075, { type:'triangle', gain:0.13 });
+        sfxTone(190, 0.05,  { type:'sine',     gain:0.08, delay:0.005 });
+      },
+      // The ball settles into its pocket — bigger, lower, longer than a tick.
+      // Marks the end of the roulette so the silence after it feels intentional.
+      rouletteLand(){
+        sfxTone(420, 0.20, { type:'triangle', gain:0.20 });
+        sfxTone(180, 0.28, { type:'sine',     gain:0.14, delay:0.01 });
+        sfxNoise(0.06, { filterFreq:1800, gain:0.06, delay:0.02 });
+      },
+      // Slow heartbeat thud — used DURING the held pause (silence-except-this).
+      // Lower and slower than the suspense loop's twin-thump so it reads as
+      // "the room goes quiet, only your pulse remains".
+      heartbeatSlow(){
+        sfxTone(72, 0.18, { type:'sine', gain:0.26 });
+        sfxTone(60, 0.22, { type:'sine', gain:0.20, delay:0.13 });
+      },
+      // Sustained low rumble — the "danger drone" under the roulette spin. We
+      // create a looped noise buffer through a lowpass + slow fade-in. Stored
+      // on __sfxRumble so rumbleStop can ramp it down cleanly.
+      rumbleStart(){
+        const ctx = sfxCtx(); if (!ctx) return;
+        sfxStopRumble();
+        try {
+          const bufLen = Math.floor(ctx.sampleRate * 2);
+          const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.loop = true;
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = 130;
+          filter.Q.value = 1.4;
+          const gain = ctx.createGain();
+          const t0 = ctx.currentTime;
+          gain.gain.setValueAtTime(0, t0);
+          gain.gain.linearRampToValueAtTime(0.085, t0 + 0.8); // slow swell
+          src.connect(filter).connect(gain).connect(ctx.destination);
+          src.start();
+          __sfxRumble = { src, gain };
+        } catch(e){}
+      },
+      // Sharp inhale-style swoosh — single beat right before the gulp.
+      whoosh(){
+        sfxNoise(0.32, { filterType:'bandpass', filterFreq:1100, gain:0.14 });
+        sfxTone(560, 0.18, { type:'sine', gain:0.08, freqTo:1200 });
+      },
+      // === GLASS SHATTER === Cinematic broken-glass crash. Was a muddy bass-
+      // heavy "pop" that read more like a thud than a smash — the user
+      // specifically called it out. Rebuilt with the canonical glass-shatter
+      // layers (snap → body → smash noise → cascading tinkles → reverb tail):
+      //   * SNAP — sharp high-freq transient (the moment glass goes critical)
+      //   * BODY THUD — 50Hz sub-bass sine + 38Hz sub, long decay (physical weight)
+      //   * SHATTER NOISE — broadband highpass noise burst (the actual smash)
+      //   * GLASS TINKLE — 6 quick high-freq sine taps cascading over ~700ms
+      //                    (shards landing one after another)
+      //   * REVERB TAIL — lowpass noise decay (room ambience after the crash)
+      spillImpact(){
+        // 1. Snap — the instant the cup breaks
+        sfxTone(2800, 0.025, { type:'square', gain:0.16 });
+        sfxNoise(0.04, { filterType:'highpass', filterFreq:3200, gain:0.22 });
+        // 2. Body thud — sub-bass weight under the smash
+        sfxTone(50, 0.85, { type:'sine', gain:0.34 });
+        sfxTone(38, 1.0,  { type:'sine', gain:0.20, delay:0.04 });
+        // 3. Shatter noise — broadband crash
+        sfxNoise(0.5,  { filterType:'highpass', filterFreq:1300, gain:0.32, delay:0.01 });
+        sfxNoise(0.75, { filterFreq:3000,                        gain:0.18, delay:0.02 });
+        // 4. Glass tinkle — cascading shards landing
+        sfxTone(3200, 0.045, { type:'sine', gain:0.13, delay:0.17 });
+        sfxTone(2700, 0.05,  { type:'sine', gain:0.12, delay:0.26 });
+        sfxTone(3450, 0.04,  { type:'sine', gain:0.11, delay:0.35 });
+        sfxTone(2500, 0.04,  { type:'sine', gain:0.10, delay:0.46 });
+        sfxTone(2950, 0.035, { type:'sine', gain:0.09, delay:0.58 });
+        sfxTone(3100, 0.035, { type:'sine', gain:0.07, delay:0.72 });
+        // 5. Reverb tail — low filtered noise decay
+        sfxNoise(1.4, { filterFreq:380, gain:0.10, delay:0.10 });
+      },
+      // Pre-shatter stress crack — fires ~150ms before spillImpact so you
+      // HEAR the glass starting to give before it breaks. High descending
+      // sweep + tiny noise grit.
+      glassCrack(){
+        sfxTone(2100, 0.11, { type:'sawtooth', gain:0.11, freqTo:700 });
+        sfxNoise(0.10,       { filterType:'highpass', filterFreq:2200, gain:0.10 });
+      },
+      // Slow droning aftermath — the ominous "you're done" tail under the
+      // result card. Very low, very quiet, fades on its own.
+      spillAftermath(){
+        sfxTone(70, 1.8, { type:'sine', gain:0.12 });
+        sfxTone(94, 1.6, { type:'sine', gain:0.07, delay:0.1 });
+      },
+      // Extended celebration — sustained major chord (C5 + E5 + G5 + C6) so
+      // the safe moment breathes. Comes ~0.7s after the initial safe() chord.
+      safeCheer(){
+        sfxTone(523.25, 0.9, { type:'triangle', gain:0.13 });
+        sfxTone(659.25, 0.9, { type:'triangle', gain:0.12, delay:0.05 });
+        sfxTone(783.99, 0.9, { type:'triangle', gain:0.11, delay:0.1 });
+        sfxTone(1046.5, 0.9, { type:'triangle', gain:0.1,  delay:0.15 });
+      },
+    };
+    function sfxStopSuspense(){
+      if (__sfxSuspenseTimer) { clearInterval(__sfxSuspenseTimer); __sfxSuspenseTimer = null; }
+    }
+    function sfxStopRumble(){
+      if (!__sfxRumble) return;
+      const ctx = __sfxCtx;
+      const { src, gain } = __sfxRumble;
+      __sfxRumble = null;
+      try {
+        if (ctx) gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
+      } catch(e){}
+      setTimeout(() => { try { src.stop(); } catch(e){} }, 260);
+    }
+
+    // ===== Liar's Cup audio lifecycle =====
+    // The Liar's Cup mini-game schedules ~25 setTimeouts inside the cup
+    // animation that fire SFX (roulette ticks, gulp, shatter, drone, etc.).
+    // Without tracking them, navigating away mid-animation OR finishing the
+    // game while audio is still scheduled leaves sound playing until the
+    // page is refreshed. The tracker + hard-kill below give us cleanup
+    // semantics: every scheduled SFX timeout pushes its id; on game-end,
+    // leave-room, or page-unload we cancel everything pending AND close the
+    // audio context to silence any in-flight Web Audio oscillators.
+    let __liarSfxTimeouts = [];
+    function liarSchedule(fn, ms){
+      const id = setTimeout(() => {
+        const i = __liarSfxTimeouts.indexOf(id);
+        if (i >= 0) __liarSfxTimeouts.splice(i, 1);
+        try { fn(); } catch(e){ console.error('liar sfx step failed', e); }
+      }, ms);
+      __liarSfxTimeouts.push(id);
+      return id;
+    }
+    function liarCancelScheduledSfx(){
+      __liarSfxTimeouts.forEach(id => { try { clearTimeout(id); } catch(e){} });
+      __liarSfxTimeouts = [];
+    }
+    // Complete audio kill switch — clears pending SFX timeouts AND closes the
+    // Web Audio context so any already-started oscillators stop immediately.
+    // The next sfxCtx() call will create a fresh context on demand (~15ms).
+    function liarStopAllSfx(){
+      liarCancelScheduledSfx();
+      sfxStopSuspense();
+      sfxStopRumble();
+      if (__sfxCtx) {
+        try { __sfxCtx.close(); } catch(e){}
+        __sfxCtx = null;
+      }
+    }
+    // Belt-and-braces: kill audio when the page unloads (refresh, navigation,
+    // tab close). Without this, an in-flight oscillator can briefly ring on
+    // some browsers during the unload race.
+    try {
+      window.addEventListener('beforeunload', liarStopAllSfx, { capture: true });
+      window.addEventListener('pagehide',     liarStopAllSfx, { capture: true });
+    } catch(e){}
+
+    // ---------- Profile & Avatar ----------
+    // 3-layer avatar: symbol + colour + style. Persisted to localStorage.
+    // Other players (Alex, Maria, Kenji) get deterministic avatars derived
+    // from their id so the lobby never looks like a row of gray circles.
+
+    const AV_COLOURS = [
+      { id:'sage',       hex:'#7DA89E' },
+      { id:'dustyblue',  hex:'#7A95C2' },
+      { id:'peach',      hex:'#E9A57B' },
+      { id:'lavender',   hex:'#A593C7' },
+      { id:'rose',       hex:'#D38AA3' },
+      { id:'charcoal',   hex:'#4A4B52' },
+      { id:'olive',      hex:'#8C9A6F' },
+      { id:'terracotta', hex:'#C97A60' },
+      { id:'teal',       hex:'#5FA5A0' },
+      { id:'mustard',    hex:'#C9A356' },
+    ];
+
+    const AV_STYLES = [
+      // Calm / static
+      { id:'solid',    label:'Solid' },
+      { id:'gradient', label:'Gradient' },
+      { id:'soft',     label:'Soft' },
+      { id:'half',     label:'Half' },
+      { id:'ring',     label:'Ring' },
+      // Patterned / static
+      { id:'dots',     label:'Dots' },
+      { id:'stripes',  label:'Stripes' },
+      { id:'glow',     label:'Glow' },
+      // Animated (motion:true → flagged for reduced-motion fallback)
+      { id:'pulse',    label:'Pulse',   motion:true },
+      { id:'shimmer',  label:'Shimmer', motion:true },
+      { id:'halo',     label:'Halo',    motion:true },
+      { id:'float',    label:'Float',   motion:true },
+      { id:'ripple',   label:'Ripple',  motion:true },
+    ];
+
+    const AV_SYMBOL_CATS = [
+      { id:'faces',   label:'Faces',   items:['😀','😎','🥳','🤓','🙂','😴','🤠','🤖'] },
+      { id:'animals', label:'Animals', items:['🐼','🦊','🐙','🦄','🐸','🦉','🐢','🐧'] },
+      { id:'food',    label:'Food',    items:['🍕','🌮','🍩','🍣','🍔','🥑','🍦','🍇'] },
+      { id:'hobbies', label:'Hobbies', items:['🎲','🎸','🎮','⚽','🎨','📚','🎬','🎤'] },
+      { id:'things',  label:'Things',  items:['🚀','🌈','⚡','🔥','💎','🎯','🪐','🌵'] },
+    ];
+
+    function allSymbols(){
+      return AV_SYMBOL_CATS.flatMap(c => c.items);
+    }
+
+    // Tiny string hash → stable index, used to give other players a
+    // deterministic avatar derived from their id.
+    function hashStr(s){
+      let h = 0;
+      for (let i = 0; i < s.length; i++) {
+        h = ((h << 5) - h) + s.charCodeAt(i);
+        h |= 0;
+      }
+      return Math.abs(h);
+    }
+    function deterministicAvatar(seed){
+      const symbols = allSymbols();
+      const h = hashStr(seed);
+      return {
+        symbol: symbols[h % symbols.length],
+        colour: AV_COLOURS[(h >> 5) % AV_COLOURS.length].id,
+        style:  AV_STYLES[(h >> 10) % AV_STYLES.length].id,
+      };
+    }
+    function randomAvatar(){
+      const symbols = allSymbols();
+      return {
+        symbol: symbols[Math.floor(Math.random() * symbols.length)],
+        colour: AV_COLOURS[Math.floor(Math.random() * AV_COLOURS.length)].id,
+        style:  AV_STYLES[Math.floor(Math.random() * AV_STYLES.length)].id,
+      };
+    }
+    function colourHex(id){
+      const c = AV_COLOURS.find(x => x.id === id);
+      return c ? c.hex : AV_COLOURS[0].hex;
+    }
+
+    // Renders the avatar component as an HTML string. `size` is px.
+    // Pass `online:true` to add the green presence dot.
+    function avatarHTML(avatar, size, opts){
+      opts = opts || {};
+      const bg = colourHex(avatar.colour);
+      // Defense-in-depth against stored XSS: a malicious actor with direct
+      // Supabase REST access could write an arbitrary string into profiles.avatar.symbol,
+      // and this value flows straight into innerHTML below. Restrict to the curated
+      // emoji allowlist — anything else falls back to the initial.
+      const symbolValid = (typeof allSymbols === 'function' && allSymbols().includes(avatar.symbol));
+      const symbol = symbolValid ? avatar.symbol : '';
+      const content = symbol
+        ? `<span class="av-symbol">${symbol}</span>`
+        : `<span class="av-initial">${(opts.fallback || '?').toUpperCase()}</span>`;
+      const av = `<div class="av" data-style="${avatar.style}" style="--size:${size}px;--av-bg:${bg}">${content}</div>`;
+      // Online → wrap in a non-clipping shell so the presence dot can sit OUTSIDE
+      // the avatar's circular clip. Offline → just the .av, no wrapper overhead.
+      if (opts.online) {
+        return `<span class="av-shell" style="--size:${size}px">${av}<span class="av-presence" aria-hidden="true"></span></span>`;
+      }
+      return av;
+    }
+
+    // ---------- My profile (the logged-in user) ----------
+    const PROFILE_KEY = 'huddle.profile';
+
+    function sanitizeStyle(id){
+      return AV_STYLES.some(s => s.id === id) ? id : 'solid';
+    }
+    function sanitizeColour(id){
+      return AV_COLOURS.some(c => c.id === id) ? id : AV_COLOURS[0].id;
+    }
+    // Security fix: only Google-authenticated users have a profile. We do NOT
+    // synthesize a "Jordan Lee" placeholder on first visit (prior versions did,
+    // and it ended up persisted to localStorage AND seeded into Supabase, so a
+    // refresh would auto-log every visitor in as "Jordan Lee"). If there's a
+    // legitimate cached profile (set by a previous real sign-in), restore it;
+    // otherwise myProfile stays null until huddleAfterSignIn runs.
+    function loadProfile(){
+      try {
+        const raw = localStorage.getItem(PROFILE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          // Guard against the legacy "Jordan Lee" seed lingering in localStorage.
+          // If we see that exact shape (no real username was ever set), treat the
+          // cache as empty so the user lands on login instead of a fake identity.
+          const looksLikeLegacySeed = (!parsed.username || parsed.username === 'jordan')
+            && (!parsed.name || parsed.name === 'Jordan Lee');
+          if (looksLikeLegacySeed) {
+            try { localStorage.removeItem(PROFILE_KEY); } catch(e){}
+            return null;
+          }
+          return {
+            name: parsed.name || '',
+            username: parsed.username || '',
+            avatar: {
+              symbol: parsed.avatar && parsed.avatar.symbol || '🙂',
+              colour: sanitizeColour(parsed.avatar && parsed.avatar.colour),
+              style:  sanitizeStyle(parsed.avatar && parsed.avatar.style),
+            },
+          };
+        }
+      } catch(e){}
+      return null;
+    }
+    function saveProfile(profile){
+      try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch(e){}
+    }
+    let myProfile = loadProfile();
+
+    // ---------- Auth (Phase 1A — real login with email/password) ----------
+    // Modes: 'signin' (default), 'signup', 'forgot' (request reset email),
+    //        'reset' (set new password after clicking the reset email link)
+    let huddleAuthMode = 'signin';
+
+    function huddleClearAuthStatus(){
+      const el = document.getElementById('login-status');
+      if (el) { el.textContent = ''; el.className = 'login-status'; }
+    }
+    function huddleSetAuthStatus(text, kind){
+      const el = document.getElementById('login-status');
+      if (!el) return;
+      el.textContent = text;
+      el.className = 'login-status' + (kind ? ' ' + kind : '');
+    }
+
+    // Central UI updater — call after changing huddleAuthMode to refresh all the
+    // elements on the login screen. Each mode shows a different subset of fields.
+    function huddleApplyAuthModeUI(){
+      const mode = huddleAuthMode;
+      const isSignin = mode === 'signin';
+      const isSignup = mode === 'signup';
+      const isForgot = mode === 'forgot';
+      const isReset  = mode === 'reset';
+
+      const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+      const show = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? '' : 'none'; };
+
+      // Headline + subtitle
+      if (isSignup) { set('login-headline', t('login.createTitle')); set('login-sub', t('login.createSub')); }
+      else if (isForgot) { set('login-headline', t('login.forgotTitle')); set('login-sub', t('login.forgotSub')); }
+      else if (isReset)  { set('login-headline', t('login.resetTitle'));  set('login-sub', t('login.resetSub')); }
+      else { set('login-headline', t('login.welcomeBack')); set('login-sub', t('login.sub')); }
+
+      // Field visibility
+      show('login-email-field', !isReset);     // hide email in reset (we have the session already)
+      show('login-password-field', !isForgot); // hide password in forgot mode
+      show('login-username-field', isSignup);
+      show('login-forgot-row', isSignin);      // only sign-in shows "Forgot password?"
+      show('login-divider', !isReset);
+      show('login-guest-btn', !isReset);
+      show('login-footer-row', !isReset);
+
+      // Submit button label
+      if (isSignup)      set('login-submit-btn', t('login.createAccountBtn'));
+      else if (isForgot) set('login-submit-btn', t('login.sendResetLink'));
+      else if (isReset)  set('login-submit-btn', t('login.setNewPassword'));
+      else               set('login-submit-btn', t('login.signIn'));
+
+      // Footer toggle
+      const togglePrompt = document.getElementById('login-toggle-prompt');
+      const toggleLink = document.getElementById('login-toggle-link');
+      if (togglePrompt && toggleLink) {
+        if (isSignup) {
+          togglePrompt.textContent = t('login.haveAccount');
+          toggleLink.textContent = t('login.signInLink');
+          toggleLink.onclick = () => huddleSetAuthMode('signin');
+        } else if (isForgot) {
+          togglePrompt.textContent = t('login.rememberPassword');
+          toggleLink.textContent = t('login.signInLink');
+          toggleLink.onclick = () => huddleSetAuthMode('signin');
+        } else {
+          togglePrompt.textContent = t('login.newHere');
+          toggleLink.textContent = t('login.createAccount');
+          toggleLink.onclick = () => huddleSetAuthMode('signup');
+        }
+      }
+
+      huddleClearAuthStatus();
+    }
+
+    function huddleSetAuthMode(mode){
+      huddleAuthMode = mode;
+      huddleApplyAuthModeUI();
+    }
+
+    // Legacy toggle from the original Sign-in <-> Sign-up flip — kept for compatibility
+    // with any onclick="huddleToggleAuthMode()" still in HTML, but the actual logic now
+    // lives in huddleSetAuthMode.
+    function huddleToggleAuthMode(){
+      huddleSetAuthMode(huddleAuthMode === 'signin' ? 'signup' : 'signin');
+    }
+
+    async function huddleHandleAuthSubmit(){
+      if (!window.sb) {
+        huddleSetAuthStatus(t('login.supabaseDown'), 'error');
+        return;
+      }
+      // Forgot mode — just need email, send reset link
+      if (huddleAuthMode === 'forgot') {
+        const email = (document.getElementById('email').value || '').trim();
+        if (!email) { huddleSetAuthStatus(t('login.missingEmail'), 'error'); return; }
+        await huddleSendPasswordReset(email);
+        return;
+      }
+      // Reset mode — just need new password
+      if (huddleAuthMode === 'reset') {
+        const password = document.getElementById('password').value || '';
+        if (!password) { huddleSetAuthStatus(t('login.missingFields'), 'error'); return; }
+        if (password.length < 6) { huddleSetAuthStatus(t('login.passwordTooShort'), 'error'); return; }
+        await huddleApplyNewPassword(password);
+        return;
+      }
+
+      // Signin / signup require email + password
+      const email = (document.getElementById('email').value || '').trim();
+      const password = document.getElementById('password').value || '';
+      if (!email || !password) {
+        huddleSetAuthStatus(t('login.missingFields'), 'error');
+        return;
+      }
+      if (huddleAuthMode === 'signup') {
+        const username = (document.getElementById('login-username').value || '').trim().toLowerCase();
+        if (!username || username.length < 3) {
+          huddleSetAuthStatus(t('editProfile.usernameTooShort'), 'error');
+          return;
+        }
+        if (!/^[a-z0-9_]+$/.test(username)) {
+          huddleSetAuthStatus(t('editProfile.usernameBadChars'), 'error');
+          return;
+        }
+        await huddleSignUp(email, password, username);
+      } else {
+        await huddleSignIn(email, password);
+      }
+    }
+
+    // Send password reset email. Supabase emails the user a link that brings them
+    // back to our site with a recovery token — our PASSWORD_RECOVERY listener catches it.
+    async function huddleSendPasswordReset(email){
+      huddleLockSubmit(true);
+      huddleSetAuthStatus(t('login.sendingResetLink'), 'saving');
+      try {
+        const redirectTo = window.location.origin + '/';
+        const { error } = await window.sb.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) {
+          huddleSetAuthStatus(huddleAuthErrorText(error), 'error');
+          return;
+        }
+        huddleSetAuthStatus(t('login.resetLinkSent'), 'ok');
+      } catch (e) {
+        huddleSetAuthStatus(t('login.signInFailed'), 'error');
+      } finally {
+        huddleLockSubmit(false);
+      }
+    }
+
+    // Apply the new password (called from 'reset' mode after PASSWORD_RECOVERY event).
+    // The user's session has been temporarily authenticated by clicking the email link.
+    async function huddleApplyNewPassword(newPassword){
+      huddleLockSubmit(true);
+      huddleSetAuthStatus(t('login.savingPassword'), 'saving');
+      try {
+        const { data, error } = await window.sb.auth.updateUser({ password: newPassword });
+        if (error) {
+          huddleSetAuthStatus(huddleAuthErrorText(error), 'error');
+          return;
+        }
+        // Their session is now active with the new password. Drop into the app.
+        liarMe.sessionId = data.user.id;
+        liarMe.bootstrapped = true;
+        await huddleSyncProfileFromSupabase();
+        huddleClearAuthStatus();
+        document.getElementById('password').value = '';
+        // Reset mode → switch back to signin for future use
+        huddleSetAuthMode('signin');
+        goTo('games');
+      } catch (e) {
+        huddleSetAuthStatus(t('login.signInFailed'), 'error');
+      } finally {
+        huddleLockSubmit(false);
+      }
+    }
+
+    // Sign in to an existing account.
+    async function huddleSignIn(email, password){
+      huddleLockSubmit(true);
+      huddleSetAuthStatus(t('login.signingIn'), 'saving');
+      try {
+        const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
+        if (error) {
+          console.error('[Huddle] signIn error:', {
+            status: error.status, code: error.code, message: error.message, name: error.name, full: error,
+          });
+          huddleSetAuthStatus(huddleAuthErrorText(error), 'error');
+          return;
+        }
+        // Update local sessionId to the real auth user
+        liarMe.sessionId = data.user.id;
+        liarMe.bootstrapped = true;
+        // Pull profile from server
+        await huddleSyncProfileFromSupabase();
+        huddleClearAuthStatus();
+        // Clear sensitive inputs
+        document.getElementById('password').value = '';
+        goTo('games');
+      } catch (e) {
+        huddleSetAuthStatus(t('login.signInFailed'), 'error');
+      } finally {
+        huddleLockSubmit(false);
+      }
+    }
+
+    // Sign up a new account. Plain signUp — does NOT try to upgrade the existing
+    // anonymous user (that path required Supabase "manual linking" + triggered extra
+    // confirmation emails which hit rate limits during testing). Anonymous user data
+    // is effectively orphaned, but in practice the user hasn't customised anything
+    // yet so this is fine. We can add account-merging in a later phase.
+    async function huddleSignUp(email, password, username){
+      huddleLockSubmit(true);
+      huddleSetAuthStatus(t('login.creatingAccount'), 'saving');
+      try {
+        // Username uniqueness check FIRST (so we don't burn a signup attempt only to
+        // fail on the profile insert step — and so we don't waste an email-rate-limit slot)
+        const { data: existing } = await window.sb
+          .from('profiles')
+          .select('user_id')
+          .eq('username', username)
+          .maybeSingle();
+        if (existing) {
+          huddleSetAuthStatus(t('editProfile.usernameTaken'), 'error');
+          return;
+        }
+
+        // Create the account
+        const { data, error } = await window.sb.auth.signUp({ email, password });
+        if (error) {
+          // Diagnostic: log the full error to the console so the user can paste it
+          // when troubleshooting rate limits or other auth issues.
+          console.error('[Huddle] signUp error:', {
+            status: error.status,
+            code: error.code,
+            message: error.message,
+            name: error.name,
+            full: error,
+          });
+          huddleSetAuthStatus(huddleAuthErrorText(error), 'error');
+          return;
+        }
+
+        // CRITICAL: with email-confirmation ON, Supabase returns the user but session=null.
+        // The user can't authenticate further requests until they confirm via email link.
+        // Detect this and tell the user clearly instead of failing on the profile upsert.
+        if (!data || !data.session) {
+          huddleSetAuthStatus(t('login.confirmEmailFirst'), 'error');
+          return;
+        }
+
+        const userId = data.user.id;
+        liarMe.sessionId = userId;
+        liarMe.bootstrapped = true;
+
+        // Now safely upsert the profile row — we have a real session, RLS will allow it
+        const upsertData = {
+          user_id: userId,
+          username: username,
+          display_name: myProfile.name || username,
+          avatar: myProfile.avatar,
+        };
+        const { error: upsertErr } = await window.sb
+          .from('profiles')
+          .upsert(upsertData, { onConflict: 'user_id' });
+        if (upsertErr) {
+          if (upsertErr.code === '23505') {
+            huddleSetAuthStatus(t('editProfile.usernameTaken'), 'error');
+            return;
+          }
+          huddleSetAuthStatus(t('editProfile.saveFailed'), 'error');
+          return;
+        }
+
+        // Update local cache
+        myProfile.username = username;
+        saveProfile(myProfile);
+        huddleClearAuthStatus();
+        document.getElementById('password').value = '';
+        document.getElementById('login-username').value = '';
+        goTo('games');
+      } catch (e) {
+        huddleSetAuthStatus(t('login.signInFailed'), 'error');
+      } finally {
+        huddleLockSubmit(false);
+      }
+    }
+
+    // Disable / re-enable the submit button + Forgot link while a request is in flight.
+    // Prevents users from double-tapping during a slow response, which causes extra
+    // failed attempts and burns through email rate-limit slots.
+    function huddleLockSubmit(locked){
+      const btn = document.getElementById('login-submit-btn');
+      if (btn) btn.disabled = !!locked;
+      const guest = document.getElementById('login-guest-btn');
+      if (guest) guest.disabled = !!locked;
+    }
+
+    // "Continue with Google" — triggers Supabase OAuth flow with Google.
+    // signInWithOAuth performs a full-page redirect to Google's consent screen.
+    // Execution halts here; when Google redirects back to roundlly.com, Supabase
+    // parses the URL fragment, creates a session, and fires SIGNED_IN on
+    // onAuthStateChange. huddleAfterSignIn() handles the rest.
+    // NOTE: Phase 1 does not link an existing anon session to the new Google
+    // account — the anon row is effectively abandoned. Account merging is a
+    // future phase.
+    async function huddleSignInWithGoogle(){
+      // Local preview bypass: Supabase OAuth requires a publicly-reachable
+      // callback URL, which doesn't work from localhost / Claude preview
+      // (Supabase blocks the request). On localhost we skip auth entirely
+      // and drop the user on the profile screen so the Lab entries (Test
+      // Mafia, etc.) are reachable. Production users still go through the
+      // real Google flow.
+      const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname);
+      if (isLocal) {
+        // Seed a dev profile on first localhost entry so the Profile screen
+        // isn't blank. Skipped if a real profile is already cached (so an
+        // edited name/avatar survives reloads). Uses a per-tab random tag so
+        // multiple preview tabs don't share an identity in multiplayer.
+        if (!myProfile) {
+          const tag = Math.random().toString(36).slice(2, 6);
+          myProfile = {
+            name: 'Dev preview',
+            username: 'dev-' + tag,
+            avatar: randomAvatar(),
+          };
+          saveProfile(myProfile);
+          if (typeof renderProfileScreen === 'function') renderProfileScreen();
+        }
+        try { goTo('profile'); } catch(e){}
+        return;
+      }
+      if (!window.sb) {
+        huddleSetAuthStatus(t('login.googleUnavailable'), 'error');
+        return;
+      }
+      const btn = document.getElementById('login-google-btn');
+      if (btn) btn.disabled = true;
+      huddleSetAuthStatus(t('login.signingIn'), 'saving');
+      try {
+        // Preserve ?room=&game= in the redirect so QR-scanning friends land back
+        // in the right lobby after the Google bounce — but ONLY if the values pass
+        // strict validation. Anything else gets stripped (plan note #M17): the
+        // pathname is forced to '/' to prevent open-redirect tricks, and any
+        // unrecognised query params are dropped before being bounced through
+        // Google's OAuth flow.
+        const incomingParams = new URLSearchParams(window.location.search);
+        const incomingRoom   = incomingParams.get('room');
+        const incomingGame   = incomingParams.get('game');
+        const ROOM_CODE_RE   = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
+        const ALLOWED_GAMES  = new Set(['liar', 'hotseat', 'chameleon']);
+        const safeParams = new URLSearchParams();
+        if (incomingRoom && ROOM_CODE_RE.test(incomingRoom)) safeParams.set('room', incomingRoom);
+        if (incomingGame && ALLOWED_GAMES.has(incomingGame)) safeParams.set('game', incomingGame);
+        const safeQuery = safeParams.toString();
+        const redirectTo = window.location.origin + '/' + (safeQuery ? '?' + safeQuery : '');
+        const { error } = await window.sb.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo },
+        });
+        if (error) throw error;
+        // Full-page redirect to Google is in flight — nothing more to do.
+      } catch(e) {
+        console.warn('[Huddle] Google sign-in failed:', e);
+        huddleSetAuthStatus((e && e.message) || t('login.googleFailed'), 'error');
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    // Only navigate to games if the user is currently on a login-flow screen
+    // (login or username-setup). Otherwise the user has already been routed
+    // somewhere meaningful (lobby via ?room=, games via boot-screen pre-paint,
+    // etc.) and `huddleAfterSignIn` shouldn't yank them to games and override
+    // that destination. This fixes the lobby-flash race: openLobby() and
+    // huddleAfterSignIn() both ran goTo() unconditionally; whichever finished
+    // last won, briefly showing the lobby then snapping to games.
+    function huddleNavigateAfterSignInIfNeeded(){
+      var active = document.querySelector('.screen.active');
+      var id = active ? active.id : '';
+      if (!id || id === 'screen-login' || id === 'screen-username-setup') {
+        goTo('games');
+      }
+    }
+
+    // Called after SIGNED_IN fires for a non-anonymous user (Google or password).
+    // Routes the user: missing username → username-setup screen, otherwise → games.
+    async function huddleAfterSignIn(user){
+      if (!user || user.is_anonymous) return;
+      // Capture the previous (anon) session ids BEFORE rebinding, so we can
+      // ask the server to migrate any seat claims that are still tied to them.
+      // The seat-migration RPC requires both the new auth.uid() (implicit
+      // from session) and the previous session id (explicit arg).
+      const prevHotSid   = (typeof hotMe   !== 'undefined' && hotMe.sessionId)   ? hotMe.sessionId   : null;
+      const prevChamSid  = (typeof chamMe  !== 'undefined' && chamMe.sessionId)  ? chamMe.sessionId  : null;
+      const prevLiarSid  = (liarMe && liarMe.sessionId) ? liarMe.sessionId : null;
+      const prevMafiaSid = (typeof mafiaMe !== 'undefined' && mafiaMe.sessionId) ? mafiaMe.sessionId : null;
+      // Bind the new auth user as the active session for ALL multiplayer subsystems.
+      // Critical: without this, hotMe/chamMe keep their old anon session IDs after Google sign-in,
+      // which causes host-transfer + "claimed seat" mismatches across the games.
+      if (typeof hotMe  !== 'undefined') { hotMe.sessionId  = user.id; hotMe.bootstrapped  = true; }
+      if (typeof chamMe !== 'undefined') { chamMe.sessionId = user.id; chamMe.bootstrapped = true; }
+      liarMe.sessionId = user.id;
+      liarMe.bootstrapped = true;
+      // Migrate any seat claims still tied to the old anon session over to the
+      // new Google user, so the lobby shows them as seated instead of unseated.
+      // Lobby-phase only, server-side, atomic. Quiet failure (no toast) — this
+      // is a background operation; if the room doesn't exist or the user
+      // didn't actually have a seat, the RPC silently no-ops.
+      const migrateSeat = async (table, code, fromSid) => {
+        if (!code || !fromSid || fromSid === user.id) return;
+        try {
+          await window.sb.rpc('huddle_migrate_seat', {
+            p_table: table,
+            p_code: code,
+            p_from_session_id: fromSid,
+          });
+        } catch(e) { /* quiet — best-effort */ }
+      };
+      try {
+        await Promise.all([
+          (typeof state      !== 'undefined' && state      && state.code)      ? migrateSeat('hotseat_rooms',   state.code,      prevHotSid)   : null,
+          (typeof chamState  !== 'undefined' && chamState  && chamState.code)  ? migrateSeat('chameleon_rooms', chamState.code,  prevChamSid)  : null,
+          (typeof liarState  !== 'undefined' && liarState  && liarState.code)  ? migrateSeat('liar_rooms',      liarState.code,  prevLiarSid)  : null,
+          (typeof mafiaState !== 'undefined' && mafiaState && mafiaState.code) ? migrateSeat('mafia_rooms',     mafiaState.code, prevMafiaSid) : null,
+        ].filter(Boolean));
+      } catch(e) { /* quiet — best-effort */ }
+      // If the user was already in a lobby (mid-flow anon → Google sign-in),
+      // rebuild the realtime channels so presence is keyed on the new user id
+      // instead of the stale anon id. xWireSync no-ops if state.code is empty.
+      // (Done AFTER migrate so the rebuilt channel's reconcile-on-subscribe
+      // pulls the migrated state.)
+      try { if (typeof chamWireSync === 'function') chamWireSync(); } catch(e){}
+      try { if (typeof liarWireSync === 'function') liarWireSync(); } catch(e){}
+      try {
+        const { data, error } = await window.sb
+          .from('profiles')
+          .select('username, display_name, avatar')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (error) {
+          console.warn('[Huddle] profile lookup after sign-in failed:', error.message);
+          // Fall back to syncing the way email-signin does
+          await huddleSyncProfileFromSupabase();
+          huddleNavigateAfterSignInIfNeeded();
+          return;
+        }
+        if (data && data.username) {
+          // Existing profile with username — sync local cache and drop into the app.
+          // myProfile may be null (fresh browser / cache cleared / true first
+          // sign-in on this device for a returning account) — fall back to safe
+          // defaults so the || chain doesn't dereference null.
+          const prevName   = (myProfile && myProfile.name)   || '';
+          const prevAvatar = (myProfile && myProfile.avatar) || randomAvatar();
+          myProfile = {
+            name: data.display_name || prevName,
+            username: data.username,
+            avatar: data.avatar || prevAvatar,
+          };
+          saveProfile(myProfile);
+          if (typeof renderProfileScreen === 'function') renderProfileScreen();
+          if (typeof friendsLoad === 'function') friendsLoad();
+          if (typeof invitesLoad === 'function') { invitesLoad().then(() => { if (typeof invitesWireSync === 'function') invitesWireSync(); }); }
+          huddleNavigateAfterSignInIfNeeded();
+        } else {
+          // First sign-in for this Google account — prompt for username.
+          // The trigger created the profile row already (display_name may be set
+          // from Google's full_name claim); we just need a username.
+          // For a true first-time user, myProfile is null (no localStorage cache)
+          // — initialize it before assigning so the next two lines don't crash.
+          if (!myProfile) {
+            myProfile = { name: '', username: '', avatar: randomAvatar() };
+          }
+          if (data && data.display_name) myProfile.name = data.display_name;
+          if (data && data.avatar)       myProfile.avatar = data.avatar;
+          saveProfile(myProfile);
+          huddleOpenUsernameSetup();
+        }
+      } catch(e) {
+        console.warn('[Huddle] huddleAfterSignIn exception:', e);
+        huddleNavigateAfterSignInIfNeeded();
+      }
+    }
+
+    // ---------- Username setup (first-time after Google sign-in) ----------
+    let huddleUsernameDebounce = null;
+    let huddleUsernameLastChecked = '';
+    let huddleUsernameLastResult = null; // 'available' | 'taken' | null
+
+    function huddleOpenUsernameSetup(){
+      const input = document.getElementById('us-username');
+      if (input) input.value = '';
+      huddleUsernameLastChecked = '';
+      huddleUsernameLastResult = null;
+      huddleSetUsernameSetupStatus('', '');
+      const btn = document.getElementById('us-confirm-btn');
+      if (btn) btn.disabled = true;
+      goTo('username-setup');
+      setTimeout(() => { if (input) input.focus(); }, 50);
+    }
+
+    function huddleSetUsernameSetupStatus(text, kind){
+      const el = document.getElementById('us-status');
+      if (!el) return;
+      el.textContent = text;
+      el.className = 'ep-username-status' + (kind ? ' ' + kind : '');
+    }
+
+    function huddleUsernameSetupCheck(){
+      const input = document.getElementById('us-username');
+      const btn = document.getElementById('us-confirm-btn');
+      if (!input || !btn) return;
+      const val = (input.value || '').trim().toLowerCase();
+      // Local validation first
+      if (val.length === 0) {
+        huddleSetUsernameSetupStatus('', '');
+        btn.disabled = true;
+        huddleUsernameLastResult = null;
+        return;
+      }
+      if (val.length < 3 || val.length > 20 || !/^[a-z0-9_]+$/.test(val)) {
+        huddleSetUsernameSetupStatus(t('username.invalid'), 'error');
+        btn.disabled = true;
+        huddleUsernameLastResult = null;
+        return;
+      }
+      // Debounce remote uniqueness check
+      huddleSetUsernameSetupStatus(t('username.checking'), 'saving');
+      btn.disabled = true;
+      if (huddleUsernameDebounce) clearTimeout(huddleUsernameDebounce);
+      huddleUsernameDebounce = setTimeout(() => huddleUsernameSetupRemoteCheck(val), 400);
+    }
+
+    async function huddleUsernameSetupRemoteCheck(val){
+      if (!window.sb) {
+        huddleSetUsernameSetupStatus(t('login.googleUnavailable'), 'error');
+        return;
+      }
+      try {
+        const { data, error } = await window.sb
+          .from('profiles')
+          .select('user_id')
+          .eq('username', val)
+          .maybeSingle();
+        // Bail if the user kept typing while we were waiting
+        const current = (document.getElementById('us-username').value || '').trim().toLowerCase();
+        if (current !== val) return;
+        if (error) {
+          huddleSetUsernameSetupStatus(t('username.invalid'), 'error');
+          return;
+        }
+        huddleUsernameLastChecked = val;
+        if (data) {
+          huddleUsernameLastResult = 'taken';
+          huddleSetUsernameSetupStatus(t('username.taken'), 'error');
+          document.getElementById('us-confirm-btn').disabled = true;
+        } else {
+          huddleUsernameLastResult = 'available';
+          huddleSetUsernameSetupStatus(t('username.available'), 'ok');
+          document.getElementById('us-confirm-btn').disabled = false;
+        }
+      } catch(e) {
+        console.warn('[Huddle] username check failed:', e);
+        huddleSetUsernameSetupStatus(t('login.googleFailed'), 'error');
+      }
+    }
+
+    async function huddleUsernameSetupConfirm(){
+      const input = document.getElementById('us-username');
+      const btn = document.getElementById('us-confirm-btn');
+      if (!input || !btn) return;
+      const val = (input.value || '').trim().toLowerCase();
+      if (val.length < 3 || !/^[a-z0-9_]+$/.test(val)) {
+        huddleSetUsernameSetupStatus(t('username.invalid'), 'error');
+        return;
+      }
+      if (huddleUsernameLastResult !== 'available' || huddleUsernameLastChecked !== val) {
+        // Re-check synchronously before save (covers race where user clicks before debounce fires)
+        await huddleUsernameSetupRemoteCheck(val);
+        if (huddleUsernameLastResult !== 'available') return;
+      }
+      btn.disabled = true;
+      huddleSetUsernameSetupStatus(t('username.saving'), 'saving');
+      try {
+        const { data: { user } } = await window.sb.auth.getUser();
+        if (!user) {
+          huddleSetUsernameSetupStatus(t('login.googleFailed'), 'error');
+          btn.disabled = false;
+          return;
+        }
+        // Update the existing profile row (trigger created it on signup with NULL username)
+        const { error } = await window.sb
+          .from('profiles')
+          .update({ username: val, display_name: myProfile.name, avatar: myProfile.avatar })
+          .eq('user_id', user.id);
+        if (error) {
+          if (error.code === '23505') {
+            huddleSetUsernameSetupStatus(t('username.taken'), 'error');
+          } else {
+            console.warn('[Huddle] username save failed:', error.message);
+            huddleSetUsernameSetupStatus(error.message || t('login.googleFailed'), 'error');
+          }
+          btn.disabled = false;
+          return;
+        }
+        myProfile.username = val;
+        saveProfile(myProfile);
+        if (typeof renderProfileScreen === 'function') renderProfileScreen();
+        huddleSetUsernameSetupStatus('', '');
+        goTo('games');
+      } catch(e) {
+        console.warn('[Huddle] username confirm exception:', e);
+        huddleSetUsernameSetupStatus(t('login.googleFailed'), 'error');
+        btn.disabled = false;
+      }
+    }
+
+    // "Continue as guest" — uses the existing anonymous auth path.
+    async function huddleContinueAsGuest(){
+      huddleSetAuthStatus(t('login.signingIn'), 'saving');
+      try {
+        if (typeof liarBootstrap === 'function') await liarBootstrap();
+        huddleSyncProfileFromSupabase().catch(() => {});
+        huddleClearAuthStatus();
+        goTo('games');
+      } catch(e) {
+        // Even if Supabase fails, let the user in — they can play single-device games
+        goTo('games');
+      }
+    }
+
+    // Translate Supabase auth error codes/messages to friendly strings.
+    // Researched 2026-05-15: Supabase's rate-limit error string is
+    // "For security purposes, you can only request this after X seconds."
+    // and is returned with status 429. Email-confirmation-required is not
+    // an error — it just returns user with session=null, handled in caller.
+    function huddleAuthErrorText(error){
+      const msg = (error && error.message) ? error.message.toLowerCase() : '';
+      const status = error && error.status;
+
+      // Rate limit — most common error during testing
+      if (status === 429
+          || msg.includes('for security purposes')
+          || msg.includes('rate limit')
+          || msg.includes('too many requests')) {
+        const secMatch = (error.message || '').match(/after (\d+) seconds?/i);
+        if (secMatch) {
+          return t('login.rateLimitedSec').replace('{n}', secMatch[1]);
+        }
+        return t('login.rateLimited');
+      }
+      if (msg.includes('invalid login credentials') || msg.includes('invalid_credentials')) {
+        return t('login.invalidCredentials');
+      }
+      if (msg.includes('already registered') || msg.includes('user already') || msg.includes('already exists')) {
+        return t('login.alreadyRegistered');
+      }
+      if (msg.includes('password') && (msg.includes('short') || msg.includes('weak') || msg.includes('characters'))) {
+        return t('login.passwordTooShort');
+      }
+      if (msg.includes('email') && (msg.includes('invalid') || msg.includes('format'))) {
+        return t('login.invalidEmail');
+      }
+      // Last resort — show the raw message so user sees what's wrong, but capitalize first letter
+      const raw = (error && error.message) || '';
+      if (raw) return raw.charAt(0).toUpperCase() + raw.slice(1);
+      return t('login.signInFailed');
+    }
+
+    // Sign out — clears Supabase session, drops local profile cache, returns to login.
+    async function huddleSignOut(){
+      // Tear down any game-room Realtime channels BEFORE auth cleanup so the
+      // old user's channels don't bleed into the next signed-in user's session
+      // and write their state into the wrong account. Each helper handles its
+      // own channel removal + per-game state reset.
+      try {
+        if (typeof hotForceLeaveLocal === 'function') hotForceLeaveLocal();
+      } catch(e){}
+      try {
+        if (typeof chamForceLeaveLocal === 'function') chamForceLeaveLocal();
+      } catch(e){}
+      try {
+        if (typeof liarForceLeaveLocal === 'function') liarForceLeaveLocal();
+      } catch(e){}
+      // Mafia: no dedicated forceLeaveLocal helper exists, so tear down its
+      // realtime channel + reset its module-level state inline. Without this,
+      // the previous user's Mafia channel and seat-id would leak into the next
+      // signed-in user's session.
+      try {
+        if (typeof mafiaSyncChannel !== 'undefined' && mafiaSyncChannel && window.sb) {
+          try { mafiaSyncChannel.untrack(); } catch(e){}
+          try { window.sb.removeChannel(mafiaSyncChannel); } catch(e){}
+          mafiaSyncChannel = null;
+          if (typeof _mafiaChannelCode !== 'undefined') _mafiaChannelCode = null;
+          if (typeof _mafiaChannelSessionId !== 'undefined') _mafiaChannelSessionId = null;
+          if (typeof mafiaResetPresenceState === 'function') mafiaResetPresenceState();
+        }
+      } catch(e){}
+      try {
+        if (typeof mafiaMe !== 'undefined') {
+          mafiaMe.sessionId = null;
+          mafiaMe.myId = null;
+          mafiaMe.myRole = null;
+          mafiaMe.myTeammates = [];
+        }
+      } catch(e){}
+      try {
+        if (typeof mafiaState !== 'undefined') {
+          Object.keys(mafiaState).forEach(k => { delete mafiaState[k]; });
+        }
+      } catch(e){}
+      try {
+        if (typeof invitesUnwireSync === 'function') invitesUnwireSync();
+      } catch(e){}
+      try {
+        if (typeof friendsUnwireSync === 'function') friendsUnwireSync();
+      } catch(e){}
+      try {
+        if (typeof feedbackUnwireSync === 'function') feedbackUnwireSync();
+      } catch(e){}
+      if (typeof friendsState !== 'undefined') {
+        friendsState.me = null;
+        friendsState.friends = [];
+        friendsState.incoming = [];
+        friendsState.outgoing = [];
+      }
+      if (typeof feedbackState !== 'undefined') {
+        feedbackState.me = null;
+        feedbackState.posts = [];
+        feedbackState.voteCounts = Object.create(null);
+        feedbackState.myVotes = new Set();
+        feedbackState.loaded = false;
+      }
+      if (typeof invitesState !== 'undefined') {
+        invitesState.me = null;
+        invitesState.incoming = [];
+        invitesState.outgoing = [];
+        invitesState.bannerQueue = [];
+        invitesState.bannerActive = null;
+        invitesState.seenIncomingIds = new Set();
+      }
+      try {
+        if (window.sb) await window.sb.auth.signOut();
+      } catch(e){}
+      // Clear local cache so a fresh anonymous user starts cleanly next time
+      try { localStorage.removeItem('huddle.profile'); } catch(e){}
+      try { huddleClearLastRoom('hotseat'); } catch(e){}
+      try { huddleClearLastRoom('cham'); } catch(e){}
+      try { huddleClearLastRoom('liar'); } catch(e){}
+      try { huddleClearLastRoom('mafia'); } catch(e){}
+      // Clear last-screen so the next user lands on the default boot screen
+      // (login) instead of inheriting the previous user's last location
+      // (e.g., Profile / Edit Profile / Feedback board).
+      try { sessionStorage.removeItem('huddle.lastScreen'); } catch(e){}
+      // Reset in-memory state for every game's multiplayer subsystem
+      liarMe.sessionId = null;
+      liarMe.bootstrapped = false;
+      if (typeof hotMe !== 'undefined') { hotMe.sessionId = null; hotMe.myId = null; hotMe.bootstrapped = false; }
+      if (typeof chamMe !== 'undefined') { chamMe.sessionId = null; chamMe.myId = null; chamMe.bootstrapped = false; }
+      // defaultProfile() was removed as part of the "Jordan Lee" auth fix —
+      // signed-out state is now represented by a null profile. renderProfileScreen
+      // and the lobby renderers are null-safe.
+      myProfile = null;
+      // Reset login screen back to default sign-in mode (in case user was in forgot/reset)
+      huddleSetAuthMode('signin');
+      // Clear any stale input values
+      try {
+        const emailEl = document.getElementById('email');
+        const passEl = document.getElementById('password');
+        const userEl = document.getElementById('login-username');
+        if (emailEl) emailEl.value = '';
+        if (passEl) passEl.value = '';
+        if (userEl) userEl.value = '';
+      } catch(e){}
+      goTo('login');
+    }
+
+    // ---------- Supabase profile sync (Phase 1A — usernames) ----------
+    // Strategy: localStorage stays as cache for fast paint + offline. Supabase is the
+    // source of truth for username (so it can be UNIQUE across all users — Phase 1B uses
+    // this to find friends by username). On app load we sync from Supabase down to local.
+    // On Edit Profile save we sync from local up to Supabase, with uniqueness check.
+
+    function huddleHasSupabaseAuth(){
+      return !!(window.sb && liarMe.sessionId && !liarMe.sessionId.startsWith('tab_'));
+    }
+
+    function huddleClearUsernameStatus(){
+      const el = document.getElementById('ep-username-status');
+      if (el) { el.textContent = ''; el.className = 'ep-username-status'; }
+    }
+    function huddleSetUsernameStatus(text, kind){
+      const el = document.getElementById('ep-username-status');
+      if (!el) return;
+      el.textContent = text;
+      el.className = 'ep-username-status' + (kind ? ' ' + kind : '');
+    }
+
+    // Pull profile from Supabase into local cache. Runs on app load after auth resolves.
+    // If no row exists yet, seeds one from the local cache (so any avatar/name the user
+    // had in localStorage carries over to the server on first sync).
+    async function huddleSyncProfileFromSupabase(){
+      if (!huddleHasSupabaseAuth()) return;
+      const userId = liarMe.sessionId;
+      try {
+        const { data, error } = await window.sb
+          .from('profiles')
+          .select('username, display_name, avatar')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (error) { console.warn('[Huddle] profile fetch failed:', error.message); return; }
+        if (data) {
+          // Server row exists — server wins. Local cache picks up anything set elsewhere.
+          myProfile = {
+            name: data.display_name || myProfile.name,
+            username: data.username || myProfile.username,
+            avatar: data.avatar || myProfile.avatar,
+          };
+          saveProfile(myProfile);
+          if (typeof renderProfileScreen === 'function') renderProfileScreen();
+        } else {
+          // No server row — seed from local cache. Never seed with the legacy
+          // "Jordan Lee" placeholder (prior versions defaulted to it before the
+          // user had really signed in, which produced the cross-user identity bug).
+          if (!myProfile) return;
+          const localName = (myProfile.name || '').trim();
+          const localUsername = (myProfile.username || '').toLowerCase();
+          const looksLikeLegacyName = !localName || localName === 'Jordan Lee';
+          if (looksLikeLegacyName) return; // refuse to seed garbage
+          const insertData = {
+            user_id: userId,
+            display_name: localName,
+            avatar: myProfile.avatar,
+          };
+          if (localUsername && localUsername !== 'jordan' && localUsername !== 'you') {
+            // Try to claim it. If it's already taken by someone else, fail silently —
+            // user will be prompted to pick a different one in Edit Profile.
+            insertData.username = localUsername;
+          }
+          const { error: insErr } = await window.sb
+            .from('profiles')
+            .insert(insertData);
+          if (insErr) {
+            // Most common cause: unique-violation on username. That's fine — they'll set
+            // a fresh one from Edit Profile. Try again without username field.
+            if (insErr.code === '23505' && insertData.username) {
+              delete insertData.username;
+              await window.sb.from('profiles').insert(insertData);
+            } else if (insErr.code !== '23505') {
+              console.warn('[Huddle] profile insert failed:', insErr.message);
+            }
+          }
+        }
+      } catch(e) {
+        console.warn('[Huddle] profile sync exception:', e);
+      }
+    }
+
+    function avatarForPlayer(player){
+      if (player.id === state.meId && myProfile && myProfile.avatar) return myProfile.avatar;
+      return deterministicAvatar(player.id);
+    }
+    function displayName(player){
+      if (player.id === state.meId) {
+        if (myProfile && myProfile.name) return myProfile.name.split(' ')[0] || 'You';
+        return 'You';
+      }
+      return player.name;
+    }
+
+    // ---------- Stats ----------
+    const STATS_KEY = 'huddle.stats';
+    function loadStats(){
+      try {
+        const raw = localStorage.getItem(STATS_KEY);
+        if (raw) {
+          const p = JSON.parse(raw);
+          return { games: p.games|0, wins: p.wins|0 };
+        }
+      } catch(e){}
+      return { games: 0, wins: 0 };
+    }
+    function saveStats(s){
+      try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch(e){}
+    }
+    let myStats = loadStats();
+    function bumpGamesPlayed(){
+      myStats.games += 1;
+      saveStats(myStats);
+      renderProfileScreen();
+    }
+    function bumpWins(){
+      myStats.wins += 1;
+      saveStats(myStats);
+      renderProfileScreen();
+    }
+
+    // ---------- Render profile screen ----------
+    function renderProfileScreen(){
+      const slot = document.getElementById('profile-avatar-slot');
+      const nameEl = document.getElementById('profile-name');
+      const userEl = document.getElementById('profile-username');
+      const authRow = document.getElementById('profile-auth-row');
+      const authEmail = document.getElementById('profile-auth-email');
+      // No real profile yet (visitor is not Google-signed-in) → blank out the
+      // template fields so the screen doesn't flash a stale identity if the user
+      // somehow lands here without auth.
+      if (!myProfile) {
+        if (slot) slot.innerHTML = '';
+        if (nameEl) nameEl.textContent = '';
+        if (userEl) userEl.textContent = '';
+        if (authRow) authRow.hidden = true;
+        if (authEmail) authEmail.textContent = '';
+        return;
+      }
+      if (slot) slot.innerHTML = avatarHTML(myProfile.avatar, 96, { fallback: (myProfile.name || '?')[0] });
+      if (nameEl) nameEl.textContent = myProfile.name || '';
+      if (userEl) userEl.textContent = myProfile.username ? '@' + myProfile.username : '';
+      const g = document.getElementById('stat-games');
+      if (g) g.textContent = myStats.games;
+      const w = document.getElementById('stat-wins');
+      if (w) w.textContent = myStats.wins;
+      parseEmoji(slot);
+      // Show which auth account is signed in (Google email, etc.) above Sign out.
+      // Skipped for anonymous sessions — those have no real identity to show.
+      //
+      // IMPORTANT: only POSITIVE answers (real user found) update the UI.
+      // A `null` or anonymous response is treated as "unknown right now" — we
+      // leave the previously rendered auth row + admin row alone. Real sign-out
+      // is handled by the SIGNED_OUT auth state change listener below, NOT by
+      // a transient getUser() blip during a token refresh. Otherwise tapping
+      // Admin → Back would tear down the email + admin row mid-token-refresh
+      // and the user would look "logged out" even though they're still signed in.
+      const adminRow = document.getElementById('profile-admin-row');
+      if (authRow && authEmail && window.sb) {
+        window.sb.auth.getUser().then(({ data }) => {
+          const u = data && data.user;
+          if (!u || u.is_anonymous) {
+            // Unknown / not-yet-resolved — leave UI as-is. Cached admin flag
+            // (from previous successful render or localStorage) keeps the row
+            // visible until SIGNED_OUT fires.
+            return;
+          }
+          const email = u.email
+            || (u.user_metadata && (u.user_metadata.email || u.user_metadata.preferred_username))
+            || '';
+          if (email) {
+            authEmail.textContent = email;
+            authRow.hidden = false;
+          }
+          // Server is the source of truth — call is_admin() RPC.
+          // The email constant below is just a fast no-network early-out for
+          // the common case (most users), so we don't ping the RPC for them.
+          if (isHuddleAdmin(email)) {
+            window.sb.rpc('is_admin').then(({ data: ok }) => {
+              if (ok) setHuddleAdmin(true);
+              // RPC returned false → DEFINITELY not admin. Otherwise (error /
+              // network blip) keep the last known state — don't flicker.
+              else if (ok === false) setHuddleAdmin(false);
+            }).catch(() => {
+              // Network or transient failure — keep last known state.
+            });
+          } else {
+            setHuddleAdmin(false);
+          }
+        }).catch(() => {
+          // Transient getUser failure — leave UI alone.
+        });
+      }
+    }
+
+    // ---------- Admin gate ----------
+    // Two-layer gate:
+    //   1. Server `public.is_admin()` (RLS-backed) is the AUTHORITATIVE check.
+    //      Every admin write goes through Postgres policies that call it.
+    //   2. `huddleIsAdmin` is a UI-only mirror — used to show/hide the admin
+    //      menu row and bounce non-admins out of admin screens. Set from the
+    //      server RPC after sign-in, cached in localStorage so a refresh
+    //      stays on the admin screen without flickering through profile.
+    //      Even if cached true for a demoted admin, RLS still rejects writes
+    //      — the cache is purely a UI hint.
+    const HUDDLE_ADMIN_EMAIL = 'saeedabdulaziz132@gmail.com';
+    const HUDDLE_ADMIN_CACHE_KEY = 'huddle.isAdmin';
+    let huddleIsAdmin = (function(){
+      try { return localStorage.getItem(HUDDLE_ADMIN_CACHE_KEY) === '1'; }
+      catch(e){ return false; }
+    })();
+    function isHuddleAdmin(email){
+      return (email || '').trim().toLowerCase() === HUDDLE_ADMIN_EMAIL;
+    }
+    function setHuddleAdmin(on){
+      huddleIsAdmin = !!on;
+      try {
+        if (huddleIsAdmin) localStorage.setItem(HUDDLE_ADMIN_CACHE_KEY, '1');
+        else               localStorage.removeItem(HUDDLE_ADMIN_CACHE_KEY);
+      } catch(e){}
+      const adminRow = document.getElementById('profile-admin-row');
+      if (adminRow) adminRow.hidden = !huddleIsAdmin;
+      // If we just gained admin rights and we're on the admin panel, refresh
+      // the "Feedback NEW count" badge.
+      if (huddleIsAdmin && typeof adminRefreshFeedbackBadge === 'function') {
+        adminRefreshFeedbackBadge();
+      }
+    }
+
+    // ---------- Render lobby player tiles (real-multiplayer seat claim) ----------
+    function renderLobbyPlayers(){
+      const grid = document.getElementById('lobby-players-grid');
+      if (!grid) return;
+      // Skeleton while the room is hydrating from the server (URL says
+      // we're in room X but state.code hasn't caught up). Avoids the
+      // "everyone left!" flash that would otherwise show default invite
+      // tiles for ~500ms after a hard refresh on a lobby URL.
+      if (huddleLobbyHydrating(state.code)) {
+        grid.innerHTML = huddleLobbySkeletonHTML(6);
+        return;
+      }
+      const sessionId = hotGetSessionId();
+      const claimedCount = hotClaimedCount();
+      // Resolve real profiles for any claimed sessions we haven't fetched yet
+      const claimedSessionIds = Object.values(state.claimedBy || {});
+      ensureClaimantProfiles(claimedSessionIds, renderLobbyPlayers);
+      // My display name — prefer @username (globally unique) so two players
+      // with the same first name still render distinctly across the table.
+      // Falls through to display_name first-word, then to the slot placeholder.
+      const myName = (myProfile && myProfile.username)
+        ? '@' + myProfile.username
+        : ((myProfile && myProfile.name && myProfile.name.trim().split(/\s+/)[0]) || t('lobby.seatYou'));
+      const myAvatar = (myProfile && myProfile.avatar) ? myProfile.avatar : null;
+      grid.innerHTML = state.players.map((p, i) => {
+        const claimedSession = state.claimedBy && state.claimedBy[p.id];
+        const claimedByMe = claimedSession === sessionId;
+        const claimedByOther = !!claimedSession && !claimedByMe;
+        const isHostSeat = !!claimedSession && claimedSession === state.hostId;
+        const claimProfile = claimedByOther ? profileForClaim(claimedSession) : null;
+
+        // Empty seat → render an Invite tile (not a claim button). Tapping it
+        // opens the shared invite sheet so the user fills the seat with a real
+        // friend instead of "claiming" a fake-named slot.
+        if (!claimedSession) {
+          return `
+            <div class="player-tile hot-seat-tile invite-tile" onclick="openLobbyInviteSheet('hotseat')">
+              <span class="invite-plus" aria-hidden="true">+</span>
+              <div class="player-tile-name" data-i18n="liar.seatInviteTap">Invite friend</div>
+              <div class="player-tile-status" data-i18n="liar.seatEmpty">Empty seat</div>
+            </div>
+          `;
+        }
+
+        // Claimed seat — render with the claimant's REAL identity (no Maria/Kenji).
+        let cls = 'player-tile hot-seat-tile';
+        let statusText, nameText, avatarData;
+        if (claimedByMe) {
+          cls += ' claimed-by-me';
+          nameText = myName;
+          statusText = isHostSeat ? t('lobby.host') : t('lobby.seatYou');
+          avatarData = myAvatar || avatarForPlayer(p);
+        } else {
+          cls += ' claimed-by-other';
+          nameText = claimDisplayName(claimProfile, '…');
+          statusText = isHostSeat ? t('lobby.host') : t('lobby.seatTaken');
+          avatarData = (claimProfile && claimProfile.avatar) ? claimProfile.avatar : avatarForPlayer(p);
+        }
+        const avatar = avatarHTML(avatarData, 32, { online: true, fallback: p.initial });
+        return `
+          <div class="${cls}">
+            ${avatar}
+            <div class="player-tile-name">${escapeHTML(nameText)}</div>
+            <div class="player-tile-status">${escapeHTML(statusText)}</div>
+          </div>
+        `;
+      }).join('');
+      parseEmoji(grid);
+      if (typeof applyLang === 'function') applyLang();
+
+      const playersTitle = document.getElementById('lobby-players-title');
+      if (playersTitle) playersTitle.textContent = t('lobby.playersCount', { count: claimedCount });
+
+      // Hint + start-button state
+      const hint = document.getElementById('hot-seats-hint');
+      const startBtn = document.getElementById('hot-start-btn');
+      const amHost = hotIsHost();
+      if (hint) {
+        if (!hotMe.myId) hint.textContent = t('lobby.seatsHintNotPicked');
+        else if (claimedCount < 2) hint.textContent = t('lobby.seatsHintNeedMore', { n: 2 - claimedCount });
+        else if (!amHost) hint.textContent = t('lobby.seatsHintWaitingHost');
+        else hint.textContent = t('lobby.seatsHintReady');
+      }
+      if (startBtn) {
+        const canStart = claimedCount >= 2 && !!hotMe.myId && amHost;
+        // aria-disabled (not native disabled) — the button must still fire
+        // clicks when "disabled" so we can surface the hint text as a toast.
+        // Validation backstop lives inside startGame().
+        if (canStart) startBtn.removeAttribute('aria-disabled');
+        else          startBtn.setAttribute('aria-disabled', 'true');
+      }
+      // Leave / Reset moved to top-right of the Players header (no more bottom actions)
+      const leaveBtn = document.getElementById('hot-leave-btn');
+      const resetBtn = document.getElementById('hot-reset-btn');
+      const hasSeat = !!hotMe.myId;
+      if (leaveBtn) leaveBtn.hidden = !hasSeat;
+      if (resetBtn) resetBtn.hidden = !(hasSeat && amHost && claimedCount > 1);
+      // Refresh shared invite sheet if it's open for hotseat
+      if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen('hotseat');
+    }
+
+    // ---------- Hot Seat: leave room / reset other players ----------
+    async function hotLeaveRoom(){
+      if (!hotMe.myId) return;
+      const ok = await huddleConfirm({
+        title: t('lobby.leaveTitle'),
+        body: t('lobby.leaveBody'),
+        confirmLabel: t('lobby.leaveConfirm'),
+        danger: true,
+      });
+      if (!ok) return;
+      const mySid = hotGetSessionId();
+      const myPlayerId = hotMe.myId;
+      const leavingCode = state.code;
+      // Optimistic local update (C2 turn 4a) — server-validated via RPC below.
+      if (state.claimedBy && state.claimedBy[myPlayerId] === mySid) {
+        delete state.claimedBy[myPlayerId];
+      }
+      if (state.hostId === mySid) {
+        const remaining = Object.entries(state.claimedBy || {})
+          .sort((a, b) => a[0].localeCompare(b[0]));
+        state.hostId = remaining.length ? remaining[0][1] : null;
+      }
+      // Server-validated leave (universal RPC handles host transfer too).
+      if (leavingCode) {
+        huddleCallRPC('huddle_leave_seat', { p_table: 'hotseat_rooms', p_code: leavingCode });
+      }
+      // Cancel any pending invites I sent for this room — a friend tapping
+      // Join after I've left would otherwise land in a room without me.
+      if (typeof inviteCancelMineForRoom === 'function' && leavingCode) {
+        try { inviteCancelMineForRoom(leavingCode, 'hotseat'); } catch(e){}
+      }
+      // Local cleanup
+      hotMe.myId = null;
+      state.meId = null;
+      state.code = null;
+      try { huddleClearLastRoom('hotseat'); } catch(e){}
+      if (_hotChannel) {
+        try { _hotChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(_hotChannel); } catch(e){}
+        _hotChannel = null; _hotChannelCode = null; _hotChannelSessionId = null;
+        hotResetPresenceState();
+      }
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+    // Local-only cleanup — used when (a) host closes the room and we need to
+    // bail without writing more state to Supabase, and (b) a non-host receives
+    // a "closedByHost" broadcast and auto-leaves. Does NOT persist anything.
+    function hotForceLeaveLocal(){
+      hotMe.myId = null;
+      if (state) {
+        state.meId = null;
+        state.code = null;
+      }
+      try { huddleClearLastRoom('hotseat'); } catch(e){}
+      if (_hotChannel) {
+        try { _hotChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(_hotChannel); } catch(e){}
+        _hotChannel = null; _hotChannelCode = null; _hotChannelSessionId = null;
+        hotResetPresenceState();
+      }
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+    // Host taps "Leave" on the game-over screen → close the whole room so
+    // every other player auto-leaves too (they see closedByHost via Realtime).
+    function hotCloseRoom(){
+      if (!hotIsHost()) { hotLeaveGameOver(); return; }
+      const closingCode = state.code;
+      // Optimistic local change so UI reflects "closed" immediately.
+      state.closedByHost = true;
+      state.hostId = null;
+      // Server-validated close (host-only at DB layer) — C2 turn 4a.
+      if (closingCode) {
+        huddleCallRPC('huddle_close_room', { p_table: 'hotseat_rooms', p_code: closingCode });
+      }
+      hotForceLeaveLocal();
+    }
+    // Host taps "Play again" on the game-over screen → reset round/scores and
+    // restart. Other players sync to the new splash phase via Realtime.
+    function hotPlayAgain(){
+      if (!hotIsHost()) return;
+      if (hotClaimedCount() < 2) return;
+      state.closedByHost = false;
+      startGame();
+    }
+    // Same cleanup as hotLeaveRoom but skips the confirm dialog — used by the
+    // game-over screen so a finished match doesn't trap the player in a stale
+    // room (phase='result' would otherwise reload the same end screen next time
+    // they open Hot Seat).
+    function hotLeaveGameOver(){
+      const mySid = hotGetSessionId();
+      const myPlayerId = hotMe.myId;
+      const leavingCode = state.code;
+      // Optimistic local update (C2 turn 4a).
+      if (myPlayerId && state.claimedBy && state.claimedBy[myPlayerId] === mySid) {
+        delete state.claimedBy[myPlayerId];
+      }
+      if (state.hostId === mySid) {
+        const remaining = Object.entries(state.claimedBy || {})
+          .sort((a, b) => a[0].localeCompare(b[0]));
+        state.hostId = remaining.length ? remaining[0][1] : null;
+      }
+      // Server-validated leave (mirrors hotLeaveRoom RPC pattern).
+      if (leavingCode) {
+        huddleCallRPC('huddle_leave_seat', { p_table: 'hotseat_rooms', p_code: leavingCode });
+      }
+      hotMe.myId = null;
+      state.meId = null;
+      state.code = null;
+      try { huddleClearLastRoom('hotseat'); } catch(e){}
+      if (_hotChannel) {
+        try { _hotChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(_hotChannel); } catch(e){}
+        _hotChannel = null; _hotChannelCode = null; _hotChannelSessionId = null;
+        hotResetPresenceState();
+      }
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+    async function hotResetPlayers(){
+      if (!hotIsHost()) return;
+      const ok = await huddleConfirm({
+        title: t('lobby.resetTitle'),
+        body: t('lobby.resetBody'),
+        confirmLabel: t('lobby.resetConfirm'),
+        danger: true,
+      });
+      if (!ok) return;
+      const mySid = hotGetSessionId();
+      const myPlayerId = hotMe.myId;
+      // Optimistic local update for snappy UI.
+      const next = {};
+      if (myPlayerId && mySid) next[myPlayerId] = mySid;
+      state.claimedBy = next;
+      renderLobbyPlayers();
+      // Server-validated host-only reset (C2 turn 4a).
+      huddleCallRPC('huddle_hot_reset_players', { p_code: state.code });
+    }
+
+    // ---------- Custom confirm dialog (replaces native confirm) ----------
+    // Promise-based. Usage: const ok = await huddleConfirm({title, body, confirmLabel, cancelLabel, danger});
+    let _hcResolver = null;
+    function huddleConfirm(opts){
+      opts = opts || {};
+      const backdrop = document.getElementById('hc-backdrop');
+      const titleEl  = document.getElementById('hc-title');
+      const bodyEl   = document.getElementById('hc-body');
+      const cancelEl = document.getElementById('hc-cancel');
+      const confEl   = document.getElementById('hc-confirm');
+      if (!backdrop || !titleEl || !bodyEl || !cancelEl || !confEl) {
+        return Promise.resolve(window.confirm(opts.body || opts.title || ''));
+      }
+      titleEl.textContent = opts.title || '';
+      bodyEl.textContent  = opts.body  || '';
+      cancelEl.textContent = opts.cancelLabel || t('common.cancel') || 'Cancel';
+      confEl.textContent   = opts.confirmLabel || t('common.confirm') || 'Confirm';
+      confEl.classList.toggle('is-danger', !!opts.danger);
+      backdrop.classList.add('active');
+      // If a previous dialog is somehow still open, resolve it as cancelled first.
+      if (_hcResolver) { try { _hcResolver(false); } catch(e){} _hcResolver = null; }
+      return new Promise(resolve => { _hcResolver = resolve; });
+    }
+    function huddleConfirmResolve(value){
+      const backdrop = document.getElementById('hc-backdrop');
+      if (backdrop) backdrop.classList.remove('active');
+      const r = _hcResolver; _hcResolver = null;
+      if (r) r(!!value);
+    }
+    function huddleConfirmBackdropClick(e){
+      if (!e || !e.target) return;
+      if (e.target.id === 'hc-backdrop') huddleConfirmResolve(false);
+    }
+    // ESC key dismisses
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const backdrop = document.getElementById('hc-backdrop');
+      if (backdrop && backdrop.classList.contains('active')) huddleConfirmResolve(false);
+    });
+
+    // ---------- Claimant profile cache (real-multiplayer seat display) ----------
+    // Maps a sessionId (Supabase auth.uid for signed-in users) → profile row
+    // (or null while a fetch is in flight). Lobby render fns look up real
+    // display_name + avatar so claimed seats stop showing slot placeholders
+    // like "Jordan" / "Alex" after a friend joins.
+    const claimantProfiles = new Map();
+    async function ensureClaimantProfiles(sessionIds, rerenderFn){
+      if (!window.sb || !sessionIds || sessionIds.length === 0) return;
+      const missing = sessionIds.filter(id => id && !claimantProfiles.has(id) && /^[0-9a-f-]{30,}$/i.test(id));
+      if (missing.length === 0) return;
+      // Mark them as "loading" with a null placeholder to avoid duplicate fetches
+      missing.forEach(id => claimantProfiles.set(id, null));
+      try {
+        const { data } = await window.sb
+          .from('profiles')
+          .select('user_id, username, display_name, avatar')
+          .in('user_id', missing);
+        if (data) data.forEach(p => claimantProfiles.set(p.user_id, p));
+        if (typeof rerenderFn === 'function') rerenderFn();
+      } catch(e) { console.warn('[Huddle] ensureClaimantProfiles failed:', e); }
+    }
+    function profileForClaim(sessionId){
+      if (!sessionId) return null;
+      return claimantProfiles.get(sessionId) || null;
+    }
+    function claimDisplayName(profile, slotPlaceholder){
+      if (!profile) return slotPlaceholder;
+      // Prefer @username over display_name — usernames are globally unique
+      // by Supabase constraint, so two players named "Saeed" still render
+      // distinctly as "@saeed1" and "@saeed_h". Falls through to display_name
+      // (first word only) if no username is set, then to the slot placeholder.
+      if (profile.username) return '@' + profile.username;
+      if (profile.display_name && profile.display_name.trim()) return profile.display_name.split(' ')[0];
+      return slotPlaceholder;
+    }
+    // Gameplay helper — for a slot `player`, look up the real claimant's
+    // display name + avatar. Returns the seat template name ("Jordan", "Maria"…)
+    // ONLY for UNCLAIMED seats (lobby state where the template label is meaningful).
+    // Claimed seats with no profile loaded (anonymous sessions, post-disconnect
+    // stragglers) get a neutral "Player" — never a template name leak.
+    // The caller is still responsible for the "if (player.id === meId) show 'You'" branch.
+    function playerDisplayFor(player, claimedByMap){
+      const sid = claimedByMap && player ? claimedByMap[player.id] : null;
+      const profile = sid ? profileForClaim(sid) : null;
+      let name;
+      if (profile) {
+        name = claimDisplayName(profile, player ? player.name : '');
+      } else if (sid) {
+        // Claimed but no profile in claimantProfiles. Don't leak the template
+        // seat name into the UI — show a neutral "Player" instead.
+        name = (typeof t === 'function' && t('common.otherPlayer')) || 'Player';
+      } else {
+        // Truly unclaimed seat — template name is the right label.
+        name = player ? player.name : '';
+      }
+      const avatar = (profile && profile.avatar) ? profile.avatar : (player ? avatarForPlayer(player) : null);
+      return { name, avatar, profile, sessionId: sid };
+    }
+
+    // ---------- Friends (Supabase-backed) ----------
+    // Real friends + friend-request system. Reads from public.friendships
+    // joined with public.profiles. See Phase 2 SQL in the project docs.
+    const friendsState = {
+      me: null,
+      friends: [],       // accepted, joined with other party's profile
+      incoming: [],      // pending where addressee_id = me
+      outgoing: [],      // pending where requester_id = me
+      searchResults: [], // profile rows matching current query (minus self+related)
+      searchQuery: '',
+      searchStatus: '',  // 'min' | 'searching' | 'empty' | 'ok'
+      activeTab: 'all',
+      loading: false,
+    };
+    let friendsSearchTimer = null;
+
+    function friendsEscape(s){
+      return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    function friendsDisplayName(p){
+      if (!p) return '';
+      return p.display_name || p.username || 'Player';
+    }
+
+    async function friendsLoad(){
+      const container = document.getElementById('friends-list-container');
+      if (!container) return;
+      if (!window.sb) {
+        friendsState.me = null;
+        friendsState.friends = [];
+        friendsState.incoming = [];
+        friendsState.outgoing = [];
+        renderFriends();
+        return;
+      }
+      try {
+        friendsState.loading = true;
+        const { data: { user } } = await window.sb.auth.getUser();
+        if (!user || user.is_anonymous) {
+          friendsState.me = null;
+          friendsState.friends = [];
+          friendsState.incoming = [];
+          friendsState.outgoing = [];
+          friendsState.loading = false;
+          renderFriends();
+          return;
+        }
+        friendsState.me = user.id;
+
+        const { data: rows, error } = await window.sb
+          .from('friendships')
+          .select('id, requester_id, addressee_id, status, created_at, updated_at')
+          .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
+        if (error) {
+          console.warn('[Huddle] friendsLoad query failed:', error.message);
+          friendsState.loading = false;
+          renderFriends();
+          return;
+        }
+
+        // Collect "other party" ids and batch-fetch profiles.
+        const otherIds = new Set();
+        (rows || []).forEach(r => {
+          const other = r.requester_id === user.id ? r.addressee_id : r.requester_id;
+          if (other) otherIds.add(other);
+        });
+        const profilesById = {};
+        if (otherIds.size > 0) {
+          const ids = Array.from(otherIds);
+          const { data: profs, error: pErr } = await window.sb
+            .from('profiles')
+            .select('user_id, username, display_name, avatar')
+            .in('user_id', ids);
+          if (pErr) {
+            console.warn('[Huddle] friends profile lookup failed:', pErr.message);
+          } else {
+            (profs || []).forEach(p => { profilesById[p.user_id] = p; });
+          }
+        }
+
+        const friends = [];
+        const incoming = [];
+        const outgoing = [];
+        (rows || []).forEach(r => {
+          const otherId = r.requester_id === user.id ? r.addressee_id : r.requester_id;
+          const profile = profilesById[otherId] || { user_id: otherId, username: '', display_name: '', avatar: null };
+          const entry = { row: r, otherId, profile };
+          if (r.status === 'accepted') friends.push(entry);
+          else if (r.status === 'pending' && r.addressee_id === user.id) incoming.push(entry);
+          else if (r.status === 'pending' && r.requester_id === user.id) outgoing.push(entry);
+        });
+
+        friendsState.friends = friends;
+        friendsState.incoming = incoming;
+        friendsState.outgoing = outgoing;
+        friendsState.loading = false;
+        renderFriends();
+        // Keep the open search panel in sync — e.g. if a request gets cancelled
+        // (locally or via realtime), the row should switch from "Request sent"
+        // back to the "Add" button without the user having to retype.
+        if (typeof renderFriendsSearchResults === 'function') renderFriendsSearchResults();
+        // Realtime: subscribe to my friendships rows + the profiles of my friends
+        // so add/accept/decline/remove and friend name/avatar edits propagate live.
+        try { if (typeof friendsWireSync === 'function') friendsWireSync(); } catch(e){}
+        try { if (typeof friendsWireProfileWatch === 'function') friendsWireProfileWatch(); } catch(e){}
+        try { if (typeof friendsWirePresence === 'function') friendsWirePresence(); } catch(e){}
+        // Phase 4 — kick off invites load/wire on first friends load (post-sign-in).
+        if (typeof invitesLoad === 'function' && (!invitesState.me || invitesState.me !== user.id)) {
+          invitesLoad().then(() => { if (typeof invitesWireSync === 'function') invitesWireSync(); });
+        } else if (typeof renderLobbyInvitesAll === 'function') {
+          renderLobbyInvitesAll();
+        }
+      } catch(e) {
+        console.warn('[Huddle] friendsLoad exception:', e);
+        friendsState.loading = false;
+        renderFriends();
+      }
+    }
+
+    // ---------- Friends realtime sync ----------
+    // Mirrors the invitesWireSync pattern (see Phase 4 below): one channel per
+    // user, multiple .on() handlers for the rows that touch this user. Any
+    // INSERT / UPDATE / DELETE just retriggers friendsLoad() — re-fetching is
+    // cheap and keeps a single source of truth instead of patching local state.
+    let _friendsChannel = null;
+    let _friendsChannelUserId = null;
+    let _friendsProfilesChannel = null;
+    let _friendsProfilesIds = '';
+
+    // Presence — Supabase Realtime Presence. One global channel; every signed-in
+    // user tracks themselves, clients see the union via presenceState(). On tab
+    // close Supabase auto-fires "leave" so no server-side cleanup needed.
+    const friendsPresence = new Set();   // user_ids currently online (peers + self)
+    let _friendsPresenceChannel = null;
+    let _friendsPresenceUserId = null;
+
+    function friendsRebuildPresence(){
+      if (!_friendsPresenceChannel) { friendsPresence.clear(); return; }
+      try {
+        const state = _friendsPresenceChannel.presenceState();
+        friendsPresence.clear();
+        Object.keys(state).forEach(key => friendsPresence.add(key));
+      } catch(e) {
+        console.warn('[Huddle] friendsRebuildPresence failed:', e);
+      }
+    }
+
+    function friendsWirePresence(){
+      if (!window.sb || !friendsState.me) return;
+      if (_friendsPresenceChannel && _friendsPresenceUserId === friendsState.me) return;
+      if (_friendsPresenceChannel) {
+        try { window.sb.removeChannel(_friendsPresenceChannel); } catch(e){}
+        _friendsPresenceChannel = null;
+        _friendsPresenceUserId = null;
+      }
+      try {
+        const me = friendsState.me;
+        const ch = window.sb.channel('friends_presence_global', {
+          config: { presence: { key: me } }
+        });
+        // Each presence event re-renders the Friends screen AND any open Lobby Invite sheet
+        // so the online/offline grouping there updates in real time as people join/leave.
+        const onPresenceChange = () => {
+          friendsRebuildPresence();
+          if (typeof renderFriends === 'function') renderFriends();
+          if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen();
+        };
+        ch.on('presence', { event: 'sync' }, onPresenceChange)
+        .on('presence', { event: 'join' }, onPresenceChange)
+        .on('presence', { event: 'leave' }, onPresenceChange)
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            try { await ch.track({ online_at: new Date().toISOString() }); } catch(e){}
+          }
+        });
+        _friendsPresenceChannel = ch;
+        _friendsPresenceUserId = me;
+      } catch(e) {
+        console.warn('[Huddle] friendsWirePresence failed:', e);
+        _friendsPresenceChannel = null;
+        _friendsPresenceUserId = null;
+      }
+    }
+
+    function friendsUnwirePresence(){
+      try {
+        if (_friendsPresenceChannel && window.sb) {
+          try { _friendsPresenceChannel.untrack(); } catch(e){}
+          window.sb.removeChannel(_friendsPresenceChannel);
+        }
+      } catch(e){}
+      _friendsPresenceChannel = null;
+      _friendsPresenceUserId = null;
+      friendsPresence.clear();
+    }
+
+    function friendsWireSync(){
+      if (!window.sb || !friendsState.me) return;
+      if (_friendsChannel && _friendsChannelUserId === friendsState.me) return; // already wired for this user
+      // User changed (without going through sign-out) — tear down the stale channel first
+      if (_friendsChannel) {
+        try { window.sb.removeChannel(_friendsChannel); } catch(e){}
+        _friendsChannel = null;
+        _friendsChannelUserId = null;
+      }
+      try {
+        const me = friendsState.me;
+        _friendsChannel = window.sb
+          .channel('friendships_' + me)
+          .on('postgres_changes',
+              { event: '*', schema: 'public', table: 'friendships', filter: 'requester_id=eq.' + me },
+              () => { friendsLoad(); })
+          .on('postgres_changes',
+              { event: '*', schema: 'public', table: 'friendships', filter: 'addressee_id=eq.' + me },
+              () => { friendsLoad(); })
+          .subscribe();
+        _friendsChannelUserId = me;
+      } catch(e) {
+        console.warn('[Huddle] friendsWireSync failed:', e);
+        _friendsChannel = null;
+        _friendsChannelUserId = null;
+      }
+    }
+
+    function friendsUnwireSync(){
+      try { if (_friendsChannel && window.sb) window.sb.removeChannel(_friendsChannel); } catch(e){}
+      _friendsChannel = null;
+      _friendsChannelUserId = null;
+      try { if (_friendsProfilesChannel && window.sb) window.sb.removeChannel(_friendsProfilesChannel); } catch(e){}
+      _friendsProfilesChannel = null;
+      _friendsProfilesIds = '';
+      friendsUnwirePresence();
+    }
+
+    // Live-update friend profile cards (name/avatar) by subscribing to UPDATEs
+    // on the profiles rows of the current friend set. Re-wires when the set
+    // changes (someone added/removed) so the IN filter stays accurate.
+    function friendsWireProfileWatch(){
+      if (!window.sb || !friendsState.me) return;
+      const ids = friendsState.friends.map(f => f.otherId).filter(Boolean).sort();
+      const key = ids.join(',');
+      if (key === _friendsProfilesIds && _friendsProfilesChannel) return;
+      try { if (_friendsProfilesChannel) window.sb.removeChannel(_friendsProfilesChannel); } catch(e){}
+      _friendsProfilesChannel = null;
+      _friendsProfilesIds = key;
+      if (ids.length === 0) return;
+      try {
+        _friendsProfilesChannel = window.sb
+          .channel('friend_profiles_' + friendsState.me)
+          .on('postgres_changes',
+              { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=in.(' + ids.join(',') + ')' },
+              () => { friendsLoad(); })
+          .subscribe();
+      } catch(e) {
+        console.warn('[Huddle] friendsWireProfileWatch failed:', e);
+      }
+    }
+
+    function friendsRelationship(otherId){
+      if (!otherId) return 'none';
+      if (friendsState.friends.some(f => f.otherId === otherId)) return 'friends';
+      if (friendsState.outgoing.some(f => f.otherId === otherId)) return 'sent';
+      if (friendsState.incoming.some(f => f.otherId === otherId)) return 'incoming';
+      return 'none';
+    }
+
+    function friendsSetTab(name){
+      friendsState.activeTab = name;
+      const map = { all: 'friends-tab-all', requests: 'friends-tab-requests' };
+      Object.keys(map).forEach(k => {
+        const el = document.getElementById(map[k]);
+        if (el) el.classList.toggle('active', k === name);
+      });
+      renderFriends();
+    }
+
+    function friendsRenderRowAccepted(entry){
+      const p = entry.profile;
+      const name = friendsDisplayName(p);
+      const handle = p.username ? '@' + p.username : '';
+      const avatar = p.avatar || deterministicAvatar(entry.otherId);
+      const isOnline = friendsPresence.has(entry.otherId);
+      return `
+        <div class="friend-row ${isOnline ? 'is-online' : 'is-offline'}">
+          ${avatarHTML(avatar, 44, { fallback: (name[0] || '?').toUpperCase(), online: isOnline })}
+          <div class="friend-info">
+            <div class="friend-name">${friendsEscape(name)}</div>
+            <div class="friend-status">${friendsEscape(handle)}</div>
+          </div>
+          <div class="friend-row-actions">
+            <button class="friend-overflow" onclick="openFriendMenu('${friendsEscape(entry.otherId)}', '${friendsEscape(name)}')" aria-label="${friendsEscape(t('friends.actionRemove'))}">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function friendsRenderRowIncoming(entry){
+      const p = entry.profile;
+      const name = friendsDisplayName(p);
+      const handle = p.username ? '@' + p.username : '';
+      const avatar = p.avatar || deterministicAvatar(entry.otherId);
+      return `
+        <div class="friend-row">
+          ${avatarHTML(avatar, 44, { fallback: (name[0] || '?').toUpperCase() })}
+          <div class="friend-info">
+            <div class="friend-name">${friendsEscape(name)}</div>
+            <div class="friend-status">${friendsEscape(handle)}</div>
+          </div>
+          <div class="friend-row-actions">
+            <button class="btn btn-primary btn-sm" onclick="friendRequestAccept('${friendsEscape(entry.otherId)}')">${t('friends.actionAccept')}</button>
+            <button class="friend-remove-btn" onclick="friendRequestDecline('${friendsEscape(entry.otherId)}')">${t('friends.actionDecline')}</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Phase 4 — row renderer for incoming game invites on the Requests tab
+    function friendsRenderRowGameInvite(invite){
+      const p = invite.sender || {};
+      const name = friendsDisplayName(p) || 'A friend';
+      const gameName = inviteGameLabel(invite.row.game);
+      const avatar = p.avatar || deterministicAvatar(p.user_id);
+      const escId = friendsEscape(invite.row.id);
+      return `
+        <div class="friend-row">
+          ${avatarHTML(avatar, 44, { fallback: (name[0] || '?').toUpperCase() })}
+          <div class="friend-info">
+            <div class="friend-name">${friendsEscape(name)}</div>
+            <div class="friend-status">${friendsEscape(gameName)}</div>
+          </div>
+          <div class="friend-row-actions">
+            <button class="btn btn-primary btn-sm" onclick="inviteAcceptById('${escId}')">${friendsEscape(t('invite.join'))}</button>
+            <button class="friend-remove-btn" onclick="inviteDeclineById('${escId}')">${friendsEscape(t('invite.decline'))}</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Helpers used by inline onclick handlers — look up invite by id then call accept/decline
+    function inviteAcceptById(id){
+      const inv = (invitesState.incoming || []).find(i => i.row.id === id);
+      if (inv) inviteAccept(inv);
+    }
+    function inviteDeclineById(id){
+      const inv = (invitesState.incoming || []).find(i => i.row.id === id);
+      if (inv) inviteDecline(inv);
+    }
+
+    function friendsRenderRowOutgoing(entry){
+      const p = entry.profile;
+      const name = friendsDisplayName(p);
+      const handle = p.username ? '@' + p.username : '';
+      const avatar = p.avatar || deterministicAvatar(entry.otherId);
+      return `
+        <div class="friend-row">
+          ${avatarHTML(avatar, 44, { fallback: (name[0] || '?').toUpperCase() })}
+          <div class="friend-info">
+            <div class="friend-name">${friendsEscape(name)}</div>
+            <div class="friend-status">${friendsEscape(handle)}</div>
+          </div>
+          <div class="friend-row-actions">
+            <button class="friend-remove-btn" onclick="friendRequestCancel('${friendsEscape(entry.otherId)}')">${t('friends.actionCancel')}</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFriends(){
+      const container = document.getElementById('friends-list-container');
+      if (!container) return;
+
+      // Stat counter on profile
+      const fr = document.getElementById('stat-friends');
+      if (fr) fr.textContent = friendsState.friends.length;
+
+      // Requests badge — combines pending friend requests + pending game invites
+      const badge = document.getElementById('friends-requests-badge');
+      if (badge) {
+        const gameInviteCount = (typeof invitesState !== 'undefined' && invitesState.incoming) ? invitesState.incoming.length : 0;
+        const total = friendsState.incoming.length + gameInviteCount;
+        if (total > 0) {
+          badge.textContent = total;
+          badge.hidden = false;
+        } else {
+          badge.hidden = true;
+          badge.textContent = '';
+        }
+      }
+
+      // Sign-in prompt (no auth user)
+      if (!friendsState.me) {
+        container.innerHTML = `<div class="friend-empty">${t('friends.signInPrompt')}</div>`;
+        renderFriendsSearchResults();
+        return;
+      }
+
+      let html = '';
+      const tab = friendsState.activeTab;
+      let glowSearch = false; // true → pulse the search bar to draw a new user's eye
+      // Skeleton on first fetch — without it the "all" tab briefly flashes
+      // the "no friends yet" hero for users who DO have friends, and the
+      // "requests" tab flashes "no requests". Show 4 placeholder rows while
+      // the fetch is in flight (covers both tabs).
+      const _friendsFirstFetch = friendsState.loading
+        && friendsState.friends.length === 0
+        && friendsState.incoming.length === 0
+        && friendsState.outgoing.length === 0;
+      if (_friendsFirstFetch) {
+        container.innerHTML =
+          '<div class="huddle-skeleton-list" aria-busy="true" aria-live="polite">' +
+          Array(4).fill(
+            '<div class="huddle-skeleton-row">' +
+              '<div class="huddle-skeleton-circle"></div>' +
+              '<div class="huddle-skeleton-stack">' +
+                '<div class="huddle-skeleton-bar short"></div>' +
+                '<div class="huddle-skeleton-bar tiny"></div>' +
+              '</div>' +
+            '</div>'
+          ).join('') +
+          '</div>';
+        renderFriendsSearchResults();
+        return;
+      }
+      if (tab === 'requests') {
+        const gameInvites = (typeof invitesState !== 'undefined' && invitesState.incoming) ? invitesState.incoming : [];
+        if (friendsState.incoming.length === 0 && friendsState.outgoing.length === 0 && gameInvites.length === 0) {
+          html = `<div class="friend-empty">${t('friends.emptyRequests')}</div>`;
+        } else {
+          // Phase 4 — game invites surface here too, on top
+          if (gameInvites.length > 0) {
+            html += `<div class="section-title">${t('invite.sectionTitle')} · ${gameInvites.length}</div>`;
+            html += gameInvites.map(friendsRenderRowGameInvite).join('');
+          }
+          if (friendsState.incoming.length > 0) {
+            html += `<div class="section-title">${t('friends.sectionIncoming')} · ${friendsState.incoming.length}</div>`;
+            html += friendsState.incoming.map(friendsRenderRowIncoming).join('');
+          }
+          if (friendsState.outgoing.length > 0) {
+            html += `<div class="section-title">${t('friends.sectionSent')} · ${friendsState.outgoing.length}</div>`;
+            html += friendsState.outgoing.map(friendsRenderRowOutgoing).join('');
+          }
+        }
+      } else {
+        // 'all' tab
+        if (friendsState.friends.length === 0) {
+          // Rich visual empty state — icon + headline + animated arrow pointing at the search bar
+          glowSearch = true;
+          html = `
+            <div class="friends-empty-hero">
+              <div class="friends-empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="8" r="4"></circle>
+                  <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"></path>
+                  <path d="M19 8v6M22 11h-6"></path>
+                </svg>
+              </div>
+              <div class="friends-empty-title">${t('friends.heroTitle')}</div>
+              <div class="friends-empty-sub">${t('friends.heroSub')}</div>
+            </div>`;
+        } else {
+          // Split by presence — online first (Discord/Instagram pattern). Sort
+          // alphabetically within each group for a stable, predictable order.
+          const byName = (a, b) => friendsDisplayName(a.profile).localeCompare(friendsDisplayName(b.profile), undefined, { sensitivity: 'base' });
+          const online = friendsState.friends.filter(e => friendsPresence.has(e.otherId)).sort(byName);
+          const offline = friendsState.friends.filter(e => !friendsPresence.has(e.otherId)).sort(byName);
+          if (online.length > 0) {
+            html += `<div class="section-title">${t('friends.online')} · ${online.length}</div>`;
+            html += online.map(friendsRenderRowAccepted).join('');
+          }
+          if (offline.length > 0) {
+            html += `<div class="section-title">${t('friends.offline')} · ${offline.length}</div>`;
+            html += offline.map(friendsRenderRowAccepted).join('');
+          }
+        }
+      }
+
+      container.innerHTML = html;
+      parseEmoji(container);
+      renderFriendsSearchResults();
+      // Toggle the search-bar glow so new users see where to look.
+      const searchWrap = document.querySelector('#screen-friends .search');
+      if (searchWrap) searchWrap.classList.toggle('search-glow', glowSearch);
+    }
+
+    function renderFriendsSearchResults(){
+      const el = document.getElementById('friends-search-results');
+      if (!el) return;
+      const q = (friendsState.searchQuery || '').trim();
+      if (!q) {
+        el.innerHTML = '';
+        return;
+      }
+      if (friendsState.searchStatus === 'min') {
+        el.innerHTML = `<div class="friends-search-msg">${t('friends.searchMinChars')}</div>`;
+        return;
+      }
+      if (friendsState.searchStatus === 'searching') {
+        // Keep last results visible silently; render nothing extra to avoid flicker.
+        if (!friendsState.searchResults.length) { el.innerHTML = ''; return; }
+      }
+      if (!friendsState.searchResults.length && friendsState.searchStatus === 'ok') {
+        el.innerHTML = `<div class="friends-search-msg">${t('friends.searchNoResults', { q: friendsEscape(q) })}</div>`;
+        return;
+      }
+      const rows = friendsState.searchResults.map(p => {
+        const rel = friendsRelationship(p.user_id);
+        const name = friendsDisplayName(p);
+        const handle = p.username ? '@' + p.username : '';
+        const avatar = p.avatar || deterministicAvatar(p.user_id);
+        let actions = '';
+        if (rel === 'friends') {
+          actions = `<span class="friend-status-pill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>${t('friends.actionFriends')}</span>`;
+        } else if (rel === 'sent') {
+          // Single subtle status indicator (Instagram / LinkedIn pattern). Cancel
+          // lives in the Requests tab where users expect it — avoids the
+          // confusing "Sent | Cancel" double affordance.
+          actions = `<span class="friend-status-pill" style="color:var(--text-secondary)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>${t('friends.requestSent')}</span>`;
+        } else if (rel === 'incoming') {
+          actions = `<button class="btn btn-primary btn-sm" onclick="friendRequestAccept('${friendsEscape(p.user_id)}')">${t('friends.actionAccept')}</button>`;
+        } else {
+          actions = `<button class="btn btn-outline btn-sm" onclick="friendRequestSend('${friendsEscape(p.user_id)}')">${t('friends.actionAdd')}</button>`;
+        }
+        return `
+          <div class="friend-row">
+            ${avatarHTML(avatar, 40, { fallback: (name[0] || '?').toUpperCase() })}
+            <div class="friend-info">
+              <div class="friend-name">${friendsEscape(name)}</div>
+              <div class="friend-status">${friendsEscape(handle)}</div>
+            </div>
+            <div class="friend-row-actions">${actions}</div>
+          </div>`;
+      }).join('');
+      el.innerHTML = rows;
+      parseEmoji(el);
+    }
+
+    // Header "add friend" icon → focus the search input, select any existing
+    // text, scroll it into view, and play a one-shot glow so the user's eye
+    // lands on the right spot. Single, honest action — no extra screen.
+    function friendsFocusSearch(){
+      const input = document.getElementById('friends-search-input');
+      if (!input) return;
+      const wrap = input.closest('.search');
+      try { wrap && wrap.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_){}
+      // Defer focus a beat so the smooth-scroll can start before the keyboard
+      // pops on mobile (prevents the layout from jumping mid-scroll).
+      setTimeout(() => {
+        input.focus({ preventScroll: true });
+        try { input.select(); } catch(_){}
+        if (wrap) {
+          wrap.classList.remove('search-tap-pulse');
+          // Force reflow so the animation restarts on repeat taps.
+          void wrap.offsetWidth;
+          wrap.classList.add('search-tap-pulse');
+          wrap.addEventListener('animationend', () => {
+            wrap.classList.remove('search-tap-pulse');
+          }, { once: true });
+        }
+      }, 120);
+    }
+
+    function friendsHandleSearch(value){
+      const q = (value || '').trim();
+      friendsState.searchQuery = q;
+      if (friendsSearchTimer) { clearTimeout(friendsSearchTimer); friendsSearchTimer = null; }
+      if (!q) {
+        friendsState.searchResults = [];
+        friendsState.searchStatus = '';
+        renderFriendsSearchResults();
+        return;
+      }
+      if (q.length < 2) {
+        friendsState.searchResults = [];
+        friendsState.searchStatus = 'min';
+        renderFriendsSearchResults();
+        return;
+      }
+      friendsState.searchStatus = 'searching';
+      friendsSearchTimer = setTimeout(() => { friendsRunSearch(q); }, 350);
+    }
+
+    async function friendsRunSearch(q){
+      if (!window.sb || !friendsState.me) {
+        friendsState.searchResults = [];
+        friendsState.searchStatus = 'ok';
+        renderFriendsSearchResults();
+        return;
+      }
+      try {
+        // ilike with prefix; escape % and _ to avoid wildcard injection.
+        const safe = q.replace(/[\\%_]/g, m => '\\' + m);
+        const { data, error } = await window.sb
+          .from('profiles')
+          .select('user_id, username, display_name, avatar')
+          .ilike('username', safe + '%')
+          .neq('user_id', friendsState.me)
+          .limit(8);
+        if (error) {
+          console.warn('[Huddle] friends search failed:', error.message);
+          friendsState.searchResults = [];
+          friendsState.searchStatus = 'ok';
+          renderFriendsSearchResults();
+          return;
+        }
+        friendsState.searchResults = (data || []);
+        friendsState.searchStatus = 'ok';
+        renderFriendsSearchResults();
+      } catch(e) {
+        console.warn('[Huddle] friends search exception:', e);
+        friendsState.searchResults = [];
+        friendsState.searchStatus = 'ok';
+        renderFriendsSearchResults();
+      }
+    }
+
+    async function friendRequestSend(otherUserId){
+      if (!window.sb || !friendsState.me || !otherUserId) return;
+      try {
+        const { error } = await window.sb
+          .from('friendships')
+          .insert({ requester_id: friendsState.me, addressee_id: otherUserId, status: 'pending' });
+        if (error) {
+          // 23505 unique violation = already exists
+          if (error.code === '23505' || /duplicate|unique/i.test(error.message || '')) {
+            console.warn('[Huddle] friend request already exists');
+          } else {
+            console.warn('[Huddle] friendRequestSend failed:', error.message);
+            alert(error.message || 'Could not send request');
+            return;
+          }
+        }
+        await friendsLoad();
+        // Clear search + jump to Requests tab so the user can see the pending
+        // request they just sent (the row that was here is now redundant).
+        if (friendsSearchTimer) { clearTimeout(friendsSearchTimer); friendsSearchTimer = null; }
+        const input = document.getElementById('friends-search-input');
+        if (input) input.value = '';
+        friendsState.searchQuery = '';
+        friendsState.searchResults = [];
+        friendsState.searchStatus = '';
+        renderFriendsSearchResults();
+        friendsSetTab('requests');
+      } catch(e) {
+        console.warn('[Huddle] friendRequestSend exception:', e);
+      }
+    }
+
+    async function friendRequestAccept(otherUserId){
+      if (!window.sb || !friendsState.me || !otherUserId) return;
+      try {
+        const { error } = await window.sb
+          .from('friendships')
+          .update({ status: 'accepted' })
+          .eq('addressee_id', friendsState.me)
+          .eq('requester_id', otherUserId)
+          .eq('status', 'pending');
+        if (error) console.warn('[Huddle] friendRequestAccept failed:', error.message);
+        await friendsLoad();
+      } catch(e) {
+        console.warn('[Huddle] friendRequestAccept exception:', e);
+      }
+    }
+
+    async function friendRequestDecline(otherUserId){
+      if (!window.sb || !friendsState.me || !otherUserId) return;
+      try {
+        const { error } = await window.sb
+          .from('friendships')
+          .delete()
+          .eq('addressee_id', friendsState.me)
+          .eq('requester_id', otherUserId)
+          .eq('status', 'pending');
+        if (error) console.warn('[Huddle] friendRequestDecline failed:', error.message);
+        await friendsLoad();
+      } catch(e) {
+        console.warn('[Huddle] friendRequestDecline exception:', e);
+      }
+    }
+
+    async function friendRequestCancel(otherUserId){
+      if (!window.sb || !friendsState.me || !otherUserId) return;
+      try {
+        const { error } = await window.sb
+          .from('friendships')
+          .delete()
+          .eq('requester_id', friendsState.me)
+          .eq('addressee_id', otherUserId)
+          .eq('status', 'pending');
+        if (error) console.warn('[Huddle] friendRequestCancel failed:', error.message);
+        await friendsLoad();
+      } catch(e) {
+        console.warn('[Huddle] friendRequestCancel exception:', e);
+      }
+    }
+
+    async function friendRemove(otherUserId, name){
+      if (!window.sb || !friendsState.me || !otherUserId) return;
+      const friendName = name || t('friends.thisFriend') || 'this friend';
+      const ok = await huddleConfirm({
+        title: t('friends.removeTitle', { name: friendName }),
+        body: t('friends.removeBody'),
+        confirmLabel: t('friends.actionRemove'),
+        cancelLabel: t('common.cancel'),
+        danger: true,
+      });
+      if (!ok) return;
+      try {
+        // Either direction: row may have me as requester or addressee
+        const me = friendsState.me;
+        const { error } = await window.sb
+          .from('friendships')
+          .delete()
+          .or(`and(requester_id.eq.${me},addressee_id.eq.${otherUserId}),and(requester_id.eq.${otherUserId},addressee_id.eq.${me})`)
+          .eq('status', 'accepted');
+        if (error) console.warn('[Huddle] friendRemove failed:', error.message);
+        await friendsLoad();
+      } catch(e) {
+        console.warn('[Huddle] friendRemove exception:', e);
+      }
+    }
+
+    // =====================================================================
+    // PHASE 4 — Room invites (invite friends from inside a lobby)
+    // =====================================================================
+    // Friends already in your "friends" list can be tapped on the lobby screen
+    // to receive an in-app banner that brings them into your room with one tap.
+    // Backed by public.room_invites in Supabase.
+    // =====================================================================
+    const invitesState = {
+      me: null,
+      loading: false,
+      incoming: [],   // pending invites where to_user_id = me; each: { row, sender }
+      outgoing: [],   // pending invites where from_user_id = me; each: { row, receiver }
+      bannerQueue: [],
+      bannerActive: null,
+      bannerDismissTimer: null,
+      seenIncomingIds: new Set(),
+    };
+    let _invitesChannel = null;
+
+    function inviteGameLabel(gameKey){
+      if (gameKey === 'hotseat')   return t('game.hotseat');
+      if (gameKey === 'chameleon') return t('game.chameleon');
+      if (gameKey === 'liar')      return t('game.liar');
+      return gameKey || '';
+    }
+
+    function inviteCurrentLobbyContext(){
+      // Returns { gameKey, code, claimedBy } describing the lobby we're currently in,
+      // or null if not on a lobby screen.
+      const active = document.querySelector('.screen.active');
+      const id = active ? active.id : '';
+      if (id === 'screen-lobby' && typeof state !== 'undefined' && state.code) {
+        return { gameKey: 'hotseat', code: state.code, claimedBy: state.claimedBy || {} };
+      }
+      if (id === 'screen-cham-lobby' && typeof chamState !== 'undefined' && chamState.code) {
+        return { gameKey: 'chameleon', code: chamState.code, claimedBy: chamState.claimedBy || {} };
+      }
+      if (id === 'screen-liar-lobby' && typeof liarState !== 'undefined' && liarState.code) {
+        return { gameKey: 'liar', code: liarState.code, claimedBy: liarState.claimedBy || {} };
+      }
+      if (id === 'screen-mafia-lobby' && typeof mafiaState !== 'undefined' && mafiaState.code) {
+        return { gameKey: 'mafia', code: mafiaState.code, claimedBy: mafiaState.claimedBy || {} };
+      }
+      return null;
+    }
+
+    async function invitesLoad(){
+      if (!window.sb) return;
+      try {
+        invitesState.loading = true;
+        const { data: { user } } = await window.sb.auth.getUser();
+        if (!user || user.is_anonymous) {
+          invitesState.me = null;
+          invitesState.incoming = [];
+          invitesState.outgoing = [];
+          invitesState.loading = false;
+          renderLobbyInvitesAll();
+          renderFriends();
+          return;
+        }
+        invitesState.me = user.id;
+        const nowIso = new Date().toISOString();
+        const { data: rows, error } = await window.sb
+          .from('room_invites')
+          .select('id, from_user_id, to_user_id, room_code, game, status, created_at, expires_at')
+          .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
+          .eq('status', 'pending')
+          .gt('expires_at', nowIso)
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.warn('[Huddle] invitesLoad query failed:', error.message);
+          invitesState.loading = false;
+          return;
+        }
+        const otherIds = new Set();
+        (rows || []).forEach(r => {
+          const other = r.from_user_id === user.id ? r.to_user_id : r.from_user_id;
+          if (other) otherIds.add(other);
+        });
+        const profilesById = {};
+        if (otherIds.size > 0) {
+          const { data: profs, error: pErr } = await window.sb
+            .from('profiles')
+            .select('user_id, username, display_name, avatar')
+            .in('user_id', Array.from(otherIds));
+          if (pErr) console.warn('[Huddle] invitesLoad profile lookup failed:', pErr.message);
+          else (profs || []).forEach(p => { profilesById[p.user_id] = p; });
+        }
+        const incoming = [];
+        const outgoing = [];
+        (rows || []).forEach(r => {
+          if (r.to_user_id === user.id) {
+            const sender = profilesById[r.from_user_id] || { user_id: r.from_user_id };
+            incoming.push({ row: r, sender });
+          } else {
+            const receiver = profilesById[r.to_user_id] || { user_id: r.to_user_id };
+            outgoing.push({ row: r, receiver });
+          }
+        });
+        invitesState.incoming = incoming;
+        invitesState.outgoing = outgoing;
+        invitesState.loading = false;
+
+        renderLobbyInvitesAll();
+        renderFriends();
+        // Surface any incoming invites we haven't shown the banner for yet
+        incoming.forEach(inv => {
+          if (!invitesState.seenIncomingIds.has(inv.row.id)) {
+            invitesState.seenIncomingIds.add(inv.row.id);
+            inviteEnqueueBanner(inv);
+          }
+        });
+      } catch(e) {
+        console.warn('[Huddle] invitesLoad exception:', e);
+        invitesState.loading = false;
+      }
+    }
+
+    function invitesWireSync(){
+      if (!window.sb || !invitesState.me) return;
+      // Tear down any prior channel
+      invitesUnwireSync();
+      try {
+        const me = invitesState.me;
+        _invitesChannel = window.sb
+          .channel('room_invites_' + me)
+          .on('postgres_changes',
+              { event: 'INSERT', schema: 'public', table: 'room_invites', filter: `to_user_id=eq.${me}` },
+              () => { invitesLoad(); })
+          .on('postgres_changes',
+              { event: 'UPDATE', schema: 'public', table: 'room_invites', filter: `to_user_id=eq.${me}` },
+              () => { invitesLoad(); })
+          .on('postgres_changes',
+              { event: 'UPDATE', schema: 'public', table: 'room_invites', filter: `from_user_id=eq.${me}` },
+              () => { invitesLoad(); })
+          .subscribe();
+      } catch(e) {
+        console.warn('[Huddle] invitesWireSync failed:', e);
+      }
+    }
+
+    function invitesUnwireSync(){
+      try {
+        if (_invitesChannel && window.sb) {
+          window.sb.removeChannel(_invitesChannel);
+        }
+      } catch(e){}
+      _invitesChannel = null;
+    }
+
+    async function inviteSend(toUserId, roomCode, gameKey, ev){
+      if (!window.sb || !invitesState.me) return;
+      if (!toUserId || !roomCode || !gameKey) return;
+      if (toUserId === invitesState.me) return;
+      // Must be friends
+      const isFriend = friendsState.friends.some(f => f.otherId === toUserId);
+      if (!isFriend) return;
+      // Dedupe: if we already have a pending outgoing invite for the same room/friend, no-op
+      const existing = invitesState.outgoing.find(o =>
+        o.row.to_user_id === toUserId && o.row.room_code === roomCode && o.row.game === gameKey
+      );
+      if (existing) {
+        renderLobbyInvitesAll();
+        return;
+      }
+      // Defence against tap-spam — the optimistic UI change makes a second
+      // tap impossible anyway (the button becomes "Invited"), but we disable
+      // immediately too in case the re-render is somehow delayed a frame.
+      const btn = ev && ev.currentTarget;
+      if (btn) { btn.disabled = true; btn.setAttribute('aria-busy','true'); }
+      // Optimistic UI — without this the button stays "Invite" until BOTH the
+      // INSERT and the follow-up invitesLoad() round-trip resolve (300-1000ms
+      // on real wifi). Push a placeholder outgoing entry with _optimistic:true
+      // so the next render shows "Invited" instantly. invitesLoad() later
+      // replaces this with the canonical row from the server.
+      const optimistic = {
+        row: {
+          id: '__optimistic_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+          from_user_id: invitesState.me,
+          to_user_id: toUserId,
+          room_code: roomCode,
+          game: gameKey,
+          status: 'pending',
+          _optimistic: true,
+        },
+        receiver: { user_id: toUserId },
+      };
+      invitesState.outgoing.push(optimistic);
+      try { renderLobbyInvitesAll(); } catch(e){}
+      try { renderFriends(); } catch(e){}
+      try {
+        const { error } = await window.sb
+          .from('room_invites')
+          .insert({
+            from_user_id: invitesState.me,
+            to_user_id: toUserId,
+            room_code: roomCode,
+            game: gameKey,
+            status: 'pending',
+          });
+        if (error) {
+          // Roll back the optimistic entry so the button flips back to
+          // "Invite" — the user can retry. Toast surfaces the failure.
+          console.warn('[Huddle] inviteSend failed:', error.message);
+          const idx = invitesState.outgoing.indexOf(optimistic);
+          if (idx >= 0) invitesState.outgoing.splice(idx, 1);
+          try { if (typeof showLobbyToast === 'function') showLobbyToast(t('common.syncFailed'), 3500); } catch(e){}
+          try { renderLobbyInvitesAll(); } catch(e){}
+          try { renderFriends(); } catch(e){}
+          if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); }
+          return;
+        }
+        // Canonical refresh — replaces the optimistic entry with the real
+        // row (carrying the server-issued id needed for Cancel to work).
+        // No await on the UI: the button is already showing "Invited", so
+        // this happens silently in the background.
+        invitesLoad();
+      } catch(e) {
+        console.warn('[Huddle] inviteSend exception:', e);
+        const idx = invitesState.outgoing.indexOf(optimistic);
+        if (idx >= 0) invitesState.outgoing.splice(idx, 1);
+        try { if (typeof showLobbyToast === 'function') showLobbyToast(t('common.syncFailed'), 3500); } catch(e){}
+        try { renderLobbyInvitesAll(); } catch(e){}
+        try { renderFriends(); } catch(e){}
+        if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); }
+      }
+    }
+
+    async function inviteCancel(inviteId, ev){
+      if (!window.sb || !invitesState.me || !inviteId) return;
+      // Optimistic UI — same logic as inviteSend. Remove the outgoing entry
+      // immediately so the button flips back to "Invite". Roll back on error.
+      const btn = ev && ev.currentTarget;
+      if (btn) { btn.disabled = true; btn.setAttribute('aria-busy','true'); }
+      const idx = invitesState.outgoing.findIndex(o => o.row && o.row.id === inviteId);
+      const removed = (idx >= 0) ? invitesState.outgoing.splice(idx, 1)[0] : null;
+      const removedIdx = idx;
+      try { renderLobbyInvitesAll(); } catch(e){}
+      try { renderFriends(); } catch(e){}
+      // Optimistic entries don't have a real server id yet (the INSERT is
+      // still in flight). Skip the UPDATE — the canonical invitesLoad() that
+      // chains off inviteSend will replace the optimistic row anyway, and a
+      // tap-cancel on an optimistic entry is a race we can ignore.
+      if (typeof inviteId === 'string' && inviteId.startsWith('__optimistic_')) {
+        return;
+      }
+      try {
+        const { error } = await window.sb
+          .from('room_invites')
+          .update({ status: 'cancelled' })
+          .eq('id', inviteId)
+          .eq('from_user_id', invitesState.me)
+          .eq('status', 'pending');
+        if (error) {
+          console.warn('[Huddle] inviteCancel failed:', error.message);
+          // Roll back: restore the entry at its original position.
+          if (removed) invitesState.outgoing.splice(Math.max(0, removedIdx), 0, removed);
+          try { if (typeof showLobbyToast === 'function') showLobbyToast(t('common.syncFailed'), 3500); } catch(e){}
+          try { renderLobbyInvitesAll(); } catch(e){}
+          try { renderFriends(); } catch(e){}
+          if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); }
+          return;
+        }
+        // Background canonical refresh.
+        invitesLoad();
+      } catch(e) {
+        console.warn('[Huddle] inviteCancel exception:', e);
+        if (removed) invitesState.outgoing.splice(Math.max(0, removedIdx), 0, removed);
+        try { if (typeof showLobbyToast === 'function') showLobbyToast(t('common.syncFailed'), 3500); } catch(e){}
+        try { renderLobbyInvitesAll(); } catch(e){}
+        try { renderFriends(); } catch(e){}
+        if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); }
+      }
+    }
+
+    // Cancel ALL my pending invites for a given room. Called when I leave a
+    // room so a friend tapping "Join" later doesn't land in a room I'm no
+    // longer in (ghost-room avoidance).
+    async function inviteCancelMineForRoom(roomCode, gameKey){
+      if (!window.sb || !invitesState.me || !roomCode) return;
+      try {
+        const { error } = await window.sb
+          .from('room_invites')
+          .update({ status: 'cancelled' })
+          .eq('from_user_id', invitesState.me)
+          .eq('room_code', roomCode)
+          .eq('game', gameKey)
+          .eq('status', 'pending');
+        if (error) console.warn('[Huddle] inviteCancelMineForRoom failed:', error.message);
+        await invitesLoad();
+      } catch(e) {
+        console.warn('[Huddle] inviteCancelMineForRoom exception:', e);
+      }
+    }
+
+    async function inviteAccept(invite){
+      if (!window.sb || !invite || !invite.row) return;
+      try {
+        const { error } = await window.sb
+          .from('room_invites')
+          .update({ status: 'accepted' })
+          .eq('id', invite.row.id)
+          .eq('to_user_id', invitesState.me)
+          .eq('status', 'pending');
+        if (error) console.warn('[Huddle] inviteAccept failed:', error.message);
+      } catch(e) {
+        console.warn('[Huddle] inviteAccept exception:', e);
+      }
+      // Route the user into the room. Update URL search so the lobby openers find the code.
+      try {
+        const params = new URLSearchParams(window.location.search);
+        params.set('room', invite.row.room_code);
+        params.set('game', invite.row.game);
+        const newSearch = '?' + params.toString();
+        history.replaceState(history.state || {}, '', newSearch);
+      } catch(e){}
+      inviteOpenLobby(invite.row.game);
+      // Drop the banner we just acted on
+      inviteBannerHide();
+      await invitesLoad();
+    }
+
+    async function inviteDecline(invite){
+      if (!window.sb || !invite || !invite.row) return;
+      try {
+        const { error } = await window.sb
+          .from('room_invites')
+          .update({ status: 'declined' })
+          .eq('id', invite.row.id)
+          .eq('to_user_id', invitesState.me)
+          .eq('status', 'pending');
+        if (error) console.warn('[Huddle] inviteDecline failed:', error.message);
+      } catch(e) {
+        console.warn('[Huddle] inviteDecline exception:', e);
+      }
+      inviteBannerHide();
+      await invitesLoad();
+    }
+
+    function inviteOpenLobby(gameKey){
+      if (gameKey === 'hotseat')        openLobby();
+      else if (gameKey === 'chameleon') openChamLobby();
+      else if (gameKey === 'liar')      openLiarLobby();
+      else if (gameKey === 'mafia')     openMafiaLobby();
+    }
+
+    // ---------- Lobby "Invite friends" section rendering ----------
+    function renderLobbyInvitesAll(){
+      renderLobbyInvites('hotseat');
+      renderLobbyInvites('chameleon');
+      renderLobbyInvites('liar');
+      renderLobbyInvites('mafia');
+    }
+
+    // All three game lobbies now use the shared bottom-sheet invite picker
+    // (opened from empty-seat tiles). The old bottom invite sections were
+    // removed — this function just refreshes the open sheet if it matches.
+    function renderLobbyInvites(gameKey){
+      if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen(gameKey);
+    }
+
+    function inviteLobbyContextForGame(gameKey){
+      if (gameKey === 'hotseat' && typeof state !== 'undefined') {
+        return { code: state.code, claimedBy: state.claimedBy || {} };
+      }
+      if (gameKey === 'chameleon' && typeof chamState !== 'undefined') {
+        return { code: chamState.code, claimedBy: chamState.claimedBy || {} };
+      }
+      if (gameKey === 'liar' && typeof liarState !== 'undefined') {
+        return { code: liarState.code, claimedBy: liarState.claimedBy || {} };
+      }
+      if (gameKey === 'mafia' && typeof mafiaState !== 'undefined') {
+        return { code: mafiaState.code, claimedBy: mafiaState.claimedBy || {} };
+      }
+      return null;
+    }
+
+    // ---------- Incoming invite banner ----------
+    function inviteEnqueueBanner(invite){
+      // Suppress banner on the login screen
+      const active = document.querySelector('.screen.active');
+      if (active && active.id === 'screen-login') return;
+      // If we're already in this exact room, no banner
+      const ctx = inviteCurrentLobbyContext();
+      if (ctx && ctx.code === invite.row.room_code && ctx.gameKey === invite.row.game) return;
+
+      if (invitesState.bannerActive) {
+        invitesState.bannerQueue.push(invite);
+        return;
+      }
+      inviteBannerShow(invite);
+    }
+
+    function inviteBannerShow(invite){
+      const banner = document.getElementById('invite-banner');
+      const textEl = document.getElementById('invite-banner-text');
+      const avatarEl = document.getElementById('invite-banner-avatar');
+      const joinBtn = document.getElementById('invite-banner-join');
+      const declineBtn = document.getElementById('invite-banner-decline');
+      if (!banner || !textEl || !joinBtn || !declineBtn) return;
+
+      invitesState.bannerActive = invite;
+      const senderName = friendsDisplayName(invite.sender) || 'A friend';
+      const gameName = inviteGameLabel(invite.row.game);
+      // Build banner text with bolded {name} and {game}
+      const tmpl = t('invite.banner', { name: '__N__', game: '__G__' });
+      const html = friendsEscape(tmpl)
+        .replace('__N__', '<strong>' + friendsEscape(senderName) + '</strong>')
+        .replace('__G__', '<strong>' + friendsEscape(gameName) + '</strong>');
+      textEl.innerHTML = html;
+
+      // Avatar — swap inner HTML rather than replacing the node so the id is preserved
+      const avatar = invite.sender.avatar || deterministicAvatar(invite.sender.user_id);
+      if (avatarEl) {
+        avatarEl.outerHTML = `<div id="invite-banner-avatar" style="flex-shrink:0">${avatarHTML(avatar, 40, { fallback: (senderName[0] || '?').toUpperCase() })}</div>`;
+      }
+
+      joinBtn.textContent = t('invite.join');
+      declineBtn.textContent = t('invite.decline');
+
+      banner.classList.add('show');
+      parseEmoji(banner);
+
+      // Auto-dismiss after 30s — equivalent to a silent decline (don't update DB, just hide)
+      clearTimeout(invitesState.bannerDismissTimer);
+      invitesState.bannerDismissTimer = setTimeout(() => {
+        inviteBannerHide();
+      }, 30000);
+    }
+
+    function inviteBannerHide(){
+      const banner = document.getElementById('invite-banner');
+      if (banner) banner.classList.remove('show');
+      clearTimeout(invitesState.bannerDismissTimer);
+      invitesState.bannerDismissTimer = null;
+      invitesState.bannerActive = null;
+      // Show next queued banner if any
+      if (invitesState.bannerQueue.length > 0) {
+        const next = invitesState.bannerQueue.shift();
+        setTimeout(() => inviteBannerShow(next), 350);
+      }
+    }
+
+    function inviteBannerJoin(){
+      const inv = invitesState.bannerActive;
+      if (!inv) { inviteBannerHide(); return; }
+      inviteAccept(inv);
+    }
+
+    function inviteBannerDecline(){
+      const inv = invitesState.bannerActive;
+      if (!inv) { inviteBannerHide(); return; }
+      inviteDecline(inv);
+    }
+
+    // avatarHTML supports an `id` opt — fall through ok for older callers; we patch the call
+    // above by reading the produced HTML. As a fallback for environments where avatarHTML
+    // ignores id, restore the avatar id after innerHTML swap:
+    // (no-op here — id propagation is handled by passing through opts)
+
+    // =====================================================================
+    // END Phase 4 invites
+    // =====================================================================
+
+    // ---------- Edit Profile ----------
+    let editDraft = null;        // working copy until Save
+    let activeEpTab = 'symbol';
+    let activeSymbolCat = AV_SYMBOL_CATS[0].id;
+
+    // Auto-save draft to sessionStorage so an accidental refresh or
+    // navigate-away during edit doesn't wipe unsaved customisation.
+    // sessionStorage (not localStorage) so closing the tab still
+    // discards the draft — matches the session-state pattern we use
+    // for lastScreen / lastRoom.
+    const EP_DRAFT_KEY = 'huddle.editProfile.draft';
+    function huddleSaveEpDraft(){
+      if (!editDraft) return;
+      try {
+        // Capture the latest name/username from the inputs in case the user
+        // typed but the change handler hasn't bubbled into editDraft yet.
+        const nameEl = document.getElementById('ep-name');
+        const userEl = document.getElementById('ep-username');
+        if (nameEl) editDraft.name = nameEl.value;
+        if (userEl) editDraft.username = userEl.value;
+        const payload = {
+          draft: editDraft,
+          // Signature so we don't load User A's draft over User B's profile
+          // after a sign-out / sign-in in the same tab.
+          signature: (myProfile && (myProfile.username || myProfile.name)) || '__anon__',
+          savedAt: Date.now()
+        };
+        sessionStorage.setItem(EP_DRAFT_KEY, JSON.stringify(payload));
+      } catch(e) {}
+    }
+    function huddleClearEpDraft(){
+      try { sessionStorage.removeItem(EP_DRAFT_KEY); } catch(e) {}
+    }
+    function huddleLoadEpDraft(){
+      try {
+        const raw = sessionStorage.getItem(EP_DRAFT_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.draft) return null;
+        // Discard if the draft was saved for a different account in this tab.
+        const sig = (myProfile && (myProfile.username || myProfile.name)) || '__anon__';
+        if (parsed.signature !== sig) { huddleClearEpDraft(); return null; }
+        return parsed.draft;
+      } catch(e) { return null; }
+    }
+
+    // Initialize the editDraft working copy and populate the form fields +
+    // avatar preview. Called by openEditProfile (entry point) AND by goTo
+    // when the user lands on Edit Profile via refresh-restore — without this
+    // the form would be empty (placeholders showing) and the avatar slot
+    // wouldn't render until the user manually navigated back and in again.
+    function setupEditProfileForm(){
+      // Prefer a previously-saved draft (from a same-tab refresh) over a
+      // fresh clone — preserves any unsaved customisation the user made.
+      const saved = huddleLoadEpDraft();
+      editDraft = saved ? JSON.parse(JSON.stringify(saved))
+                        : JSON.parse(JSON.stringify(myProfile));
+      // Backfill any fields the saved draft might be missing (defensive
+      // against schema changes between sessions).
+      if (!editDraft.avatar && myProfile && myProfile.avatar) {
+        editDraft.avatar = JSON.parse(JSON.stringify(myProfile.avatar));
+      }
+      document.getElementById('ep-name').value = editDraft.name || '';
+      document.getElementById('ep-username').value = editDraft.username || '';
+      activeEpTab = 'symbol';
+      activeSymbolCat = AV_SYMBOL_CATS[0].id;
+      renderEditProfile();
+      switchEpTab('symbol');
+    }
+
+    function openEditProfile(){
+      // Fresh entry from Profile = clear any stale draft first so the
+      // user starts from their current profile, not an old draft they
+      // forgot about. Refresh-restore path (via goTo) skips this and
+      // honours the saved draft instead.
+      huddleClearEpDraft();
+      setupEditProfileForm();
+      goTo('edit-profile');
+    }
+    function cancelEditProfile(){
+      editDraft = null;
+      huddleClearEpDraft();
+      goTo('profile');
+    }
+    async function saveEditProfile(){
+      const nameInput = document.getElementById('ep-name').value.trim();
+      const userInput = document.getElementById('ep-username').value.trim().toLowerCase();
+
+      // Username validation — only if user typed something
+      if (userInput) {
+        if (userInput.length < 3) {
+          huddleSetUsernameStatus(t('editProfile.usernameTooShort'), 'error');
+          return;
+        }
+        if (!/^[a-z0-9_]+$/.test(userInput)) {
+          huddleSetUsernameStatus(t('editProfile.usernameBadChars'), 'error');
+          return;
+        }
+      }
+
+      // Make sure auth is ready before talking to Supabase
+      if (typeof liarBootstrap === 'function') {
+        try { await liarBootstrap(); } catch(e){}
+      }
+
+      // If we have Supabase, push to server with uniqueness check
+      if (huddleHasSupabaseAuth()) {
+        const userId = liarMe.sessionId;
+        // Uniqueness check only if username changed
+        if (userInput && userInput !== (myProfile.username || '').toLowerCase()) {
+          huddleSetUsernameStatus(t('editProfile.checkingUsername'), 'saving');
+          try {
+            const { data: existing, error: checkErr } = await window.sb
+              .from('profiles')
+              .select('user_id')
+              .eq('username', userInput)
+              .maybeSingle();
+            if (checkErr) {
+              huddleSetUsernameStatus(t('editProfile.saveFailed'), 'error');
+              return;
+            }
+            if (existing && existing.user_id !== userId) {
+              huddleSetUsernameStatus(t('editProfile.usernameTaken'), 'error');
+              return;
+            }
+          } catch(e) {
+            huddleSetUsernameStatus(t('editProfile.saveFailed'), 'error');
+            return;
+          }
+        }
+
+        // Upsert profile
+        huddleSetUsernameStatus(t('editProfile.savingProfile'), 'saving');
+        const upsertData = {
+          user_id: userId,
+          display_name: nameInput || 'You',
+          avatar: editDraft.avatar,
+        };
+        if (userInput) upsertData.username = userInput;
+        try {
+          const { error: upsertErr } = await window.sb
+            .from('profiles')
+            .upsert(upsertData, { onConflict: 'user_id' });
+          if (upsertErr) {
+            // Race condition: someone claimed the username between our check and write
+            if (upsertErr.code === '23505') {
+              huddleSetUsernameStatus(t('editProfile.usernameTaken'), 'error');
+            } else {
+              huddleSetUsernameStatus(t('editProfile.saveFailed'), 'error');
+            }
+            return;
+          }
+        } catch(e) {
+          huddleSetUsernameStatus(t('editProfile.saveFailed'), 'error');
+          return;
+        }
+      }
+
+      // Save succeeded (or Supabase unavailable — fall through to local-only). Commit locally.
+      editDraft.name = nameInput || 'You';
+      editDraft.username = userInput || '';
+      myProfile = editDraft;
+      saveProfile(myProfile);
+      editDraft = null;
+      huddleClearEpDraft();
+      huddleClearUsernameStatus();
+      renderProfileScreen();
+      renderFriends();
+      goTo('profile');
+    }
+    function switchEpTab(tab){
+      activeEpTab = tab;
+      document.querySelectorAll('.edit-profile-tabs .tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.epTab === tab);
+      });
+      document.getElementById('ep-pane-symbol').style.display = (tab === 'symbol') ? '' : 'none';
+      document.getElementById('ep-pane-colour').style.display = (tab === 'colour') ? '' : 'none';
+      document.getElementById('ep-pane-style').style.display  = (tab === 'style')  ? '' : 'none';
+      renderEditProfile();
+    }
+    function setEpDraftSymbol(symbol){
+      editDraft.avatar.symbol = symbol;
+      huddleSaveEpDraft();
+      renderEditProfile();
+    }
+    function setEpDraftColour(colourId){
+      editDraft.avatar.colour = colourId;
+      huddleSaveEpDraft();
+      renderEditProfile();
+    }
+    function setEpDraftStyle(styleId){
+      editDraft.avatar.style = styleId;
+      huddleSaveEpDraft();
+      renderEditProfile();
+    }
+    function setSymbolCat(catId){
+      activeSymbolCat = catId;
+      renderEditProfile();
+    }
+    function randomizeDraft(){
+      if (!editDraft) return;
+      editDraft.avatar = randomAvatar();
+      renderEditProfile();
+    }
+    function renderEditProfile(){
+      if (!editDraft) return;
+      // Preview
+      const slot = document.getElementById('edit-avatar-slot');
+      slot.innerHTML = avatarHTML(editDraft.avatar, 96, { fallback: editDraft.name[0] });
+
+      // Symbol category chips
+      const cats = document.getElementById('ep-symbol-cats');
+      cats.innerHTML = AV_SYMBOL_CATS.map(c =>
+        `<button class="chip ${c.id === activeSymbolCat ? 'active' : ''}" onclick="setSymbolCat('${c.id}')">${t('symbolCat.' + c.id)}</button>`
+      ).join('');
+
+      // Symbol grid (current category only)
+      const grid = document.getElementById('ep-symbol-grid');
+      const cat = AV_SYMBOL_CATS.find(c => c.id === activeSymbolCat) || AV_SYMBOL_CATS[0];
+      grid.innerHTML = cat.items.map(sym =>
+        `<button class="ep-cell ep-symbol-cell ${sym === editDraft.avatar.symbol ? 'active' : ''}" onclick="setEpDraftSymbol('${sym}')">${sym}</button>`
+      ).join('');
+
+      // Colour grid — each cell shows a tiny avatar in that colour
+      const cg = document.getElementById('ep-colour-grid');
+      cg.innerHTML = AV_COLOURS.map(c => {
+        const preview = avatarHTML({ symbol: editDraft.avatar.symbol, colour: c.id, style: editDraft.avatar.style }, 44, {});
+        return `<button class="ep-cell ${c.id === editDraft.avatar.colour ? 'active' : ''}" onclick="setEpDraftColour('${c.id}')" aria-label="${c.id}">${preview}</button>`;
+      }).join('');
+
+      // Style grid — each cell shows the current avatar with that style
+      const sg = document.getElementById('ep-style-grid');
+      sg.innerHTML = AV_STYLES.map(s => {
+        const preview = avatarHTML({ symbol: editDraft.avatar.symbol, colour: editDraft.avatar.colour, style: s.id }, 36, {});
+        return `<button class="ep-cell ep-style-cell ${s.id === editDraft.avatar.style ? 'active' : ''}" onclick="setEpDraftStyle('${s.id}')">
+          ${preview}
+          <div class="ep-style-cell-label">${t('style.' + s.id)}</div>
+        </button>`;
+      }).join('');
+      parseEmoji(slot);
+      parseEmoji(grid);
+      parseEmoji(cg);
+      parseEmoji(sg);
+    }
+
+    // ---------- About sheet ----------
+    function openAbout(){
+      document.getElementById('about-backdrop').classList.add('active');
+    }
+    function closeAboutSheet(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'about-backdrop') return;
+      document.getElementById('about-backdrop').classList.remove('active');
+    }
+
+    // ---------- Theme ----------
+    const THEME_KEY = 'huddle.theme';
+    const THEME_LABEL = { system:'System', light:'Light', dark:'Dark' };
+
+    function getThemePref(){
+      try { return localStorage.getItem(THEME_KEY) || 'system'; } catch(e){ return 'system'; }
+    }
+    function resolveTheme(pref){
+      if (pref === 'dark' || pref === 'light') return pref;
+      try {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      } catch(e) { return 'light'; }
+    }
+    function applyTheme(pref){
+      const resolved = resolveTheme(pref);
+      document.documentElement.setAttribute('data-theme', resolved);
+      document.documentElement.setAttribute('data-theme-pref', pref);
+      const meta = document.getElementById('meta-theme-color');
+      if (meta) meta.setAttribute('content', resolved === 'dark' ? '#0e0e10' : '#ffffff');
+      const label = document.getElementById('theme-value-label');
+      if (label) label.textContent = THEME_LABEL[pref] || 'System';
+      document.querySelectorAll('.theme-option').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.themePref === pref);
+      });
+    }
+    function setTheme(pref){
+      try { localStorage.setItem(THEME_KEY, pref); } catch(e){}
+      applyTheme(pref);
+    }
+    function openThemeSheet(){
+      applyTheme(getThemePref());
+      document.getElementById('theme-backdrop').classList.add('active');
+    }
+    function closeThemeSheet(ev){
+      // Backdrop click: only close when the click target is the backdrop itself
+      // (clicks inside the sheet stop propagation, so we won't get them here).
+      // The close button calls closeThemeSheet() with no argument — always close.
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'theme-backdrop') return;
+      document.getElementById('theme-backdrop').classList.remove('active');
+    }
+    function pickTheme(pref){
+      setTheme(pref);
+      setTimeout(() => document.getElementById('theme-backdrop').classList.remove('active'), 140);
+    }
+
+    // Track system theme changes when user is on 'system' preference
+    try {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => { if (getThemePref() === 'system') applyTheme('system'); };
+      if (mq.addEventListener) mq.addEventListener('change', handler);
+      else if (mq.addListener) mq.addListener(handler);
+    } catch(e){}
+
+    // ---------- Language picker (mirrors theme picker UX) ----------
+    function openLangSheet(){
+      applyLang();
+      document.getElementById('lang-backdrop').classList.add('active');
+    }
+    function closeLangSheet(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'lang-backdrop') return;
+      document.getElementById('lang-backdrop').classList.remove('active');
+    }
+    function pickLang(lang){
+      setLang(lang);
+      setTimeout(() => document.getElementById('lang-backdrop').classList.remove('active'), 140);
+    }
+
+    // ---------- Category picker (mirrors lang picker UX) ----------
+    function renderCategoryOptions(){
+      const wrap = document.getElementById('category-options');
+      if (!wrap) return;
+      const cats = ['mixed','animals','food','movies','famous','sports','objects','places','activities','music'];
+      wrap.innerHTML = cats.map(c => `
+        <button class="theme-option${state.category === c ? ' active' : ''}" onclick="pickCategory('${c}')">
+          <span class="theme-option-text">
+            <span class="theme-option-title">${t('cat.' + c)}</span>
+          </span>
+          <svg class="theme-option-check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        </button>
+      `).join('');
+    }
+    function openCategorySheet(){
+      renderCategoryOptions();
+      document.getElementById('category-backdrop').classList.add('active');
+    }
+    function closeCategorySheet(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'category-backdrop') return;
+      document.getElementById('category-backdrop').classList.remove('active');
+    }
+    function pickCategory(cat){
+      setCategory(cat);
+      setTimeout(() => document.getElementById('category-backdrop').classList.remove('active'), 140);
+    }
+
+    // ---------- Feedback ----------
+    // Opens a bottom sheet with 4 categories. Tapping one opens the user's
+    // email app via mailto: with a pre-filled subject and body template.
+    // The body also auto-appends technical context (screen, language, theme,
+    // viewport, user agent) so the user doesn't need to type any of that.
+    const FEEDBACK_EMAIL = 'saeedabdulaziz132@gmail.com';
+
+    function currentScreenName(){
+      const active = document.querySelector('.screen.active');
+      return active ? active.id.replace(/^screen-/, '') : 'unknown';
+    }
+    function feedbackContext(){
+      const themePref = (typeof getThemePref === 'function') ? getThemePref() : 'unknown';
+      const resolvedTheme = (typeof resolveTheme === 'function') ? resolveTheme(themePref) : '';
+      const themeStr = resolvedTheme && resolvedTheme !== themePref
+        ? (themePref + ' (' + resolvedTheme + ')')
+        : themePref;
+      return '\n\n'
+        + t('feedback.contextHeader') + '\n'
+        + 'Screen: ' + currentScreenName() + '\n'
+        + 'Language: ' + getLang() + '\n'
+        + 'Theme: ' + themeStr + '\n'
+        + 'Viewport: ' + window.innerWidth + 'x' + window.innerHeight + '\n'
+        + 'Browser: ' + (navigator.userAgent || 'unknown');
+    }
+
+    function openFeedbackSheet(){
+      document.getElementById('feedback-backdrop').classList.add('active');
+    }
+    function closeFeedbackSheet(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'feedback-backdrop') return;
+      document.getElementById('feedback-backdrop').classList.remove('active');
+    }
+    // sendFeedback() is the entry point wired to the 4 category buttons in the
+    // category-picker sheet. It now opens the compose popup instead of mailto.
+    // Kept the same name so the existing onclick handlers in HTML keep working.
+    function sendFeedback(category){
+      openComposeFeedback(category);
+    }
+
+    // ---------- Feedback compose + board (Supabase-backed) ----------
+    // Posts and votes live in public.feedback_posts / public.feedback_votes.
+    // See supabase-feedback.sql for the schema, RLS policies, and realtime setup.
+    let composeCategory = 'bug';
+    let composeEditingId = null;     // set when the compose sheet is in "edit" mode
+    let feedbackMenuPostId = null;   // tracks which post the Edit/Delete sheet refers to
+    let feedbackBoardTab = 'bug';
+    const FB_CATS = ['bug','idea','word','other'];
+
+    // Single source of truth for board state. Refreshed by feedbackLoad() and
+    // kept in sync by the realtime channel — no other code path should mutate it.
+    const feedbackState = {
+      me: null,                // current auth.user.id, or null when signed-out
+      posts: [],               // array of { id, user_id, category, text, lang, edited, created_at }
+      voteCounts: Object.create(null), // post_id -> integer heart count
+      myVotes: new Set(),      // post_ids the current user has hearted
+      loaded: false,
+      loading: false,
+      error: null,             // last error message (shown in the empty state on failure)
+    };
+    let _feedbackChannel = null;
+    let _feedbackChannelUserId = null;
+
+    // SVGs used in every post card — hoisted so we don't re-allocate per render.
+    const FB_HEART_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    const FB_DOTS_ICON  = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+
+    // ---------- Post-body translation (MyMemory free API) ----------
+    // Cache lives in localStorage keyed by "<postId>|<targetLang>" so translations
+    // survive reloads. Loading + failed sets are in-memory only (per session).
+    const FB_TRANSLATIONS_KEY = 'huddle.fbTranslations';
+    const fbTranslationLoading = new Set();
+    const fbTranslationFailed  = new Set();
+    const fbShowOriginal       = new Set();
+
+    function fbTranslationKey(id, targetLang){ return id + '|' + targetLang; }
+
+    // Detect whether typed text is English or Turkish. We can't tag posts with
+    // the UI language because users routinely type in the *other* language
+    // (e.g., filing an English bug while their app is in Turkish). Without an
+    // accurate tag the translation feature can't decide when to translate.
+    //
+    // Heuristic for en-vs-tr only (the languages this app supports):
+    //   1. Any Turkish-specific character (ğ ı ş İ ç ö ü) → Turkish.
+    //   2. Otherwise score common-word matches (English vs Turkish).
+    //   3. If both score zero — short or ambiguous text — fall back to UI lang.
+    const FB_TR_WORDS = new Set([
+      'bir','ve','icin','ile','bu','su','ben','sen','biz','siz','onlar','var','yok',
+      'cok','az','ama','fakat','eger','cunku','gibi','kadar','daha','boyle','soyle',
+      'evet','hayir','nasil','nerede','neden','sadece','degil','her','hep','hic',
+      'merhaba','selam','tesekkurler','lutfen','olmaz','olur','bence','aslinda',
+      'sonra','simdi','bugun','iyi','kotu','guzel','calisiyor','calismiyor','hata',
+    ]);
+    const FB_EN_WORDS = new Set([
+      'the','and','is','of','to','a','in','that','it','he','she','we','you','they',
+      'are','was','were','have','has','had','do','does','did','will','would','can',
+      'could','should','this','these','those','what','when','where','who','why','how',
+      'from','with','for','about','as','at','by','on','but','or','if','so','than',
+      'then','because','my','your','our','their','also','very','more','most','some',
+      'any','no','not','just','only','please','thanks','bug','feature','app',
+    ]);
+    function fbDetectLang(text){
+      if (!text) return getLang();
+      if (/[çğışöüÇĞİŞÖÜ]/.test(text)) return 'tr';
+      const words = (text.toLowerCase().match(/[a-z]+/g) || []);
+      if (words.length === 0) return getLang();
+      let tr = 0, en = 0;
+      for (const w of words){
+        if (FB_TR_WORDS.has(w)) tr++;
+        else if (FB_EN_WORDS.has(w)) en++;
+      }
+      if (tr === 0 && en === 0) return getLang();
+      return tr > en ? 'tr' : 'en';
+    }
+    function loadFbTranslations(){
+      try { return JSON.parse(localStorage.getItem(FB_TRANSLATIONS_KEY) || '{}') || {}; }
+      catch(e){ return {}; }
+    }
+    function saveFbTranslations(map){
+      try { localStorage.setItem(FB_TRANSLATIONS_KEY, JSON.stringify(map)); } catch(e){}
+    }
+    function clearTranslationsForPost(id){
+      const cache = loadFbTranslations();
+      let changed = false;
+      Object.keys(cache).forEach(k => { if (k.startsWith(id + '|')) { delete cache[k]; changed = true; } });
+      if (changed) saveFbTranslations(cache);
+      // Drop in-memory failure markers too so a fresh edit can retry.
+      Array.from(fbTranslationFailed).forEach(k => { if (k.startsWith(id + '|')) fbTranslationFailed.delete(k); });
+    }
+
+    async function ensureTranslation(post, targetLang){
+      const key = fbTranslationKey(post.id, targetLang);
+      if (fbTranslationLoading.has(key) || fbTranslationFailed.has(key)) return;
+      const cache = loadFbTranslations();
+      if (cache[key]) return;
+      fbTranslationLoading.add(key);
+      try {
+        const url = 'https://api.mymemory.translated.net/get'
+          + '?q=' + encodeURIComponent(post.text)
+          + '&langpair=' + encodeURIComponent(post.lang) + '|' + encodeURIComponent(targetLang);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('http ' + res.status);
+        const data = await res.json();
+        const translated = data && data.responseData && data.responseData.translatedText;
+        if (!translated || typeof translated !== 'string') throw new Error('empty');
+        const fresh = loadFbTranslations();
+        fresh[key] = translated;
+        saveFbTranslations(fresh);
+      } catch (e) {
+        fbTranslationFailed.add(key);
+      } finally {
+        fbTranslationLoading.delete(key);
+        renderFeedbackBoard();
+      }
+    }
+
+    function fbToggleOriginal(id){
+      if (fbShowOriginal.has(id)) fbShowOriginal.delete(id);
+      else fbShowOriginal.add(id);
+      renderFeedbackBoard();
+    }
+
+    function fbRetryTranslation(id){
+      const post = feedbackState.posts.find(p => p.id === id);
+      if (!post) return;
+      const key = fbTranslationKey(id, getLang());
+      fbTranslationFailed.delete(key);
+      renderFeedbackBoard();
+      ensureTranslation(post, getLang());
+    }
+
+    // Resolves what to show for one post: the body text + which inline action,
+    // if any, to render under it. Kicks off a fetch when needed (non-blocking).
+    function fbResolveBodyView(p, currentLang, cache){
+      if (p.lang === currentLang) return { text: p.text, action: null };
+      const key = fbTranslationKey(p.id, currentLang);
+      const translated = cache[key];
+      if (fbShowOriginal.has(p.id)) {
+        return { text: p.text, action: translated ? { kind:'showTranslation' } : null };
+      }
+      if (translated)                       return { text: translated, action: { kind:'showOriginal' } };
+      if (fbTranslationLoading.has(key))    return { text: p.text,    action: { kind:'loading' } };
+      if (fbTranslationFailed.has(key))     return { text: p.text,    action: { kind:'error' } };
+      ensureTranslation(p, currentLang);
+      return { text: p.text, action: { kind:'loading' } };
+    }
+
+    // Resolves the current user, signing in anonymously if needed. Feedback is
+    // a low-friction surface — we never want a sign-in wall before viewing or
+    // posting. Matches the auto-anon pattern used by the rooms code.
+    async function feedbackEnsureUser(){
+      if (!window.sb) return null;
+      let { data: { user } } = await window.sb.auth.getUser();
+      if (!user){
+        const res = await window.sb.auth.signInAnonymously();
+        user = res && res.data && res.data.user;
+      }
+      return user || null;
+    }
+
+    // One-shot read of the board. Pulls posts + votes in parallel, derives
+    // counts + "did I vote on this" locally. Realtime keeps it fresh after.
+    async function feedbackLoad(){
+      if (!window.sb) return;
+      feedbackState.loading = true;
+      try {
+        const user = await feedbackEnsureUser();
+        feedbackState.me = user ? user.id : null;
+        if (!feedbackState.me){
+          feedbackState.posts = [];
+          feedbackState.voteCounts = Object.create(null);
+          feedbackState.myVotes = new Set();
+          feedbackState.error = null;
+          return;
+        }
+        const [postsRes, votesRes] = await Promise.all([
+          window.sb.from('feedback_posts')
+            .select('id, user_id, category, text, lang, edited, created_at')
+            .order('created_at', { ascending: false }),
+          window.sb.from('feedback_votes').select('post_id, user_id'),
+        ]);
+        if (postsRes.error){ feedbackState.error = postsRes.error.message; return; }
+        if (votesRes.error){ feedbackState.error = votesRes.error.message; return; }
+        feedbackState.posts = postsRes.data || [];
+        const counts = Object.create(null);
+        const mine = new Set();
+        (votesRes.data || []).forEach(v => {
+          counts[v.post_id] = (counts[v.post_id] || 0) + 1;
+          if (v.user_id === feedbackState.me) mine.add(v.post_id);
+        });
+        feedbackState.voteCounts = counts;
+        feedbackState.myVotes = mine;
+        feedbackState.error = null;
+        feedbackState.loaded = true;
+      } catch (e) {
+        feedbackState.error = (e && e.message) || String(e);
+        console.warn('[Huddle] feedbackLoad failed:', e);
+      } finally {
+        feedbackState.loading = false;
+        renderFeedbackBoard();
+        // After a successful load we know the user id — wire realtime here so
+        // it only ever runs once auth is settled.
+        if (feedbackState.me) feedbackWireSync();
+      }
+    }
+
+    function feedbackUnwireSync(){
+      try { if (_feedbackChannel && window.sb) window.sb.removeChannel(_feedbackChannel); } catch(e){}
+      _feedbackChannel = null;
+      _feedbackChannelUserId = null;
+    }
+
+    // Subscribe to INSERT/UPDATE/DELETE on both tables. Any change triggers a
+    // reload — simpler than diff-applying events and the dataset is small.
+    function feedbackWireSync(){
+      if (!window.sb || !feedbackState.me) return;
+      if (_feedbackChannel && _feedbackChannelUserId === feedbackState.me) return;
+      if (_feedbackChannel){
+        try { window.sb.removeChannel(_feedbackChannel); } catch(e){}
+        _feedbackChannel = null;
+      }
+      try {
+        _feedbackChannel = window.sb
+          .channel('feedback_board_' + feedbackState.me)
+          .on('postgres_changes', { event:'*', schema:'public', table:'feedback_posts' }, () => feedbackLoad())
+          .on('postgres_changes', { event:'*', schema:'public', table:'feedback_votes' }, () => feedbackLoad())
+          .subscribe();
+        _feedbackChannelUserId = feedbackState.me;
+      } catch(e) {
+        console.warn('[Huddle] feedbackWireSync failed:', e);
+      }
+    }
+
+    function fbIcon(cat){
+      switch(cat){
+        case 'bug':   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3 3 0 0 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9"></path></svg>';
+        case 'idea':  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.7.6 1 1.4 1 2.3h6c0-.9.3-1.7 1-2.3A7 7 0 0 0 12 2z"></path></svg>';
+        case 'word':  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
+        case 'other': return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>';
+      }
+      return '';
+    }
+    function fbEmoji(cat){
+      return cat === 'bug' ? '🐛' : cat === 'idea' ? '💡' : cat === 'word' ? '🗣️' : '📝';
+    }
+    function escapeHTML(s){
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function formatRelativeTime(ms){
+      const diff = Date.now() - ms;
+      if (diff < 60000) return t('time.justNow');
+      if (diff < 3600000) return t('time.minutesAgo', { n: Math.floor(diff/60000) });
+      if (diff < 86400000) return t('time.hoursAgo', { n: Math.floor(diff/3600000) });
+      if (diff < 604800000) return t('time.daysAgo', { n: Math.floor(diff/86400000) });
+      try { return new Date(ms).toLocaleDateString(getLang() === 'tr' ? 'tr-TR' : 'en-US', { month:'short', day:'numeric' }); }
+      catch(e){ return new Date(ms).toLocaleDateString(); }
+    }
+
+    function openComposeFeedback(category, editPost){
+      composeCategory = category;
+      composeEditingId = editPost ? editPost.id : null;
+      // Close the category picker if it's open (we're moving to stage 2).
+      document.getElementById('feedback-backdrop').classList.remove('active');
+      const titleEl = document.getElementById('compose-feedback-title');
+      const subEl = document.getElementById('compose-feedback-sub');
+      const submitBtn = document.getElementById('compose-feedback-submit');
+      titleEl.textContent = editPost
+        ? t('feedback.compose.editTitle')
+        : t('feedback.compose.title_' + category);
+      subEl.textContent = editPost
+        ? t('feedback.compose.editSub')
+        : t('feedback.compose.sub_' + category);
+      if (submitBtn) submitBtn.textContent = t(editPost ? 'feedback.compose.save' : 'feedback.compose.post');
+      const input = document.getElementById('compose-feedback-input');
+      input.value = editPost ? (editPost.text || '') : '';
+      input.setAttribute('placeholder', t('feedback.compose.placeholder_' + category));
+      document.getElementById('compose-feedback-count').textContent = input.value.length;
+      document.getElementById('compose-feedback-backdrop').classList.add('active');
+      setTimeout(() => { input.focus(); try { input.setSelectionRange(input.value.length, input.value.length); } catch(_){} }, 200);
+    }
+    function closeComposeFeedback(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'compose-feedback-backdrop') return;
+      document.getElementById('compose-feedback-backdrop').classList.remove('active');
+      // Clear edit state on close so a future open via any path starts fresh,
+      // even if the user dismissed without submitting.
+      composeEditingId = null;
+    }
+    function updateComposeCounter(){
+      const input = document.getElementById('compose-feedback-input');
+      const count = document.getElementById('compose-feedback-count');
+      if (input && count) count.textContent = input.value.length;
+    }
+    async function submitComposeFeedback(){
+      const input = document.getElementById('compose-feedback-input');
+      const submitBtn = document.getElementById('compose-feedback-submit');
+      const text = (input.value || '').trim();
+      if (!text) { input.focus(); return; }
+      if (!window.sb) return;
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        const user = await feedbackEnsureUser();
+        if (!user) throw new Error('not signed in');
+        // Detect the language of what was typed, not the UI language — the two
+        // routinely differ (e.g., English bug report typed while UI is Turkish).
+        const detectedLang = fbDetectLang(text);
+        if (composeEditingId){
+          // RLS will reject this if the post isn't ours, so the .eq filter is
+          // belt-and-braces against a stale composeEditingId.
+          const { error } = await window.sb.from('feedback_posts')
+            .update({ text, lang: detectedLang, edited: true })
+            .eq('id', composeEditingId)
+            .eq('user_id', user.id);
+          if (error) throw error;
+          clearTranslationsForPost(composeEditingId);
+          fbShowOriginal.delete(composeEditingId);
+          composeEditingId = null;
+        } else {
+          const { error } = await window.sb.from('feedback_posts').insert({
+            user_id: user.id,
+            category: composeCategory,
+            text,
+            lang: detectedLang,
+          });
+          if (error) throw error;
+          feedbackBoardTab = composeCategory;
+        }
+        document.getElementById('compose-feedback-backdrop').classList.remove('active');
+        goTo('feedback-board');
+        feedbackLoad();
+      } catch (e) {
+        console.warn('[Huddle] submitComposeFeedback failed:', e);
+        alert(t('feedback.board.saveError'));
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    }
+
+    // ---------- Vote / Edit / Delete ----------
+    async function toggleFeedbackVote(id){
+      if (!window.sb) return;
+      const user = await feedbackEnsureUser();
+      if (!user) return;
+      const wasVoted = feedbackState.myVotes.has(id);
+      // Optimistic UI — flip locally first so the heart responds instantly.
+      if (wasVoted){
+        feedbackState.myVotes.delete(id);
+        feedbackState.voteCounts[id] = Math.max(0, (feedbackState.voteCounts[id] || 0) - 1);
+      } else {
+        feedbackState.myVotes.add(id);
+        feedbackState.voteCounts[id] = (feedbackState.voteCounts[id] || 0) + 1;
+      }
+      renderFeedbackBoard();
+      try {
+        const res = wasVoted
+          ? await window.sb.from('feedback_votes').delete().eq('post_id', id).eq('user_id', user.id)
+          : await window.sb.from('feedback_votes').insert({ post_id: id, user_id: user.id });
+        if (res.error) throw res.error;
+      } catch (e) {
+        console.warn('[Huddle] toggleFeedbackVote failed:', e);
+        // Reload from source of truth to undo the optimistic change.
+        feedbackLoad();
+      }
+    }
+
+    function openFeedbackPostMenu(id){
+      feedbackMenuPostId = id;
+      document.getElementById('fb-action-backdrop').classList.add('active');
+    }
+
+    // Friend kebab menu — same backdrop pattern as feedback. State lives in
+    // friendMenuTarget so the destructive action below knows which friend to act on.
+    let friendMenuTarget = null; // { id, name }
+    function openFriendMenu(id, name){
+      friendMenuTarget = { id, name };
+      const header = document.getElementById('friend-menu-header');
+      if (header) {
+        const entry = friendsState.friends.find(e => e.otherId === id);
+        const handle = entry && entry.profile && entry.profile.username ? '@' + entry.profile.username : '';
+        header.innerHTML = `
+          <div class="friend-menu-info">
+            <div class="friend-menu-name">${friendsEscape(name || t('friends.thisFriend') || '')}</div>
+            ${handle ? `<div class="friend-menu-handle">${friendsEscape(handle)}</div>` : ''}
+          </div>
+        `;
+      }
+      const bd = document.getElementById('friend-menu-backdrop');
+      if (bd) bd.classList.add('active');
+    }
+    function dismissFriendMenu(){
+      const bd = document.getElementById('friend-menu-backdrop');
+      if (bd) bd.classList.remove('active');
+      const target = friendMenuTarget;
+      friendMenuTarget = null;
+      return target;
+    }
+    function closeFriendMenu(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'friend-menu-backdrop') return;
+      dismissFriendMenu();
+    }
+    function removeFriendFromMenu(){
+      const target = dismissFriendMenu();
+      if (!target) return;
+      // friendRemove already shows its own huddleConfirm — that's the safety net for
+      // a destructive action, so we don't double-confirm here. Sheet → confirm → done.
+      friendRemove(target.id, target.name);
+    }
+    // Dismiss the action sheet and return the id it referred to. All exits
+    // (backdrop tap, Edit, Delete) flow through here so the id never lingers.
+    function dismissFeedbackPostMenu(){
+      const id = feedbackMenuPostId;
+      document.getElementById('fb-action-backdrop').classList.remove('active');
+      feedbackMenuPostId = null;
+      return id;
+    }
+    function closeFeedbackPostMenu(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'fb-action-backdrop') return;
+      dismissFeedbackPostMenu();
+    }
+    function editFeedbackPostFromMenu(){
+      const id = dismissFeedbackPostMenu();
+      if (!id) return;
+      const p = feedbackState.posts.find(x => x.id === id);
+      if (!p) return;
+      openComposeFeedback(p.category, p);
+    }
+    async function deleteFeedbackPostFromMenu(){
+      const id = dismissFeedbackPostMenu();
+      if (!id) return;
+      const ok = await huddleConfirm({
+        title: t('feedback.board.deleteTitle'),
+        body: t('feedback.board.deleteBody'),
+        confirmLabel: t('feedback.board.delete'),
+        cancelLabel: t('common.cancel'),
+        danger: true,
+      });
+      if (!ok) return;
+      try {
+        const { error } = await window.sb.from('feedback_posts').delete().eq('id', id);
+        if (error) throw error;
+        clearTranslationsForPost(id);
+        fbShowOriginal.delete(id);
+        feedbackLoad();
+      } catch (e) {
+        console.warn('[Huddle] deleteFeedbackPostFromMenu failed:', e);
+        alert(t('feedback.board.saveError'));
+      }
+    }
+
+    function renderFeedbackBoard(){
+      const tabsEl = document.getElementById('feedback-tabs');
+      const listEl = document.getElementById('feedback-list');
+      if (!tabsEl || !listEl) return;
+
+      const posts = feedbackState.posts;
+      const counts = FB_CATS.reduce((acc,c) => (acc[c] = posts.filter(p => p.category === c).length, acc), {});
+
+      tabsEl.innerHTML = FB_CATS.map(c => `
+        <button class="feedback-tab${feedbackBoardTab === c ? ' active' : ''}" onclick="setFeedbackTab('${c}')">
+          ${fbIcon(c)}
+          <span>${t('feedback.board.tab.' + c)}</span>
+          ${counts[c] > 0 ? `<span class="count">${counts[c]}</span>` : ''}
+        </button>
+      `).join('');
+
+      // Persistent description below the tabs — so users always know what
+      // each category is for, not just when the section is empty.
+      const descEl = document.getElementById('feedback-board-desc');
+      if (descEl) descEl.textContent = t('feedback.board.desc_' + feedbackBoardTab);
+
+      // Loading state on first fetch only — subsequent realtime refreshes are
+      // silent so the UI doesn't flicker every time someone votes.
+      if (feedbackState.loading && !feedbackState.loaded){
+        listEl.innerHTML = `
+          <div class="feedback-empty">
+            <div class="fb-translate-hint"><span class="fb-translate-dot"></span>${t('feedback.board.loading')}</div>
+          </div>`;
+        return;
+      }
+
+      if (feedbackState.error){
+        listEl.innerHTML = `
+          <div class="feedback-empty">
+            <div class="feedback-empty-emoji">⚠️</div>
+            <div class="feedback-empty-title">${t('feedback.board.errorTitle')}</div>
+            <div style="font-size:13px;margin-bottom:14px">${escapeHTML(feedbackState.error)}</div>
+            <button class="btn btn-outline btn-sm" onclick="feedbackLoad()">${t('feedback.board.retry')}</button>
+          </div>`;
+        return;
+      }
+
+      const voteCount = (id) => feedbackState.voteCounts[id] || 0;
+      const iVoted    = (id) => feedbackState.myVotes.has(id);
+
+      // Most-hearted first; created_at is the recency tiebreaker so newest
+      // posts at the same vote count win.
+      const filtered = posts
+        .filter(p => p.category === feedbackBoardTab)
+        .slice()
+        .sort((a, b) => {
+          const dv = voteCount(b.id) - voteCount(a.id);
+          if (dv !== 0) return dv;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="feedback-empty">
+            <div class="feedback-empty-emoji">${fbEmoji(feedbackBoardTab)}</div>
+            <div class="feedback-empty-title">${t('feedback.board.empty_' + feedbackBoardTab)}</div>
+            <div style="font-size:13px;margin-bottom:14px">${t('feedback.board.emptySub')}</div>
+            <button class="btn btn-outline btn-sm" onclick="openComposeFeedback('${feedbackBoardTab}')">${t('feedback.board.firstPost')}</button>
+          </div>
+        `;
+        return;
+      }
+
+      const topVotes = voteCount(filtered[0].id);
+      const currentLang = getLang();
+      const tCache = loadFbTranslations();
+
+      listEl.innerHTML = filtered.map(p => {
+        const votes = voteCount(p.id);
+        const voted = iVoted(p.id);
+        const isTop = votes > 0 && votes === topVotes;
+        const isMine = p.user_id === feedbackState.me;
+        const likeAria = t(voted ? 'feedback.board.unlikeAria' : 'feedback.board.likeAria');
+        const view = fbResolveBodyView(p, currentLang, tCache);
+        let translateRow = '';
+        if (view.action){
+          if (view.action.kind === 'loading'){
+            translateRow = `<div class="fb-translate-row"><span class="fb-translate-hint"><span class="fb-translate-dot"></span>${t('feedback.board.translating')}</span></div>`;
+          } else if (view.action.kind === 'error'){
+            translateRow = `<div class="fb-translate-row"><span class="fb-translate-hint fb-error">${t('feedback.board.translateError')}</span><button class="fb-translate-link" onclick="fbRetryTranslation('${p.id}')">${t('feedback.board.translateRetry')}</button></div>`;
+          } else {
+            const labelKey = view.action.kind === 'showOriginal' ? 'feedback.board.showOriginal' : 'feedback.board.showTranslation';
+            translateRow = `<div class="fb-translate-row"><button class="fb-translate-link" onclick="fbToggleOriginal('${p.id}')">${t(labelKey)}</button></div>`;
+          }
+        }
+        const overflowBtn = isMine
+          ? `<button class="fb-overflow" onclick="openFeedbackPostMenu('${p.id}')" aria-label="${t('feedback.board.moreAria')}">${FB_DOTS_ICON}</button>`
+          : '';
+        const created = new Date(p.created_at).getTime();
+        return `
+        <div class="feedback-post${isTop ? ' is-top' : ''}">
+          <div class="feedback-post-text">${escapeHTML(view.text)}</div>
+          ${translateRow}
+          <div class="feedback-post-footer">
+            <div class="feedback-post-meta">
+              <span>${formatRelativeTime(created)}</span>
+              <span class="dot"></span>
+              <span class="lang-tag">${(p.lang || 'en').toUpperCase()}</span>
+              ${p.edited ? `<span class="dot"></span><span class="edited-tag">${t('feedback.board.edited')}</span>` : ''}
+            </div>
+            <div class="feedback-post-actions">
+              <button class="fb-vote${voted ? ' voted' : ''}" onclick="toggleFeedbackVote('${p.id}')" aria-label="${likeAria}" aria-pressed="${voted ? 'true' : 'false'}">
+                ${FB_HEART_ICON}<span>${votes}</span>
+              </button>
+              ${overflowBtn}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function setFeedbackTab(tab){
+      feedbackBoardTab = tab;
+      renderFeedbackBoard();
+    }
+
+    // ============================================================
+    // ADMIN — Feedback moderation
+    // ============================================================
+    // Separate state object from feedbackState — public board and admin view
+    // intentionally don't share state so neither can corrupt the other. Reads
+    // and writes go through Supabase RLS: every UPDATE/DELETE here is allowed
+    // only because is_admin() returns true for the current user (see
+    // huddle_c2_feedback_admin.sql). If a non-admin somehow calls these
+    // functions, Postgres rejects the write — the UI flag is just for UX.
+
+    const adminFeedbackState = {
+      posts: [],
+      profilesById: Object.create(null),
+      voteCounts: Object.create(null),
+      counts: { all: 0, new: 0, done: 0 },
+      loading: false,
+      loaded: false,
+      error: null,
+      filter: 'new',   // 'new' | 'all' | 'done'
+      sort: 'newest',  // 'newest' | 'top'
+    };
+    let adminFbMenuPostId = null;
+    let _adminFbChannel = null;
+
+    // ---------- Badge on the admin → Feedback tile ----------
+    // Cheap count query (HEAD + count:exact). Refreshed on profile open,
+    // on admin panel open, and after any mutation.
+    async function adminRefreshFeedbackBadge(){
+      const el = document.getElementById('admin-tile-feedback-badge');
+      if (!el) return;
+      if (!huddleIsAdmin || !window.sb){ el.hidden = true; el.removeAttribute('aria-busy'); return; }
+      // Signal "fetching" to screen readers (and any future automated tests)
+      // via aria-busy. We intentionally do NOT show a "…" or spinner — best
+      // practice for a tiny aggregate-count badge is silent update so the
+      // user never sees a misleading 0 or transient placeholder. The badge
+      // stays hidden until real data lands; if count is zero it stays hidden.
+      el.setAttribute('aria-busy', 'true');
+      try{
+        const { count, error } = await window.sb
+          .from('feedback_posts')
+          .select('id', { count:'exact', head:true })
+          .eq('status','new');
+        if (error) throw error;
+        if (count && count > 0){
+          el.textContent = count + ' ' + t('adminFb.badgeNew');
+          el.hidden = false;
+        } else {
+          el.hidden = true;
+        }
+      } catch(e){
+        // Silent: badge is optional. Real errors surface in adminFeedbackLoad.
+        el.hidden = true;
+      } finally {
+        el.removeAttribute('aria-busy');
+      }
+    }
+
+    // ---------- Load posts + author profiles + vote counts ----------
+    async function adminFeedbackLoad(forceSpin){
+      if (!window.sb) return;
+      if (!huddleIsAdmin){
+        adminFeedbackState.error = 'Not authorised';
+        renderAdminFeedback();
+        return;
+      }
+      adminFeedbackState.loading = true;
+      if (forceSpin) renderAdminFeedback();
+      try{
+        const [postsRes, votesRes] = await Promise.all([
+          window.sb.from('feedback_posts')
+            .select('id, user_id, category, text, lang, edited, status, admin_actioned_at, created_at')
+            .order('created_at', { ascending: false }),
+          window.sb.from('feedback_votes').select('post_id'),
+        ]);
+        if (postsRes.error) throw postsRes.error;
+        if (votesRes.error) throw votesRes.error;
+        const posts = postsRes.data || [];
+        adminFeedbackState.posts = posts;
+
+        // Vote counts (post_id -> integer)
+        const vc = Object.create(null);
+        (votesRes.data || []).forEach(v => { vc[v.post_id] = (vc[v.post_id] || 0) + 1; });
+        adminFeedbackState.voteCounts = vc;
+
+        // Author profiles — single batch lookup. Anonymous posters won't have
+        // a profile row; the render falls back to "Guest <id-prefix>".
+        const ids = Array.from(new Set(posts.map(p => p.user_id))).filter(Boolean);
+        if (ids.length){
+          const { data: profs, error: prErr } = await window.sb
+            .from('profiles')
+            .select('user_id, username, display_name, avatar')
+            .in('user_id', ids);
+          if (prErr) throw prErr;
+          const map = Object.create(null);
+          (profs || []).forEach(p => { map[p.user_id] = p; });
+          adminFeedbackState.profilesById = map;
+        } else {
+          adminFeedbackState.profilesById = Object.create(null);
+        }
+
+        adminFbRecomputeCounts();
+        adminFeedbackState.error = null;
+        adminFeedbackState.loaded = true;
+      } catch(e){
+        adminFeedbackState.error = (e && e.message) || String(e);
+        console.warn('[Huddle] adminFeedbackLoad failed:', e);
+      } finally {
+        adminFeedbackState.loading = false;
+        renderAdminFeedback();
+        adminRefreshFeedbackBadge();
+        adminFbWireSync();
+      }
+    }
+
+    function adminFbRecomputeCounts(){
+      const posts = adminFeedbackState.posts;
+      adminFeedbackState.counts = {
+        all: posts.length,
+        new: posts.filter(p => p.status === 'new').length,
+        done: posts.filter(p => p.status === 'done').length,
+      };
+    }
+
+    // ---------- Mutations (RLS enforces is_admin() server-side) ----------
+    async function adminFbSetStatus(id, status){
+      if (!huddleIsAdmin || !window.sb) return;
+      // Optimistic update so the UI snaps. On failure we reload truth.
+      const post = adminFeedbackState.posts.find(p => p.id === id);
+      const previous = post ? post.status : null;
+      if (post) post.status = status;
+      adminFbRecomputeCounts();
+      renderAdminFeedback();
+      adminRefreshFeedbackBadge();
+      try{
+        const update = {
+          status,
+          admin_actioned_at: status === 'done' ? new Date().toISOString() : null,
+        };
+        const { error } = await window.sb.from('feedback_posts').update(update).eq('id', id);
+        if (error) throw error;
+      } catch(e){
+        console.warn('[Huddle] adminFbSetStatus failed:', e);
+        // Roll back optimistic change
+        if (post && previous != null) post.status = previous;
+        adminFbRecomputeCounts();
+        renderAdminFeedback();
+        alert(t('adminFb.actionError'));
+      }
+    }
+
+    async function adminFbDelete(id){
+      if (!huddleIsAdmin || !window.sb) return;
+      const ok = await huddleConfirm({
+        title: t('adminFb.deleteTitle'),
+        body: t('adminFb.deleteBody'),
+        confirmLabel: t('feedback.board.delete'),
+        cancelLabel: t('common.cancel'),
+        danger: true,
+      });
+      if (!ok) return;
+      try{
+        const { error } = await window.sb.from('feedback_posts').delete().eq('id', id);
+        if (error) throw error;
+        adminFeedbackState.posts = adminFeedbackState.posts.filter(p => p.id !== id);
+        delete adminFeedbackState.voteCounts[id];
+        adminFbRecomputeCounts();
+        renderAdminFeedback();
+        adminRefreshFeedbackBadge();
+      } catch(e){
+        console.warn('[Huddle] adminFbDelete failed:', e);
+        alert(t('adminFb.actionError'));
+      }
+    }
+
+    // ---------- Overflow menu (mirrors public board's openFeedbackPostMenu) ----------
+    function openAdminFbMenu(id){
+      adminFbMenuPostId = id;
+      const post = adminFeedbackState.posts.find(p => p.id === id);
+      const lbl = document.getElementById('admin-fb-menu-toggle-label');
+      if (lbl && post){
+        lbl.textContent = post.status === 'done'
+          ? t('adminFb.menuMarkNew')
+          : t('adminFb.menuMarkDone');
+      }
+      const bd = document.getElementById('admin-fb-menu-backdrop');
+      if (bd) bd.classList.add('active');
+    }
+    function dismissAdminFbMenu(){
+      const bd = document.getElementById('admin-fb-menu-backdrop');
+      if (bd) bd.classList.remove('active');
+      const id = adminFbMenuPostId;
+      adminFbMenuPostId = null;
+      return id;
+    }
+    function closeAdminFbMenu(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'admin-fb-menu-backdrop') return;
+      dismissAdminFbMenu();
+    }
+    function adminFbToggleStatusFromMenu(){
+      const id = dismissAdminFbMenu();
+      if (!id) return;
+      const post = adminFeedbackState.posts.find(p => p.id === id);
+      if (!post) return;
+      adminFbSetStatus(id, post.status === 'done' ? 'new' : 'done');
+    }
+    function adminFbDeleteFromMenu(){
+      const id = dismissAdminFbMenu();
+      if (!id) return;
+      adminFbDelete(id);
+    }
+
+    // ---------- Filter + sort ----------
+    function adminFbSetFilter(f){
+      if (f !== 'all' && f !== 'new' && f !== 'done') return;
+      adminFeedbackState.filter = f;
+      renderAdminFeedback();
+    }
+    function adminFbToggleSort(){
+      adminFeedbackState.sort = adminFeedbackState.sort === 'newest' ? 'top' : 'newest';
+      renderAdminFeedback();
+    }
+
+    // ---------- Realtime — any change to feedback_posts reloads truth ----------
+    function adminFbUnwireSync(){
+      try { if (_adminFbChannel && window.sb) window.sb.removeChannel(_adminFbChannel); } catch(e){}
+      _adminFbChannel = null;
+    }
+    function adminFbWireSync(){
+      if (!huddleIsAdmin || !window.sb) return;
+      if (_adminFbChannel) return;
+      try{
+        _adminFbChannel = window.sb
+          .channel('admin_feedback_board')
+          .on('postgres_changes', { event:'*', schema:'public', table:'feedback_posts' }, () => adminFeedbackLoad())
+          .on('postgres_changes', { event:'*', schema:'public', table:'feedback_votes' }, () => adminFeedbackLoad())
+          .subscribe();
+      } catch(e){
+        console.warn('[Huddle] adminFbWireSync failed:', e);
+      }
+    }
+
+    // ---------- Render ----------
+    function renderAdminFeedback(){
+      const chipsEl = document.getElementById('admin-fb-chips');
+      const listEl = document.getElementById('admin-fb-list');
+      const sortLbl = document.getElementById('admin-fb-sort-label');
+      if (!chipsEl || !listEl) return;
+
+      if (sortLbl){
+        sortLbl.textContent = t(adminFeedbackState.sort === 'newest' ? 'adminFb.sortNewest' : 'adminFb.sortTop');
+      }
+
+      const c = adminFeedbackState.counts;
+      const filter = adminFeedbackState.filter;
+      const filters = [
+        { key:'new',  label:t('adminFb.filterNew'),  count:c.new  },
+        { key:'all',  label:t('adminFb.filterAll'),  count:c.all  },
+        { key:'done', label:t('adminFb.filterDone'), count:c.done },
+      ];
+      chipsEl.innerHTML = filters.map(f => `
+        <button class="admin-fb-chip${filter === f.key ? ' active' : ''}" onclick="adminFbSetFilter('${f.key}')">
+          <span>${escapeHTML(f.label)}</span>
+          ${f.count > 0 ? `<span class="count">${f.count}</span>` : ''}
+        </button>
+      `).join('');
+
+      if (adminFeedbackState.loading && !adminFeedbackState.loaded){
+        listEl.innerHTML = `
+          <div class="admin-fb-empty">
+            <div class="fb-translate-hint"><span class="fb-translate-dot"></span>${t('feedback.board.loading')}</div>
+          </div>`;
+        return;
+      }
+      if (adminFeedbackState.error){
+        listEl.innerHTML = `
+          <div class="admin-fb-empty">
+            <div class="admin-fb-empty-emoji">⚠️</div>
+            <div class="admin-fb-empty-title">${t('feedback.board.errorTitle')}</div>
+            <div style="font-size:13px;margin-bottom:14px">${escapeHTML(adminFeedbackState.error)}</div>
+            <button class="btn btn-outline btn-sm" onclick="adminFeedbackLoad(true)">${t('feedback.board.retry')}</button>
+          </div>`;
+        return;
+      }
+
+      let posts = adminFeedbackState.posts;
+      if (filter === 'new')  posts = posts.filter(p => p.status === 'new');
+      if (filter === 'done') posts = posts.filter(p => p.status === 'done');
+
+      if (adminFeedbackState.sort === 'top'){
+        posts = posts.slice().sort((a,b) => {
+          const dv = (adminFeedbackState.voteCounts[b.id]||0) - (adminFeedbackState.voteCounts[a.id]||0);
+          if (dv !== 0) return dv;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+      }
+      // 'newest' uses the SQL ORDER BY (already created_at desc).
+
+      if (!posts.length){
+        listEl.innerHTML = `
+          <div class="admin-fb-empty">
+            <div class="admin-fb-empty-emoji">${filter === 'done' ? '✓' : (filter === 'new' ? '📭' : '🗂️')}</div>
+            <div class="admin-fb-empty-title">${t('adminFb.empty_' + filter)}</div>
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = posts.map(p => {
+        const prof = adminFeedbackState.profilesById[p.user_id];
+        const hasProf = !!prof;
+        const name = hasProf
+          ? (prof.display_name || prof.username || t('adminFb.unknownUser'))
+          : (t('adminFb.guest') + ' ' + (p.user_id || '').slice(0, 4));
+        const handle = (hasProf && prof.username) ? '@' + prof.username : '';
+        const avatar = (hasProf && prof.avatar)
+          ? avatarHTML(prof.avatar, 32, { fallback: (name || '?')[0] })
+          : `<div class="admin-fb-avatar">${escapeHTML((name || '?').slice(0,1).toUpperCase())}</div>`;
+        const cat = (p.category || '').toUpperCase();
+        const status = p.status === 'done' ? 'done' : 'new';
+        const created = new Date(p.created_at).getTime();
+        const votes = adminFeedbackState.voteCounts[p.id] || 0;
+        return `
+          <div class="admin-fb-row${status === 'done' ? ' is-done' : ''}">
+            <div class="admin-fb-row-top">
+              <div class="admin-fb-author">
+                ${avatar}
+                <div style="min-width:0;flex:1">
+                  <div class="admin-fb-author-name">${escapeHTML(name)}</div>
+                  ${handle ? `<div class="admin-fb-author-handle">${escapeHTML(handle)}</div>` : ''}
+                </div>
+              </div>
+              <div class="admin-fb-row-meta">
+                <span class="admin-fb-cat">${fbIcon(p.category)}<span>${escapeHTML(cat)}</span></span>
+              </div>
+            </div>
+            <div class="admin-fb-text">${escapeHTML(p.text)}</div>
+            <div class="admin-fb-row-footer">
+              <div class="admin-fb-footer-left">
+                <span>♥ ${votes}</span>
+                <span class="dot"></span>
+                <span>${formatRelativeTime(created)}</span>
+                <span class="dot"></span>
+                <span>${escapeHTML((p.lang || 'en').toUpperCase())}</span>
+                ${p.edited ? `<span class="dot"></span><span>${t('feedback.board.edited')}</span>` : ''}
+                <span class="dot"></span>
+                <span class="admin-fb-status admin-fb-status-${status}">${t('adminFb.status_' + status)}</span>
+              </div>
+              <button class="admin-fb-overflow" onclick="openAdminFbMenu('${p.id}')" aria-label="${t('feedback.board.moreAria')}">${FB_DOTS_ICON}</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      parseEmoji(listEl);
+    }
+
+    // ============================================================
+    // ADMIN — Stats dashboard
+    // ============================================================
+    // Single RPC `public.admin_stats(p_period)` returns JSONB with current,
+    // previous, and 7-point trend for every metric. The function gates on
+    // is_admin() server-side — non-admins get a SQL error before any
+    // computation. Period selector swaps the RPC arg; everything re-renders.
+
+    const adminStatsState = {
+      period: '7d',        // '24h' | '7d' | '30d'
+      data: null,          // last successful RPC payload
+      loading: false,
+      error: null,
+    };
+
+    async function adminStatsLoad(period, forceSpin){
+      if (!window.sb) return;
+      if (!huddleIsAdmin){
+        adminStatsState.error = 'Not authorised';
+        renderAdminStats();
+        return;
+      }
+      adminStatsState.period = period || adminStatsState.period;
+      adminStatsState.loading = true;
+      if (forceSpin) renderAdminStats();
+      try{
+        const { data, error } = await window.sb.rpc('admin_stats', { p_period: adminStatsState.period });
+        if (error) throw error;
+        adminStatsState.data = data;
+        adminStatsState.error = null;
+      } catch(e){
+        adminStatsState.error = (e && e.message) || String(e);
+        console.warn('[Huddle] adminStatsLoad failed:', e);
+      } finally {
+        adminStatsState.loading = false;
+        renderAdminStats();
+      }
+    }
+
+    function adminStatsSetPeriod(period){
+      if (period !== '24h' && period !== '7d' && period !== '30d' && period !== 'all') return;
+      if (adminStatsState.period === period) return;
+      adminStatsState.period = period;
+      adminStatsLoad(period, true);
+    }
+
+    // ---------- Delta formatting ----------
+    // Returns { label, dirClass } based on current vs previous.
+    // For period='all' there is no previous — show "All time" instead of
+    // a meaningless 100%+ delta.
+    function adminStatsDelta(current, previous){
+      if (adminStatsState.period === 'all') {
+        return { label: t('adminStats.deltaAllTime'), dirClass: 'admin-stats-delta-flat' };
+      }
+      const cur = Number(current) || 0;
+      const prev = Number(previous) || 0;
+      if (prev === 0 && cur === 0) return { label: t('adminStats.deltaNoChange'), dirClass: 'admin-stats-delta-flat' };
+      if (prev === 0)              return { label: '+' + cur + ' ' + t('adminStats.deltaVsPrev'), dirClass: 'admin-stats-delta-up' };
+      const pct = Math.round(((cur - prev) / prev) * 100);
+      if (pct === 0)  return { label: t('adminStats.deltaNoChange'), dirClass: 'admin-stats-delta-flat' };
+      const sign = pct > 0 ? '+' : '';
+      const dir  = pct > 0 ? 'admin-stats-delta-up' : 'admin-stats-delta-down';
+      return { label: sign + pct + '% ' + t('adminStats.deltaVsPrev'), dirClass: dir };
+    }
+
+    // ---------- Inline SVG sparkline (DOM-friendly, no library) ----------
+    // Direction-only, no axes/labels — its only job is "line going up/down".
+    // Uses a virtual coordinate space (100×H) + preserveAspectRatio="none" so
+    // the SVG stretches to whatever width its container is; vector-effect=
+    // "non-scaling-stroke" keeps the line crisp at 1.25px regardless of scale.
+    function adminStatsSparkline(trendArr, h){
+      h = h || 24;
+      const W = 100;
+      const arr = (Array.isArray(trendArr) && trendArr.length) ? trendArr : [0];
+      const max = Math.max(...arr, 1);
+      const min = Math.min(...arr, 0);
+      const range = (max - min) || 1;
+      const padY = 2;                                          // breathing room
+      const usableH = h - padY * 2;
+      const stepX = arr.length > 1 ? W / (arr.length - 1) : 0;
+      const points = arr.map((v, i) => {
+        const x = i * stepX;
+        const y = padY + (usableH - ((v - min) / range) * usableH);
+        return x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+      return `<svg viewBox="0 0 ${W} ${h}" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="${points}" vector-effect="non-scaling-stroke"/></svg>`;
+    }
+
+    // ---------- Relative time for "Updated 5 min ago" footer ----------
+    function adminStatsRelTime(iso){
+      if (!iso) return '';
+      const then = new Date(iso).getTime();
+      const sec = Math.max(0, Math.round((Date.now() - then) / 1000));
+      if (sec < 60)      return t('adminStats.justNow');
+      if (sec < 3600)    return Math.floor(sec / 60) + 'm ' + t('adminStats.ago');
+      if (sec < 86400)   return Math.floor(sec / 3600) + 'h ' + t('adminStats.ago');
+      return Math.floor(sec / 86400) + 'd ' + t('adminStats.ago');
+    }
+
+    // ---------- Game labels ----------
+    const ADMIN_STATS_GAMES = ['hotseat','chameleon','liar','mafia'];
+    function adminStatsGameLabel(key){
+      switch(key){
+        case 'hotseat':   return t('adminStats.game.hotseat');
+        case 'chameleon': return t('adminStats.game.chameleon');
+        case 'liar':      return t('adminStats.game.liar');
+        case 'mafia':     return t('adminStats.game.mafia');
+        default: return key;
+      }
+    }
+
+    // ---------- Render ----------
+    function renderAdminStats(){
+      const heroEl  = document.getElementById('admin-stats-hero');
+      const gridEl  = document.getElementById('admin-stats-grid');
+      const bdEl    = document.getElementById('admin-stats-breakdown');
+      const footEl  = document.getElementById('admin-stats-footer');
+      if (!heroEl || !gridEl || !bdEl || !footEl) return;
+
+      // Period selector active state
+      document.querySelectorAll('.admin-stats-period-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.period === adminStatsState.period);
+      });
+
+      // Loading
+      if (adminStatsState.loading && !adminStatsState.data){
+        heroEl.innerHTML = `<div class="admin-stats-loading">${escapeHTML(t('adminStats.loading'))}</div>`;
+        gridEl.innerHTML = '';
+        bdEl.innerHTML = '';
+        footEl.innerHTML = '';
+        return;
+      }
+
+      // Error
+      if (adminStatsState.error && !adminStatsState.data){
+        heroEl.innerHTML = `
+          <div class="admin-stats-error">
+            <div style="font-weight:700;margin-bottom:6px">${escapeHTML(t('adminStats.errorTitle'))}</div>
+            <div>${escapeHTML(adminStatsState.error)}</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="adminStatsLoad(adminStatsState.period, true)">${escapeHTML(t('feedback.board.retry'))}</button>
+        `;
+        gridEl.innerHTML = '';
+        bdEl.innerHTML = '';
+        footEl.innerHTML = '';
+        return;
+      }
+
+      const d = adminStatsState.data;
+      if (!d) return;
+
+      // Hero — Active players
+      const heroDelta = adminStatsDelta(d.active_players.current, d.active_players.previous);
+      heroEl.setAttribute('role', 'button');
+      heroEl.setAttribute('tabindex', '0');
+      heroEl.onclick = () => openAdminStatsDetail('active_players');
+      heroEl.innerHTML = `
+        <div class="admin-stats-hero-body">
+          <div class="admin-stats-hero-label">${escapeHTML(t('adminStats.heroLabel'))}</div>
+          <div class="admin-stats-hero-value">${d.active_players.current}</div>
+          <div class="admin-stats-hero-delta ${heroDelta.dirClass}">${escapeHTML(heroDelta.label)}</div>
+        </div>
+        <div class="admin-stats-hero-sparkline">${adminStatsSparkline(d.active_players.trend, 48)}</div>
+      `;
+
+      // 4 secondary cards
+      const cards = [
+        { key:'signups',      data: d.signups,      label: t('adminStats.signups'),     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>' },
+        { key:'lobbies',      data: d.lobbies,      label: t('adminStats.lobbies'),     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9 12 2l9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' },
+        { key:'games_played', data: d.games_played, label: t('adminStats.gamesPlayed'), icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>' },
+        { key:'feedback',     data: d.feedback,     label: t('adminStats.feedback'),    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+      ];
+      gridEl.innerHTML = cards.map(c => {
+        const dlt = adminStatsDelta(c.data.current, c.data.previous);
+        return `
+          <div class="admin-stats-card" role="button" tabindex="0" onclick="openAdminStatsDetail('${c.key}')">
+            <div class="admin-stats-card-body">
+              <div class="admin-stats-card-top">${c.icon}<span>${escapeHTML(c.label)}</span></div>
+              <div class="admin-stats-card-value">${c.data.current}</div>
+              <div class="admin-stats-card-delta ${dlt.dirClass}">${escapeHTML(dlt.label)}</div>
+            </div>
+            <div class="admin-stats-card-spark">${adminStatsSparkline(c.data.trend, 28)}</div>
+          </div>
+        `;
+      }).join('');
+
+      // By-game breakdown (share-of-total bars)
+      const byGame = d.by_game || {};
+      const total = ADMIN_STATS_GAMES.reduce((sum,k) => sum + (Number(byGame[k]) || 0), 0);
+      const rows = ADMIN_STATS_GAMES.map(k => {
+        const count = Number(byGame[k]) || 0;
+        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        return `
+          <div class="admin-stats-bd-row">
+            <div class="admin-stats-bd-name">${escapeHTML(adminStatsGameLabel(k))}</div>
+            <div class="admin-stats-bd-bar"><div class="admin-stats-bd-bar-fill" style="width:${pct}%"></div></div>
+            <div class="admin-stats-bd-count">${count}</div>
+          </div>
+        `;
+      }).join('');
+      bdEl.innerHTML = `
+        <div class="admin-stats-breakdown-title">${escapeHTML(t('adminStats.byGameTitle'))}</div>
+        ${rows}
+        ${total === 0 ? `<div style="font-size:12.5px;color:var(--text-tertiary);text-align:center;padding:8px 0 4px">${escapeHTML(t('adminStats.byGameEmpty'))}</div>` : ''}
+      `;
+
+      // Footer
+      footEl.innerHTML = `${escapeHTML(t('adminStats.updated'))} ${escapeHTML(adminStatsRelTime(d.generated_at))}`;
+    }
+
+    // ---------- Detail sheet (tap a card → expanded chart) ----------
+    // State lives in adminStatsDetailKey; the sheet shows the metric matching
+    // that key, sourced from adminStatsState.data (no extra RPC needed).
+    let adminStatsDetailKey = null;
+
+    // Resolves the metric label for the detail sheet header.
+    function adminStatsMetricLabel(key){
+      switch(key){
+        case 'active_players': return t('adminStats.heroLabel');
+        case 'signups':        return t('adminStats.signups');
+        case 'lobbies':        return t('adminStats.lobbies');
+        case 'games_played':   return t('adminStats.gamesPlayed');
+        case 'feedback':       return t('adminStats.feedback');
+        default: return key;
+      }
+    }
+
+    // Computes 3 X-axis labels (start / middle / now) given the active
+    // period. For 'all' it falls back to "earliest" / "midpoint" / "now"
+    // since the data span varies.
+    function adminStatsAxisLabels(period){
+      const now = t('adminStats.axisNow');
+      switch(period){
+        case '24h': return [ '24h ' + t('adminStats.ago'), '12h ' + t('adminStats.ago'), now ];
+        case '7d':  return [ '7d ' + t('adminStats.ago'),  '3d ' + t('adminStats.ago'),  now ];
+        case '30d': return [ '30d ' + t('adminStats.ago'), '15d ' + t('adminStats.ago'), now ];
+        case 'all': return [ t('adminStats.axisEarliest'), t('adminStats.axisMid'), now ];
+        default:    return [ '', '', now ];
+      }
+    }
+
+    // Big inline-SVG chart — uses the same trend array as the sparkline but
+    // adds area fill, 3 gridlines (0 / mid / max), Y-axis labels rendered
+    // inside the SVG as proper <text> elements, and dots at each data point.
+    //
+    // Coordinate system is REAL (360 × 240 px) with `preserveAspectRatio`
+    // defaulting to `xMidYMid meet` — the SVG scales proportionally to its
+    // container without distorting circles or stretching text. This fixes
+    // the ellipsoid-dots bug from the earlier `preserveAspectRatio="none"`.
+    function adminStatsBigChart(trendArr){
+      const arr = (Array.isArray(trendArr) && trendArr.length) ? trendArr : [0];
+      const W = 360, H = 240;
+      const padL = 40;   // left padding for Y-axis labels
+      const padR = 12;
+      const padT = 18;
+      const padB = 18;
+      const innerW = W - padL - padR;
+      const innerH = H - padT - padB;
+
+      const max = Math.max(...arr, 1);
+      const min = 0;                         // always anchor at zero — accurate read
+      const range = (max - min) || 1;
+      const midVal = Math.round(max / 2);
+      const stepX = arr.length > 1 ? innerW / (arr.length - 1) : 0;
+
+      const yFor = v => padT + (innerH - ((v - min) / range) * innerH);
+      const points = arr.map((v, i) => ({
+        x: padL + i * stepX,
+        y: yFor(v),
+        v
+      }));
+
+      // Line path
+      const lineD = points.map((p, i) =>
+        (i === 0 ? 'M' : 'L') + p.x.toFixed(2) + ',' + p.y.toFixed(2)
+      ).join(' ');
+      // Area path = line, then drop to baseline, then close
+      const baseline = padT + innerH;
+      const areaD = lineD
+        + ' L' + points[points.length - 1].x.toFixed(2) + ',' + baseline
+        + ' L' + points[0].x.toFixed(2) + ',' + baseline + ' Z';
+
+      // Three gridlines: 0, mid, max
+      const gridYs = [
+        { y: yFor(max),   label: String(max)   },
+        { y: yFor(midVal), label: String(midVal) },
+        { y: yFor(0),     label: '0'           }
+      ];
+      const grid = gridYs.map(g =>
+        `<line class="grid-line" x1="${padL}" y1="${g.y.toFixed(2)}" x2="${W - padR}" y2="${g.y.toFixed(2)}"/>`
+      ).join('');
+      const yLabels = gridYs.map(g =>
+        `<text class="y-label" x="${padL - 8}" y="${g.y.toFixed(2)}" text-anchor="end" dominant-baseline="middle">${g.label}</text>`
+      ).join('');
+
+      // Dots — donut style (surface fill + accent stroke)
+      const dots = points.map(p =>
+        `<circle class="dot" cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="3.5"/>`
+      ).join('');
+
+      return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+        ${grid}
+        ${yLabels}
+        <path class="area" d="${areaD}"/>
+        <path class="line" d="${lineD}"/>
+        ${dots}
+      </svg>`;
+    }
+
+    // ---------- Summary stats (avg / peak / low) ----------
+    function adminStatsSummary(trendArr){
+      const arr = (Array.isArray(trendArr) && trendArr.length) ? trendArr : [0];
+      const sum = arr.reduce((s, v) => s + (Number(v) || 0), 0);
+      const avg = arr.length ? sum / arr.length : 0;
+      return {
+        avg:  Math.round(avg * 10) / 10,
+        peak: Math.max(...arr, 0),
+        low:  Math.min(...arr, 0),
+      };
+    }
+
+    function openAdminStatsDetail(key){
+      if (!adminStatsState.data) return;
+      const metric = adminStatsState.data[key];
+      if (!metric) return;
+      adminStatsDetailKey = key;
+
+      const labelEl   = document.getElementById('admin-stats-detail-label');
+      const valEl     = document.getElementById('admin-stats-detail-value');
+      const deltaEl   = document.getElementById('admin-stats-detail-delta');
+      const chartEl   = document.getElementById('admin-stats-detail-chart');
+      const axisEl    = document.getElementById('admin-stats-detail-axis');
+      const summaryEl = document.getElementById('admin-stats-detail-summary');
+
+      const dlt = adminStatsDelta(metric.current, metric.previous);
+      if (labelEl) labelEl.textContent = adminStatsMetricLabel(key);
+      if (valEl)   valEl.textContent   = metric.current;
+      if (deltaEl) {
+        deltaEl.className = 'admin-stats-detail-delta ' + dlt.dirClass;
+        deltaEl.textContent = dlt.label;
+      }
+      if (chartEl) chartEl.innerHTML = adminStatsBigChart(metric.trend);
+      if (axisEl){
+        const labels = adminStatsAxisLabels(adminStatsState.period);
+        axisEl.innerHTML = labels.map(l => `<span>${escapeHTML(l)}</span>`).join('');
+      }
+      if (summaryEl){
+        const s = adminStatsSummary(metric.trend);
+        summaryEl.innerHTML = `
+          <div class="admin-stats-detail-summary-cell">
+            <div class="admin-stats-detail-summary-label">${escapeHTML(t('adminStats.summaryAvg'))}</div>
+            <div class="admin-stats-detail-summary-value">${s.avg}</div>
+          </div>
+          <div class="admin-stats-detail-summary-cell">
+            <div class="admin-stats-detail-summary-label">${escapeHTML(t('adminStats.summaryPeak'))}</div>
+            <div class="admin-stats-detail-summary-value">${s.peak}</div>
+          </div>
+          <div class="admin-stats-detail-summary-cell">
+            <div class="admin-stats-detail-summary-label">${escapeHTML(t('adminStats.summaryLow'))}</div>
+            <div class="admin-stats-detail-summary-value">${s.low}</div>
+          </div>
+        `;
+      }
+      const bd = document.getElementById('admin-stats-detail-backdrop');
+      if (bd) bd.classList.add('active');
+    }
+
+    function closeAdminStatsDetail(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'admin-stats-detail-backdrop') return;
+      const bd = document.getElementById('admin-stats-detail-backdrop');
+      if (bd) bd.classList.remove('active');
+      adminStatsDetailKey = null;
+    }
+
+    // ESC closes the sheet
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && adminStatsDetailKey !== null) closeAdminStatsDetail();
+    });
+
+    // ============================================================
+    // THE CHAMELEON — separate state + game loop, no shared code paths with Hot Seat
+    // ============================================================
+    //
+    // Single-device prototype convention: meId is hardcoded (Jordan). Other players are NPCs
+    // we simulate. Voting behaviour is randomised with light bias toward realistic outcomes
+    // (50% of non-Chameleon NPCs vote for the actual Chameleon; the Chameleon NPC votes for
+    // a random Player to throw suspicion).
+    //
+    // When real multiplayer ships, replace NPC simulation with synced peer votes; the UI
+    // flow does not need to change.
+
+    // Topics + items. Translations live in the data structure (not as i18n keys) — saves a
+    // huge amount of i18n bloat. Topic NAMES are i18n keyed though.
+    //
+    // DESIGN RULE: each topic is a TIGHT semantic family — every item in the grid belongs to
+    // the same narrow type (e.g., all dog breeds, all pizza toppings, all musical instruments).
+    // This is what makes Chameleon hard. With loose mixed categories (mammals + fish + bugs),
+    // the Chameleon can bluff with a generic word like "wild" and stay safe. With tight
+    // categories, every hint MUST be specific — and any vague hint exposes the Chameleon.
+    // Matches the published Big Potato Chameleon convention (Pizza Toppings, Disney Villains,
+    // Things in a Toolbox, etc.).
+    //
+    // Each topic carries 32 items. chamStartRound shuffles the pool and takes 16 so the 4×4
+    // grid feels fresh even when the same topic repeats. Names that are universally
+    // recognized stay in English in the TR list too (superhero names, Disney characters) —
+    // same convention used in Hot Seat's WORDS.
+    const CHAM_TOPICS = {
+      dogs: {
+        emoji: '🐕',
+        en: ['Husky','Poodle','Bulldog','Labrador','Beagle','Boxer','Dalmatian','Chihuahua','Pug','Shepherd','Retriever','Doberman','Rottweiler','Collie','Spaniel','Greyhound','Mastiff','Akita','Corgi','Pomeranian','Schnauzer','Setter','Terrier','Whippet','Kangal','Bichon','Basset','Bloodhound','Pinscher','Yorkie','Maltese','Dachshund'],
+        tr: ['Husky','Kaniş','Bulldog','Labrador','Beagle','Boxer','Dalmaçyalı','Chihuahua','Pug','Çoban köpeği','Golden','Doberman','Rottweiler','Collie','Spaniel','Tazı','Mastiff','Akita','Corgi','Pomeranya','Schnauzer','Setter','Terrier','Whippet','Kangal','Bichon','Basset','Bloodhound','Pinscher','Yorkie','Maltese','Dachshund'],
+      },
+      zoo: {
+        emoji: '🦁',
+        en: ['Lion','Tiger','Elephant','Giraffe','Zebra','Hippo','Rhino','Bear','Panda','Gorilla','Chimpanzee','Monkey','Kangaroo','Koala','Penguin','Crocodile','Cheetah','Leopard','Jaguar','Wolf','Fox','Lemur','Meerkat','Otter','Seal','Walrus','Sloth','Camel','Ostrich','Polar bear','Buffalo','Orangutan'],
+        tr: ['Aslan','Kaplan','Fil','Zürafa','Zebra','Su aygırı','Gergedan','Ayı','Panda','Goril','Şempanze','Maymun','Kanguru','Koala','Penguen','Timsah','Çita','Leopar','Jaguar','Kurt','Tilki','Lemur','Mirket','Su samuru','Fok','Mors','Tembel','Deve','Devekuşu','Kutup ayısı','Bufalo','Orangutan'],
+      },
+      sea: {
+        emoji: '🐠',
+        en: ['Shark','Dolphin','Whale','Octopus','Squid','Crab','Lobster','Jellyfish','Starfish','Seahorse','Eel','Stingray','Turtle','Seal','Walrus','Pufferfish','Clownfish','Tuna','Salmon','Cod','Sardine','Anchovy','Swordfish','Manta ray','Orca','Beluga','Manatee','Coral','Sea urchin','Narwhal','Shrimp','Oyster'],
+        tr: ['Köpekbalığı','Yunus','Balina','Ahtapot','Kalamar','Yengeç','Istakoz','Denizanası','Denizyıldızı','Denizatı','Yılan balığı','Vatoz','Kaplumbağa','Fok','Mors','Balon balığı','Palyaço balığı','Ton balığı','Somon','Morina','Sardalya','Hamsi','Kılıç balığı','Manta','Orka','Beluga','Manati','Mercan','Deniz kestanesi','Narval','Karides','İstiridye'],
+      },
+      birds: {
+        emoji: '🦅',
+        en: ['Eagle','Owl','Parrot','Penguin','Sparrow','Pigeon','Hawk','Falcon','Crow','Raven','Robin','Swan','Duck','Goose','Chicken','Rooster','Turkey','Peacock','Flamingo','Pelican','Heron','Stork','Vulture','Woodpecker','Hummingbird','Canary','Cockatoo','Toucan','Kiwi','Ostrich','Emu','Albatross'],
+        tr: ['Kartal','Baykuş','Papağan','Penguen','Serçe','Güvercin','Şahin','Doğan','Karga','Kuzgun','Kızılgerdan','Kuğu','Ördek','Kaz','Tavuk','Horoz','Hindi','Tavus','Flamingo','Pelikan','Balıkçıl','Leylek','Akbaba','Ağaçkakan','Sinekkuşu','Kanarya','Kakadu','Tukan','Kivi','Devekuşu','Emu','Albatros'],
+      },
+      farm: {
+        emoji: '🐔',
+        en: ['Cow','Sheep','Goat','Horse','Pig','Chicken','Duck','Goose','Rooster','Donkey','Mule','Lamb','Calf','Piglet','Foal','Bull','Ox','Buffalo','Turkey','Rabbit','Llama','Alpaca','Pony','Boar','Ram','Ewe','Stallion','Mare','Kid','Quail','Hen','Drake'],
+        tr: ['İnek','Koyun','Keçi','At','Domuz','Tavuk','Ördek','Kaz','Horoz','Eşek','Katır','Kuzu','Buzağı','Domuz yavrusu','Tay','Boğa','Öküz','Manda','Hindi','Tavşan','Lama','Alpaka','Midilli','Yaban domuzu','Koç','Dişi koyun','Aygır','Kısrak','Oğlak','Bıldırcın','Piliç','Erkek ördek'],
+      },
+      pizza: {
+        emoji: '🍕',
+        en: ['Pepperoni','Mushroom','Onion','Olive','Cheese','Ham','Pineapple','Sausage','Bacon','Tomato','Anchovy','Spinach','Pepper','Chicken','Tuna','Garlic','Basil','Salami','Corn','Egg','Beef','Artichoke','Broccoli','Jalapeño','Feta','Mozzarella','Eggplant','Zucchini','Pesto','Capers','Parmesan','Ricotta'],
+        tr: ['Sucuk','Mantar','Soğan','Zeytin','Peynir','Jambon','Ananas','Sosis','Pastırma','Domates','Hamsi','Ispanak','Biber','Tavuk','Ton balığı','Sarımsak','Fesleğen','Salam','Mısır','Yumurta','Dana eti','Enginar','Brokoli','Jalapeño','Beyaz peynir','Mozzarella','Patlıcan','Kabak','Pesto','Kapari','Parmesan','Ricotta'],
+      },
+      fruits: {
+        emoji: '🍎',
+        en: ['Apple','Banana','Orange','Strawberry','Watermelon','Pineapple','Grape','Mango','Peach','Pear','Plum','Cherry','Lemon','Lime','Kiwi','Coconut','Avocado','Papaya','Apricot','Blueberry','Raspberry','Blackberry','Pomegranate','Fig','Melon','Guava','Lychee','Passion fruit','Persimmon','Quince','Tangerine','Date'],
+        tr: ['Elma','Muz','Portakal','Çilek','Karpuz','Ananas','Üzüm','Mango','Şeftali','Armut','Erik','Kiraz','Limon','Misket limonu','Kivi','Hindistan cevizi','Avokado','Papaya','Kayısı','Yaban mersini','Ahududu','Böğürtlen','Nar','İncir','Kavun','Guava','Liçi','Çarkıfelek','Trabzon hurması','Ayva','Mandalina','Hurma'],
+      },
+      veggies: {
+        emoji: '🥬',
+        en: ['Carrot','Potato','Tomato','Onion','Garlic','Pepper','Cucumber','Lettuce','Spinach','Broccoli','Cauliflower','Cabbage','Pumpkin','Eggplant','Zucchini','Mushroom','Corn','Pea','Bean','Radish','Beet','Celery','Asparagus','Artichoke','Leek','Okra','Turnip','Parsnip','Kale','Arugula','Chard','Fennel'],
+        tr: ['Havuç','Patates','Domates','Soğan','Sarımsak','Biber','Salatalık','Marul','Ispanak','Brokoli','Karnabahar','Lahana','Bal kabağı','Patlıcan','Kabak','Mantar','Mısır','Bezelye','Fasulye','Turp','Pancar','Kereviz','Kuşkonmaz','Enginar','Pırasa','Bamya','Şalgam','Yaban havucu','Karalahana','Roka','Pazı','Rezene'],
+      },
+      desserts: {
+        emoji: '🍰',
+        en: ['Cake','Cookie','Donut','Ice cream','Brownie','Cupcake','Cheesecake','Tiramisu','Pie','Tart','Muffin','Pudding','Mousse','Pancake','Waffle','Crepe','Eclair','Macaron','Croissant','Baklava','Cannoli','Truffle','Soufflé','Sundae','Sorbet','Gelato','Custard','Trifle','Parfait','Pavlova','Crumble','Fudge'],
+        tr: ['Pasta','Kurabiye','Donut','Dondurma','Brownie','Cupcake','Cheesecake','Tiramisu','Turta','Tart','Muffin','Puding','Mus','Pankek','Waffle','Krep','Ekler','Makaron','Kruvasan','Baklava','Cannoli','Truffle','Sufle','Sundae','Sorbet','Gelato','Krema','Trifle','Parfe','Pavlova','Crumble','Fudge'],
+      },
+      drinks: {
+        emoji: '☕',
+        en: ['Coffee','Tea','Cola','Juice','Water','Lemonade','Smoothie','Milkshake','Hot chocolate','Espresso','Cappuccino','Latte','Iced tea','Mocha','Frappe','Soda','Beer','Wine','Whiskey','Vodka','Cocktail','Champagne','Cider','Rum','Gin','Tequila','Sake','Margarita','Mojito','Sangria','Ayran','Lassi'],
+        tr: ['Kahve','Çay','Kola','Meyve suyu','Su','Limonata','Smoothie','Milkshake','Sıcak çikolata','Espresso','Cappuccino','Latte','Soğuk çay','Mocha','Frappe','Soda','Bira','Şarap','Viski','Votka','Kokteyl','Şampanya','Elma şarabı','Rom','Cin','Tekila','Sake','Margarita','Mojito','Sangria','Ayran','Lassi'],
+      },
+      turkish: {
+        emoji: '🥙',
+        en: ['Kebab','Köfte','Lahmacun','Pide','Baklava','Künefe','Dolma','Mantı','Börek','Simit','Menemen','Çiğ köfte','İskender','Adana','Urfa','Lokum','Pilav','Mercimek','Sarma','Tarhana','Tantuni','Su böreği','Sucuk','Pastırma','Helva','Tulumba','Şekerpare','Revani','Ayran','Salep','Boza','Tahini'],
+        tr: ['Kebap','Köfte','Lahmacun','Pide','Baklava','Künefe','Dolma','Mantı','Börek','Simit','Menemen','Çiğ köfte','İskender','Adana','Urfa','Lokum','Pilav','Mercimek','Sarma','Tarhana','Tantuni','Su böreği','Sucuk','Pastırma','Helva','Tulumba','Şekerpare','Revani','Ayran','Salep','Boza','Tahin'],
+      },
+      breakfast: {
+        emoji: '🍳',
+        en: ['Eggs','Bacon','Toast','Pancakes','Cereal','Omelet','Sausage','Bagel','Croissant','Waffles','French toast','Yogurt','Granola','Oatmeal','Muffin','Donut','Hash browns','Porridge','Smoothie','Crepes','Quiche','Frittata','Scone','Honey','Jam','Butter','Cheese','Olives','Tomato','Cucumber','Tea','Coffee'],
+        tr: ['Yumurta','Pastırma','Tost','Pankek','Mısır gevreği','Omlet','Sosis','Simit','Kruvasan','Waffle','Fransız tost','Yoğurt','Granola','Yulaf ezmesi','Muffin','Donut','Patates kızartması','Lapa','Smoothie','Krep','Kiş','Frittata','Çörek','Bal','Reçel','Tereyağı','Peynir','Zeytin','Domates','Salatalık','Çay','Kahve'],
+      },
+      disney: {
+        emoji: '🏰',
+        en: ['Mickey','Minnie','Donald','Goofy','Pluto','Simba','Nala','Mufasa','Scar','Ariel','Belle','Beast','Cinderella','Aurora','Snow White','Elsa','Anna','Olaf','Moana','Mulan','Rapunzel','Tiana','Jasmine','Aladdin','Pocahontas','Tarzan','Hercules','Pinocchio','Bambi','Dumbo','Peter Pan','Tinkerbell'],
+        tr: ['Mickey','Minnie','Donald','Goofy','Pluto','Simba','Nala','Mufasa','Scar','Ariel','Belle','Beast','Cinderella','Aurora','Snow White','Elsa','Anna','Olaf','Moana','Mulan','Rapunzel','Tiana','Jasmine','Aladdin','Pocahontas','Tarzan','Hercules','Pinocchio','Bambi','Dumbo','Peter Pan','Tinkerbell'],
+      },
+      heroes: {
+        emoji: '🦸',
+        en: ['Superman','Batman','Spider-Man','Iron Man','Hulk','Thor','Wonder Woman','Captain America','Black Panther','Flash','Aquaman','Wolverine','Deadpool','Daredevil','Ant-Man','Doctor Strange','Hawkeye','Black Widow','Captain Marvel','Storm','Cyclops','Jean Grey','Green Lantern','Robin','Catwoman','Joker','Loki','Thanos','Venom','Magneto','Nightwing','Supergirl'],
+        tr: ['Superman','Batman','Spider-Man','Iron Man','Hulk','Thor','Wonder Woman','Captain America','Black Panther','Flash','Aquaman','Wolverine','Deadpool','Daredevil','Ant-Man','Doctor Strange','Hawkeye','Black Widow','Captain Marvel','Storm','Cyclops','Jean Grey','Green Lantern','Robin','Catwoman','Joker','Loki','Thanos','Venom','Magneto','Nightwing','Supergirl'],
+      },
+      ballsports: {
+        emoji: '⚽',
+        en: ['Football','Basketball','Tennis','Volleyball','Baseball','Cricket','Rugby','Golf','Bowling','Handball','Badminton','Squash','Polo','Snooker','Pool','Hockey','Field hockey','Beach volley','Netball','Lacrosse','Pingpong','Dodgeball','Kickball','Softball','Water polo','Ultimate','Pickleball','Boules','Petanque','Croquet','Foosball','Bocce'],
+        tr: ['Futbol','Basketbol','Tenis','Voleybol','Beyzbol','Kriket','Ragbi','Golf','Bowling','Hentbol','Badminton','Squash','Polo','Snooker','Bilardo','Hokey','Çim hokeyi','Plaj voleybolu','Netbol','Lakros','Pingpong','Dodgeball','Kickball','Softbol','Su topu','Frizbi','Pickleball','Boules','Petanque','Kroket','Langırt','Bocce'],
+      },
+      olympic: {
+        emoji: '🥋',
+        en: ['Swimming','Boxing','Karate','Judo','Wrestling','Marathon','Archery','Sailing','Diving','Climbing','Skating','Skiing','Snowboard','Gymnastics','Cycling','Rowing','Fencing','Taekwondo','Pole vault','Long jump','High jump','Sprint','Hurdles','Discus','Javelin','Shot put','Triathlon','Decathlon','Equestrian','Surfing','Skateboard','Weightlift'],
+        tr: ['Yüzme','Boks','Karate','Judo','Güreş','Maraton','Okçuluk','Yelken','Dalış','Tırmanış','Paten','Kayak','Snowboard','Jimnastik','Bisiklet','Kürek','Eskrim','Tekvando','Sırıkla atlama','Uzun atlama','Yüksek atlama','Sprint','Engelli koşu','Disk','Cirit','Gülle','Triatlon','Dekatlon','Binicilik','Sörf','Kaykay','Halter'],
+      },
+      instruments: {
+        emoji: '🎸',
+        en: ['Guitar','Piano','Drums','Violin','Flute','Trumpet','Saxophone','Harmonica','Accordion','Banjo','Harp','Cello','Clarinet','Trombone','Oboe','Bassoon','Bagpipes','Mandolin','Ukulele','Xylophone','Tambourine','Maracas','Triangle','Bongo','Sitar','Lute','Recorder','Synth','Keyboard','Bass','Organ','Castanets'],
+        tr: ['Gitar','Piyano','Davul','Keman','Flüt','Trompet','Saksafon','Mızıka','Akordeon','Banjo','Arp','Çello','Klarnet','Trombon','Obua','Fagot','Gayda','Mandolin','Ukulele','Ksilofon','Tef','Marakas','Üçgen','Bongo','Sitar','Lavta','Blok flüt','Synth','Klavye','Bas','Org','Kastanyet'],
+      },
+      hospital: {
+        emoji: '🏥',
+        en: ['Doctor','Nurse','Surgeon','Dentist','Pharmacist','Therapist','Paramedic','Midwife','Vet','Physio','Psychologist','Psychiatrist','Radiologist','Cardiologist','Pediatrician','Oncologist','Anesthetist','Optometrist','Orthodontist','Chiropractor','Nutritionist','Receptionist','Caregiver','Counselor','Intern','Resident','Pathologist','Dermatologist','Neurologist','Lab tech','Specialist','Orderly'],
+        tr: ['Doktor','Hemşire','Cerrah','Diş hekimi','Eczacı','Terapist','Paramedik','Ebe','Veteriner','Fizyoterapist','Psikolog','Psikiyatrist','Radyolog','Kardiyolog','Çocuk doktoru','Onkolog','Anestezist','Göz doktoru','Ortodontist','Kiropraktör','Diyetisyen','Resepsiyonist','Bakıcı','Danışman','Stajyer','Asistan','Patolog','Dermatolog','Nörolog','Lab teknisyeni','Uzman','Hasta bakıcı'],
+      },
+      trades: {
+        emoji: '🔧',
+        en: ['Plumber','Electrician','Carpenter','Mechanic','Builder','Welder','Painter','Bricklayer','Tiler','Roofer','Locksmith','Glazier','Blacksmith','Mason','Cobbler','Tailor','Barber','Florist','Baker','Butcher','Sculptor','Potter','Watchmaker','Goldsmith','Upholsterer','Plasterer','Joiner','Cooper','Jeweler','Chimney sweep','Stonemason','Gardener'],
+        tr: ['Tesisatçı','Elektrikçi','Marangoz','Tamirci','İnşaatçı','Kaynakçı','Boyacı','Duvarcı','Fayansçı','Çatıcı','Çilingir','Camcı','Demirci','Taşçı','Ayakkabıcı','Terzi','Berber','Çiçekçi','Fırıncı','Kasap','Heykeltıraş','Çömlekçi','Saatçi','Kuyumcu','Döşemeci','Sıvacı','Doğramacı','Fıçıcı','Mücevherci','Baca temizleyici','Mermerci','Bahçıvan'],
+      },
+      landmarks: {
+        emoji: '🗼',
+        en: ['Eiffel Tower','Big Ben','Pyramids','Taj Mahal','Colosseum','Statue of Liberty','Mt Everest','Niagara','Grand Canyon','Hagia Sophia','Blue Mosque','Topkapı','Galata Tower','Burj Khalifa','Sphinx','Great Wall','Stonehenge','Acropolis','Parthenon','Machu Picchu','Christ Redeemer','Sydney Opera','Tower Bridge','Notre Dame','Sagrada Família','Leaning Tower','Petra','Angkor Wat','Mt Fuji','White House','Kremlin','Sahara'],
+        tr: ['Eyfel Kulesi','Big Ben','Piramitler','Tac Mahal','Kolezyum','Özgürlük Heykeli','Everest','Niagara','Grand Canyon','Ayasofya','Sultanahmet','Topkapı','Galata Kulesi','Burj Khalifa','Sfenks','Çin Seddi','Stonehenge','Akropol','Parthenon','Machu Picchu','Kurtarıcı İsa','Sidney Operası','Kule Köprü','Notre Dame','Sagrada Família','Pisa Kulesi','Petra','Angkor Wat','Fuji Dağı','Beyaz Saray','Kremlin','Sahra'],
+      },
+      kitchen: {
+        emoji: '🍴',
+        en: ['Fork','Knife','Spoon','Plate','Cup','Pan','Pot','Whisk','Ladle','Spatula','Bowl','Mug','Cutting board','Strainer','Grater','Peeler','Tongs','Apron','Mixer','Blender','Toaster','Kettle','Oven','Stove','Fridge','Microwave','Dishwasher','Sink','Napkin','Tray','Rolling pin','Salt shaker'],
+        tr: ['Çatal','Bıçak','Kaşık','Tabak','Bardak','Tava','Tencere','Çırpıcı','Kepçe','Spatula','Kase','Kupa','Kesme tahtası','Süzgeç','Rende','Soyacak','Maşa','Önlük','Mikser','Blender','Tost makinesi','Su ısıtıcısı','Fırın','Ocak','Buzdolabı','Mikrodalga','Bulaşık makinesi','Lavabo','Peçete','Tepsi','Oklava','Tuzluk'],
+      },
+      clothes: {
+        emoji: '👕',
+        en: ['Shirt','Pants','Dress','Hat','Shoes','Socks','Jeans','Jacket','Coat','Scarf','Gloves','Boots','Sneakers','Sandals','Skirt','Shorts','Sweater','Hoodie','Suit','Tie','Belt','T-shirt','Underwear','Pajamas','Robe','Cap','Beanie','Glasses','Watch','Earrings','Necklace','Ring'],
+        tr: ['Gömlek','Pantolon','Elbise','Şapka','Ayakkabı','Çorap','Kot','Ceket','Mont','Atkı','Eldiven','Bot','Spor ayakkabı','Sandalet','Etek','Şort','Kazak','Kapüşonlu','Takım','Kravat','Kemer','Tişört','İç çamaşırı','Pijama','Bornoz','Kep','Bere','Gözlük','Kol saati','Küpe','Kolye','Yüzük'],
+      },
+    };
+    const CHAM_TOPIC_IDS = Object.keys(CHAM_TOPICS);
+
+    // Game state — kept completely separate from Hot Seat's `state`. Reset on every lobby open.
+    const chamState = {
+      topic: 'mixed',          // 'mixed' | 'animals' | 'foods' | ...
+      rounds: 3,               // 1 | 3 | 5
+      currentRound: 1,
+      players: [],             // deep-copied from PLAYERS at lobby open
+      chameleonId: null,
+      previousChameleonId: null,
+      activeTopic: null,       // resolved topic for this round (never 'mixed')
+      gridItems: [],           // 16 strings for this round, in the active language
+      secretIndex: -1,         // index into gridItems of the secret word
+      startingPlayerIdx: 0,
+      myVote: null,            // playerId I (meId) voted for — kept for per-device locking
+      voteResults: {},         // playerId → array of voter playerIds (real votes only)
+      mostVotedId: null,       // playerId(s) with the highest vote count — picks chameleon first if tied
+      chameleonCaught: false,
+      outcome: null,           // 'chameleon' | 'players'
+      scores: {},              // playerId → wins across rounds in this game
+      // Multiplayer additions (mirror hotState)
+      code: null,
+      phase: 'lobby',          // 'lobby' | 'splash' | 'play' | 'vote' | 'result'
+      hostId: null,
+      claimedBy: {},           // playerId → sessionId
+      revision: 0,
+    };
+
+    // Local per-device identity for Chameleon (mirrors hotMe)
+    const chamMe = { sessionId: null, myId: null, bootstrapped: false };
+
+    async function chamBootstrap(){
+      if (chamMe.bootstrapped) return;
+      chamMe.bootstrapped = true;
+      if (!window.sb) { chamMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10); return; }
+      try {
+        const { data: { user } } = await window.sb.auth.getUser();
+        if (user && user.id) { chamMe.sessionId = user.id; return; }
+        const { data, error } = await window.sb.auth.signInAnonymously();
+        if (error) throw error;
+        chamMe.sessionId = data.user.id;
+      } catch(e) { chamMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10); }
+    }
+    function chamGetSessionId(){
+      if (!chamMe.sessionId) chamMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10);
+      return chamMe.sessionId;
+    }
+    function chamIsHost(){ return chamGetSessionId() === chamState.hostId; }
+    function chamClaimedCount(){ return Object.keys(chamState.claimedBy || {}).length; }
+
+    // ---------- Chameleon sync transport (mirrors hotPersist/hotLoadRoom/hotWireSync) ----------
+    function chamPersist(){
+      if (!chamState.code) return;
+      chamState.revision = (chamState.revision || 0) + 1;
+      if (!window.sb) return;
+      const snapshot = JSON.parse(JSON.stringify(chamState));
+      window.sb
+        .from('chameleon_rooms')
+        .upsert({ code: snapshot.code, state: snapshot })
+        .then(({ error }) => {
+          if (error) {
+            console.warn('[Huddle] cham persist failed:', error.message || error);
+            try { if (typeof showLobbyToast === 'function') showLobbyToast(t('common.syncFailed'), 3500); } catch(e){}
+          }
+        }, (err) => {
+          console.warn('[Huddle] cham persist network error:', err && err.message || err);
+          try { if (typeof showLobbyToast === 'function') showLobbyToast(t('common.syncFailed'), 3500); } catch(e){}
+        });
+    }
+    async function chamLoadRoom(code){
+      if (!window.sb) return false;
+      // One retry with a short backoff — when an invitee taps Join the host's
+      // row may not have reached this client yet (replication lag, race with
+      // host's first persist). Catches transient failures without hanging the UI.
+      for (let attempt = 0; attempt < 2; attempt++){
+        try {
+          const { data, error } = await window.sb
+            .from('chameleon_rooms')
+            .select('state')
+            .eq('code', code)
+            .maybeSingle();
+          if (error) {
+            console.warn('[Huddle] chamLoadRoom query error (attempt ' + (attempt+1) + '):', error.message || error);
+          } else if (data && data.state) {
+            const incoming = data.state;
+            // Room was closed by the host — treat as gone.
+            if (incoming.closedByHost) return false;
+            Object.keys(chamState).forEach(k => { delete chamState[k]; });
+            Object.assign(chamState, incoming);
+            return true;
+          }
+        } catch(e) {
+          console.warn('[Huddle] chamLoadRoom exception (attempt ' + (attempt+1) + '):', e);
+        }
+        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+      }
+      return false;
+    }
+    // ===== Chameleon multiplayer presence =====
+    // Supabase Presence tracks every device subscribed to the room channel.
+    // When a tab dies (OS kill, wifi drop, app switch-away), the WebSocket
+    // eventually drops and Supabase emits a `presence.leave`. A 5-second grace
+    // timer covers legitimate refreshes (auth user ID is stable across reload).
+    // After the grace expires, the lowest-connected peer fires
+    // huddle_cham_handle_disconnect server-side, which does phase-aware cleanup
+    // (seat removal, host transfer, round abort if the chameleon left mid-game).
+    let _chamPresentSessions = new Set();
+    let _chamLeaveGraceTimers = new Map();
+    // 60s grace — long enough to cover a player locking their phone briefly,
+    // switching to another app, or hitting a transient network drop. Was
+    // originally 5s which freed seats so aggressively that legitimate
+    // "I'll be right back" moments dropped players from the lobby.
+    // Matches industry default for soft-disconnect windows (Colyseus
+    // documents 30s; we go slightly higher since Huddle is in-person and
+    // hosts/friends can verbally call a kick if it drags on).
+    const CHAM_LEAVE_GRACE_MS = 60000;
+
+    function chamIsPlayerPresent(playerId){
+      if (!playerId) return false;
+      const sid = chamState.claimedBy && chamState.claimedBy[playerId];
+      return sid ? _chamPresentSessions.has(sid) : false;
+    }
+    // Lowest-seat-id remaining player whose session is currently connected.
+    // Deterministic across peers, so the "who fires the cleanup mutation"
+    // decision is consistent without a coordinator.
+    function chamLowestSeatConnectedPlayer(){
+      const claimedBy = chamState.claimedBy || {};
+      const seats = Object.keys(claimedBy).sort();
+      for (const pid of seats) {
+        const sid = claimedBy[pid];
+        if (sid && _chamPresentSessions.has(sid)) return pid;
+      }
+      return null;
+    }
+    function chamConfirmUserGone(sessionId){
+      _chamPresentSessions.delete(sessionId);
+      _chamLeaveGraceTimers.delete(sessionId);
+      let goneSeatId = null;
+      Object.keys(chamState.claimedBy || {}).forEach(pid => {
+        if (chamState.claimedBy[pid] === sessionId) goneSeatId = pid;
+      });
+      if (!goneSeatId) {
+        if (typeof chamRerender === 'function') chamRerender();
+        return;
+      }
+      // Only the lowest-connected peer fires the server cleanup — others just refresh UI.
+      const isMyJobToWrite = chamLowestSeatConnectedPlayer() === chamMe.myId;
+      if (!isMyJobToWrite) {
+        if (typeof chamRerender === 'function') chamRerender();
+        return;
+      }
+      chamHandleConfirmedDisconnect(goneSeatId);
+    }
+    function chamHandleConfirmedDisconnect(goneSeatId){
+      try {
+        const goneName = (() => {
+          const p = (chamState.players || []).find(x => x.id === goneSeatId);
+          if (!p) return goneSeatId;
+          const disp = playerDisplayFor(p, chamState.claimedBy);
+          return disp.name || p.name;
+        })();
+        if (typeof showLobbyToast === 'function' &&
+            chamState.phase && chamState.phase !== 'lobby' && chamState.phase !== 'result') {
+          showLobbyToast(t('cham.toastPlayerLeft', { name: goneName }), 3500);
+        }
+      } catch(e){}
+
+      const goneSessionId = chamState.claimedBy && chamState.claimedBy[goneSeatId];
+      if (!goneSessionId) {
+        if (typeof chamRerender === 'function') chamRerender();
+        return;
+      }
+      huddleCallRPC('huddle_cham_handle_disconnect', {
+        p_code: chamState.code,
+        p_gone_session_id: goneSessionId,
+      });
+    }
+    function chamStartLeaveGrace(sessionId){
+      if (_chamLeaveGraceTimers.has(sessionId)) {
+        clearTimeout(_chamLeaveGraceTimers.get(sessionId));
+      }
+      const tid = setTimeout(() => chamConfirmUserGone(sessionId), CHAM_LEAVE_GRACE_MS);
+      _chamLeaveGraceTimers.set(sessionId, tid);
+    }
+    function chamCancelLeaveGrace(sessionId){
+      if (_chamLeaveGraceTimers.has(sessionId)) {
+        clearTimeout(_chamLeaveGraceTimers.get(sessionId));
+        _chamLeaveGraceTimers.delete(sessionId);
+      }
+    }
+    function chamResetPresenceState(){
+      _chamLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
+      _chamLeaveGraceTimers.clear();
+      _chamPresentSessions.clear();
+    }
+
+    let _chamChannel = null;
+    let _chamChannelCode = null;
+    let _chamChannelSessionId = null;
+    function chamWireSync(){
+      if (!window.sb) return;
+      if (!chamState.code) return;
+      // Bind the channel to BOTH the room code AND the current session id.
+      // The presence key is captured at channel-creation time (see below), so a
+      // user-identity change (e.g., anon → Google sign-in) requires a rebuild
+      // — otherwise our presence echoes the stale anon id.
+      const sid = chamGetSessionId();
+      if (_chamChannel && _chamChannelCode === chamState.code && _chamChannelSessionId === sid) return;
+      if (_chamChannel) {
+        try { window.sb.removeChannel(_chamChannel); } catch(e){}
+        _chamChannel = null; _chamChannelCode = null; _chamChannelSessionId = null;
+        chamResetPresenceState();
+      }
+      const code = chamState.code;
+      const handler = (payload) => {
+        const newState = payload && payload.new && payload.new.state;
+        if (!newState) return;
+        if (typeof newState.revision === 'number' && newState.revision <= (chamState.revision || 0)) return;
+        // Host closed the room — auto-leave for every other player still seated.
+        if (newState.closedByHost && chamMe.myId) {
+          if (typeof showLobbyToast === 'function') {
+            try { showLobbyToast(t('lobby.hostClosedRoom'), 3500); } catch(e){}
+          }
+          chamForceLeaveLocal();
+          return;
+        }
+        // Preserve myVote — it's per-device only (not shared)
+        const localMyVote = chamState.myVote;
+        Object.keys(chamState).forEach(k => { delete chamState[k]; });
+        Object.assign(chamState, newState);
+        // Restore meId from claim so existing code reading state.meId still works
+        const sid = chamGetSessionId();
+        const claimed = Object.entries(chamState.claimedBy || {}).find(([pid, s]) => s === sid);
+        if (claimed) { chamMe.myId = claimed[0]; state.meId = claimed[0]; }
+        // Restore myVote if we've already voted in this round
+        if (chamMe.myId && chamState.voteResults) {
+          const myVotedFor = Object.keys(chamState.voteResults).find(target =>
+            (chamState.voteResults[target] || []).includes(chamMe.myId)
+          );
+          if (myVotedFor) chamState.myVote = myVotedFor;
+        }
+        const activeId = document.querySelector('.screen.active');
+        const currentId = activeId ? activeId.id.replace('screen-', '') : null;
+        const chamScreens = ['cham-lobby','cham-splash','cham-play','cham-vote','cham-result'];
+        if (currentId && chamScreens.indexOf(currentId) !== -1) chamRerender();
+      };
+      // Presence-event handlers. Key is the auth session id so refresh = same key.
+      const onPresenceSync = () => {
+        const state = _chamChannel.presenceState();
+        const fresh = new Set(Object.keys(state || {}));
+        // Anyone newly arrived clears their grace timer (refresh covers this).
+        fresh.forEach(sid => {
+          if (_chamLeaveGraceTimers.has(sid)) chamCancelLeaveGrace(sid);
+        });
+        _chamPresentSessions = fresh;
+        if (typeof chamRerender === 'function') chamRerender();
+      };
+      const onPresenceJoin = ({ key }) => {
+        if (!key) return;
+        _chamPresentSessions.add(key);
+        chamCancelLeaveGrace(key);
+      };
+      const onPresenceLeave = ({ key }) => {
+        if (!key) return;
+        // DON'T delete from _chamPresentSessions immediately — start a grace
+        // timer so a refresh-rejoin (~1-3s) doesn't trigger the "left" flow.
+        chamStartLeaveGrace(key);
+      };
+      _chamChannelCode = code;
+      _chamChannelSessionId = sid;
+      _chamChannel = window.sb
+        .channel('chameleon_room:' + code, { config: { presence: { key: chamMe.sessionId || ('tab_' + Math.random()) } } })
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'chameleon_rooms', filter:'code=eq.' + code }, handler)
+        .on('postgres_changes', { event:'INSERT', schema:'public', table:'chameleon_rooms', filter:'code=eq.' + code }, handler)
+        .on('presence', { event: 'sync'  }, onPresenceSync)
+        .on('presence', { event: 'join'  }, onPresenceJoin)
+        .on('presence', { event: 'leave' }, onPresenceLeave)
+        .subscribe(async (status) => {
+          if (status !== 'SUBSCRIBED') return;
+          if (_chamChannelCode !== code) return;
+          // Announce our presence the moment we're subscribed.
+          try {
+            await _chamChannel.track({
+              user_id: chamMe.sessionId,
+              joined_at: Date.now(),
+            });
+          } catch(e){}
+          // Reconcile gap between initial load and live subscription.
+          try {
+            const ok = await chamLoadRoom(code);
+            if (ok) {
+              const sid = chamGetSessionId();
+              const claimed = Object.entries(chamState.claimedBy || {}).find(([pid, s]) => s === sid);
+              if (claimed) { chamMe.myId = claimed[0]; state.meId = claimed[0]; }
+              const activeId = document.querySelector('.screen.active');
+              const currentId = activeId ? activeId.id.replace('screen-', '') : null;
+              if (currentId && ['cham-lobby','cham-splash','cham-play','cham-vote','cham-result'].indexOf(currentId) !== -1) chamRerender();
+            }
+          } catch(e){}
+        });
+    }
+    // Chameleon rerender — wrapped through the generic sync gate. See the
+    // huddleSync* block for the mechanism.
+    function chamRerenderInner(){
+      const phaseToScreen = { lobby:'cham-lobby', splash:'cham-splash', play:'cham-play', vote:'cham-vote', result:'cham-result' };
+      const target = phaseToScreen[chamState.phase] || 'cham-lobby';
+      const activeId = document.querySelector('.screen.active');
+      const currentId = activeId ? activeId.id.replace('screen-', '') : null;
+      if (currentId !== target) goTo(target);
+      // Lobby-only invite sheet — auto-close if game starts while it's open.
+      if (chamState.phase !== 'lobby') {
+        const bd = document.getElementById('lobby-invite-backdrop');
+        if (bd && bd.classList.contains('active') && typeof closeLobbyInviteSheet === 'function') {
+          closeLobbyInviteSheet();
+        }
+      }
+      if (chamState.phase === 'lobby') { renderChamLobbyPlayers(); chamRenderSettings(); chamUpdateHowToTrigger(); if (typeof renderLobbyInvites === 'function') renderLobbyInvites('chameleon'); }
+      else if (chamState.phase === 'splash') applyChamSplashContent();
+      else if (chamState.phase === 'play') applyChamPlayContent();
+      else if (chamState.phase === 'vote') applyChamVoteContent();
+      else if (chamState.phase === 'result') applyChamResultContent();
+    }
+    const __chamRerenderPending = { timer: null };
+    function chamRerender(){
+      huddleSyncGateRerender(chamState, chamRerenderInner, __chamRerenderPending);
+    }
+
+    function chamJoinUrl(code){ return joinUrl(code, 'chameleon'); }
+    function chamReadUrlRoom(){
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('room');
+        const game = params.get('game');
+        if (!code) return null;
+        if (game && game !== 'chameleon') return null;
+        return code.toUpperCase().trim();
+      } catch(e){ return null; }
+    }
+    function chamSyncUrlToRoom(code){
+      if (!code) return;
+      try {
+        const newUrl = '/?room=' + encodeURIComponent(code) + '&game=chameleon';
+        history.replaceState(history.state, '', newUrl);
+      } catch(e){}
+    }
+    function chamFindRecentRoomCode(){
+      try { return huddleReadLastRoom('cham'); } catch(e){ return null; }
+    }
+    async function chamStateReset(code){
+      const playersCopy = JSON.parse(JSON.stringify(PLAYERS));
+      const scoresInit = {};
+      playersCopy.forEach(p => { scoresInit[p.id] = 0; });
+      const sid = chamGetSessionId();
+      const firstSeat = playersCopy[0] && playersCopy[0].id;
+      Object.keys(chamState).forEach(k => { delete chamState[k]; });
+      Object.assign(chamState, {
+        topic: 'mixed',
+        rounds: 3,
+        currentRound: 1,
+        players: playersCopy,
+        chameleonId: null,
+        previousChameleonId: null,
+        activeTopic: null,
+        gridItems: [],
+        secretIndex: -1,
+        startingPlayerIdx: 0,
+        myVote: null,
+        voteResults: {},
+        mostVotedId: null,
+        chameleonCaught: false,
+        outcome: null,
+        scores: scoresInit,
+        code: code,
+        phase: 'lobby',
+        // Pre-claim seat 0 for the creator (see hotStateReset for reasoning).
+        // Single atomic write closes the race where an invitee could load the
+        // room mid-create and steal the host role or seat 0.
+        hostId: sid,
+        claimedBy: firstSeat ? { [firstSeat]: sid } : {},
+        revision: 0,
+      });
+      chamMe.myId = firstSeat || null;
+      if (firstSeat) state.meId = firstSeat;
+      chamPersist();
+      try { huddlePersistLastRoom('cham',code); } catch(e){}
+    }
+    async function chamClaimSeat(playerId){
+      const sessionId = chamGetSessionId();
+      const currentClaim = chamState.claimedBy[playerId];
+      if (currentClaim && currentClaim !== sessionId) return;
+      // Optimistic local update; server-validated via universal RPC (C2 turn 5).
+      if (chamMe.myId && chamState.claimedBy[chamMe.myId] === sessionId) {
+        delete chamState.claimedBy[chamMe.myId];
+      }
+      chamState.claimedBy[playerId] = sessionId;
+      if (!chamState.hostId) chamState.hostId = sessionId;
+      chamMe.myId = playerId;
+      state.meId = playerId;
+      renderChamLobbyPlayers();
+      chamRenderSettings();
+      await huddleCallRPC('huddle_claim_seat', {
+        p_table: 'chameleon_rooms',
+        p_code: chamState.code,
+        p_player_id: playerId,
+      });
+    }
+    async function chamAutoClaimIfNeeded(){
+      if (chamMe.myId) return;
+      if (chamState.phase && chamState.phase !== 'lobby') return;
+      const empty = (chamState.players || []).find(p => !chamState.claimedBy || !chamState.claimedBy[p.id]);
+      if (!empty) return;
+      await chamClaimSeat(empty.id);
+    }
+
+    // ---------- Lobby ----------
+    async function openChamLobby(){
+      // Drop any seat we still hold in OTHER game lobbies before claiming
+      // one here — invariant: one user, one seat across all games.
+      try { huddleLeaveOtherGameSeats('cham'); } catch(e){}
+      const urlRoom = chamReadUrlRoom();
+      const existingCode = urlRoom || chamFindRecentRoomCode();
+
+      const authPromise = chamBootstrap();
+      const loadPromise = existingCode ? chamLoadRoom(existingCode) : Promise.resolve(false);
+      await authPromise;
+      const sessionId = chamGetSessionId();
+      const loaded = await loadPromise;
+
+      // Invitee arrived via URL but the room load failed — surface it and
+      // route to Games instead of silently creating a fresh room.
+      if (urlRoom && !loaded) {
+        try { history.replaceState(history.state, '', '/'); } catch(e){}
+        if (typeof showLobbyToast === 'function') {
+          try { showLobbyToast(t('lobby.joinFailed')); } catch(e){}
+        }
+        goTo('games');
+        return;
+      }
+
+      let cachedRoomGone = !!existingCode && !loaded;
+
+      if (loaded) {
+        const claimed = Object.entries(chamState.claimedBy || {}).find(([pid, sid]) => sid === sessionId);
+        chamMe.myId = claimed ? claimed[0] : null;
+        if (chamMe.myId) {
+          state.meId = chamMe.myId;
+          try { huddlePersistLastRoom('cham',existingCode); } catch(e){}
+        } else if (urlRoom) {
+          // Intentional join via URL/invite — keep the cached code.
+          try { huddlePersistLastRoom('cham',existingCode); } catch(e){}
+        } else {
+          // Cached room but we have no claim and no invite — don't barge in.
+          try { huddleClearLastRoom('cham'); } catch(e){}
+          await chamStateReset(generateCode());
+          cachedRoomGone = true;
+        }
+
+        // === Reconnect protection (mirrors openLiarLobby) ===
+        // If we returned to a room that's mid-game (splash / play / vote) but
+        // we no longer own a seat, bounce to Games instead of stranding the
+        // user on a screen they can't act on. See openLiarLobby for full
+        // rationale on why this happens.
+        const inGamePhase = chamState.phase
+          && chamState.phase !== 'lobby'
+          && chamState.phase !== 'result';
+        if (inGamePhase && !chamMe.myId) {
+          if (typeof showLobbyToast === 'function') {
+            try { showLobbyToast(t('liar.toastReconnectStale'), 4500); } catch(e){}
+          }
+          chamForceLeaveLocal();
+          return;
+        }
+      } else {
+        await chamStateReset(generateCode());
+      }
+
+      chamWireSync();
+      await chamAutoClaimIfNeeded();
+      chamSyncUrlToRoom(chamState.code);
+
+      document.getElementById('cham-room-code').textContent = chamState.code;
+      const fallback = document.getElementById('cham-room-qr-fallback');
+      if (fallback) fallback.classList.remove('show');
+      setRoomQrSrc(document.getElementById('cham-room-qr'), qrUrl(chamJoinUrl(chamState.code)));
+
+      chamUpdateHowToTrigger();
+      chamRerender();
+
+      if (cachedRoomGone && typeof showLobbyToast === 'function') {
+        showLobbyToast(t('lobby.previousRoomGone'));
+      }
+    }
+
+    async function regenerateChamRoom(){
+      const code = generateCode();
+      await chamStateReset(code);
+      chamWireSync();
+      chamSyncUrlToRoom(code);
+      const codeEl = document.getElementById('cham-room-code');
+      const fallback = document.getElementById('cham-room-qr-fallback');
+      if (codeEl) codeEl.textContent = code;
+      if (fallback) fallback.classList.remove('show');
+      setRoomQrSrc(document.getElementById('cham-room-qr'), qrUrl(chamJoinUrl(code)));
+      const btn = document.querySelector('#screen-cham-lobby .room-code-action button[onclick*="regenerateChamRoom"]');
+      if (btn) {
+        btn.classList.remove('spinning');
+        void btn.offsetWidth;
+        btn.classList.add('spinning');
+        setTimeout(() => btn.classList.remove('spinning'), 520);
+      }
+      chamRerender();
+    }
+
+    function handleChamQrError(){
+      const img = document.getElementById('cham-room-qr');
+      const fallback = document.getElementById('cham-room-qr-fallback');
+      if (img) img.style.display = 'none';
+      if (fallback) fallback.classList.add('show');
+    }
+
+    // Settings render — Topic picker (single tap-to-open row mirroring Hot Seat's Category)
+    // and Rounds segmented control. No "Order" or "Mode" — Chameleon doesn't need them.
+    function chamRenderSettings(){
+      const list = document.getElementById('cham-settings-list');
+      if (!list) return;
+      const roundsSeg = [1,3,5].map(r =>
+        `<button onclick="chamSetRounds(${r})" class="${chamState.rounds===r?'active':''}">${r}</button>`
+      ).join('');
+      const topicLabel = chamState.topic === 'mixed' ? t('cham.topic.mixed') : t('cham.topic.' + chamState.topic);
+      list.innerHTML = `
+        <div class="setting-row" onclick="openChamTopicSheet()" style="cursor:pointer">
+          <div class="setting-row-label">${t('cham.topicLabel')}</div>
+          <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
+            <span>${topicLabel}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-row-label">${t('lobby.rounds')}</div>
+          <div class="seg">${roundsSeg}</div>
+        </div>
+      `;
+    }
+
+    function chamSetRounds(r){
+      if (!chamIsHost()) return;
+      chamState.rounds = r;
+      huddleCallRPC('huddle_cham_set_setting', { p_code: chamState.code, p_field: 'rounds', p_value: r });
+      chamRenderSettings();
+    }
+    function chamSetTopic(topicId){
+      if (!chamIsHost()) return;
+      chamState.topic = topicId;
+      huddleCallRPC('huddle_cham_set_setting', { p_code: chamState.code, p_field: 'topic', p_value: topicId });
+      chamRenderSettings();
+    }
+
+    // Real-multiplayer seat-claim lobby render (mirrors renderLobbyPlayers in Hot Seat)
+    function renderChamLobbyPlayers(){
+      const grid = document.getElementById('cham-players-grid');
+      if (grid && huddleLobbyHydrating(chamState && chamState.code)) {
+        grid.innerHTML = huddleLobbySkeletonHTML(6);
+        return;
+      }
+      if (!grid) return;
+      const sessionId = chamGetSessionId();
+      const claimedCount = chamClaimedCount();
+      const claimedSessionIds = Object.values(chamState.claimedBy || {});
+      ensureClaimantProfiles(claimedSessionIds, renderChamLobbyPlayers);
+      // Prefer @username (unique) over display_name first-word so two players
+      // with the same first name render distinctly. See claimDisplayName.
+      const myName = (myProfile && myProfile.username)
+        ? '@' + myProfile.username
+        : ((myProfile && myProfile.name && myProfile.name.trim().split(/\s+/)[0]) || t('lobby.seatYou'));
+      const myAvatar = (myProfile && myProfile.avatar) ? myProfile.avatar : null;
+      grid.innerHTML = chamState.players.map((p, i) => {
+        const claimedSession = chamState.claimedBy && chamState.claimedBy[p.id];
+        const claimedByMe = claimedSession === sessionId;
+        const claimedByOther = !!claimedSession && !claimedByMe;
+        const isHostSeat = !!claimedSession && claimedSession === chamState.hostId;
+        const claimProfile = claimedByOther ? profileForClaim(claimedSession) : null;
+
+        // Empty seat → invite tile (shared lobby invite sheet).
+        if (!claimedSession) {
+          return `
+            <div class="player-tile hot-seat-tile invite-tile" onclick="openLobbyInviteSheet('chameleon')">
+              <span class="invite-plus" aria-hidden="true">+</span>
+              <div class="player-tile-name" data-i18n="liar.seatInviteTap">Invite friend</div>
+              <div class="player-tile-status" data-i18n="liar.seatEmpty">Empty seat</div>
+            </div>
+          `;
+        }
+
+        let cls = 'player-tile hot-seat-tile';
+        let statusText, nameText, avatarData;
+        if (claimedByMe) {
+          cls += ' claimed-by-me';
+          nameText = myName;
+          statusText = isHostSeat ? t('lobby.host') : t('lobby.seatYou');
+          avatarData = myAvatar || avatarForPlayer(p);
+        } else {
+          cls += ' claimed-by-other';
+          nameText = claimDisplayName(claimProfile, '…');
+          statusText = isHostSeat ? t('lobby.host') : t('lobby.seatTaken');
+          avatarData = (claimProfile && claimProfile.avatar) ? claimProfile.avatar : avatarForPlayer(p);
+        }
+        const avatar = avatarHTML(avatarData, 32, { online: true, fallback: p.initial });
+        return `
+          <div class="${cls}">
+            ${avatar}
+            <div class="player-tile-name">${escapeHTML(nameText)}</div>
+            <div class="player-tile-status">${escapeHTML(statusText)}</div>
+          </div>
+        `;
+      }).join('');
+      parseEmoji(grid);
+      if (typeof applyLang === 'function') applyLang();
+
+      const title = document.getElementById('cham-players-title');
+      if (title) title.textContent = t('lobby.playersCount', { count: claimedCount });
+
+      const hint = document.getElementById('cham-seats-hint');
+      const startBtn = document.getElementById('cham-start-btn');
+      const amHost = chamIsHost();
+      if (hint) {
+        if (!chamMe.myId) hint.textContent = t('lobby.seatsHintNotPicked');
+        else if (claimedCount < 3) hint.textContent = t('lobby.seatsHintNeedMore', { n: 3 - claimedCount });
+        else if (!amHost) hint.textContent = t('lobby.seatsHintWaitingHost');
+        else hint.textContent = t('lobby.seatsHintReady');
+      }
+      if (startBtn) {
+        const canStart = claimedCount >= 3 && !!chamMe.myId && amHost;
+        if (canStart) startBtn.removeAttribute('aria-disabled');
+        else          startBtn.setAttribute('aria-disabled', 'true');
+      }
+      const leaveBtn = document.getElementById('cham-leave-btn');
+      const resetBtn = document.getElementById('cham-reset-btn');
+      const hasSeat = !!chamMe.myId;
+      if (leaveBtn) leaveBtn.hidden = !hasSeat;
+      if (resetBtn) resetBtn.hidden = !(hasSeat && amHost && claimedCount > 1);
+      if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen('chameleon');
+    }
+    // Back-compat alias — older callers (e.g. applyLang) still reach for chamRenderPlayers
+    function chamRenderPlayers(){ renderChamLobbyPlayers(); }
+
+    async function chamLeaveRoom(context){
+      if (!chamMe.myId) return;
+      const midRound = context === 'midround';
+      const ok = await huddleConfirm({
+        title: t(midRound ? 'common.leaveMidRoundTitle' : 'lobby.leaveTitle'),
+        body:  t(midRound ? 'common.leaveMidRoundBody'  : 'lobby.leaveBody'),
+        confirmLabel: t('lobby.leaveConfirm'),
+        danger: true,
+      });
+      if (!ok) return;
+      const mySid = chamGetSessionId();
+      const myPlayerId = chamMe.myId;
+      const leavingCode = chamState.code;
+      // Optimistic local update; server-validated via universal RPC (C2 turn 5).
+      if (chamState.claimedBy && chamState.claimedBy[myPlayerId] === mySid) {
+        delete chamState.claimedBy[myPlayerId];
+      }
+      if (chamState.hostId === mySid) {
+        const remaining = Object.entries(chamState.claimedBy || {})
+          .sort((a, b) => a[0].localeCompare(b[0]));
+        chamState.hostId = remaining.length ? remaining[0][1] : null;
+      }
+      if (leavingCode) {
+        huddleCallRPC('huddle_leave_seat', { p_table: 'chameleon_rooms', p_code: leavingCode });
+      }
+      if (typeof inviteCancelMineForRoom === 'function' && leavingCode) {
+        try { inviteCancelMineForRoom(leavingCode, 'chameleon'); } catch(e){}
+      }
+      chamMe.myId = null;
+      chamState.code = null;
+      try { huddleClearLastRoom('cham'); } catch(e){}
+      if (_chamChannel) {
+        try { window.sb.removeChannel(_chamChannel); } catch(e){}
+        _chamChannel = null; _chamChannelCode = null; _chamChannelSessionId = null;
+        chamResetPresenceState();
+      }
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+    // Local-only cleanup (no Supabase write). Used when host closes the room
+    // and when a non-host receives the "closedByHost" broadcast.
+    function chamForceLeaveLocal(){
+      chamMe.myId = null;
+      if (chamState) chamState.code = null;
+      try { huddleClearLastRoom('cham'); } catch(e){}
+      if (_chamChannel) {
+        try { window.sb.removeChannel(_chamChannel); } catch(e){}
+        _chamChannel = null; _chamChannelCode = null; _chamChannelSessionId = null;
+        chamResetPresenceState();
+      }
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+    // Host taps "Leave" on the game-over screen → close the whole room so
+    // every other player auto-leaves too via Realtime.
+    function chamCloseRoom(){
+      if (!chamIsHost()) { chamLeaveGameOver(); return; }
+      const closingCode = chamState.code;
+      chamState.closedByHost = true;
+      chamState.hostId = null;
+      if (closingCode) {
+        huddleCallRPC('huddle_close_room', { p_table: 'chameleon_rooms', p_code: closingCode });
+      }
+      chamForceLeaveLocal();
+    }
+    // Host taps "Play again" → reset and restart. Others sync to splash.
+    function chamPlayAgain(){
+      if (!chamIsHost()) return;
+      const claimed = chamClaimedPlayers();
+      if (claimed.length < 3) return;
+      chamState.closedByHost = false;
+      chamStartGame();
+    }
+    // No-confirm leave for the game-over screen (mirror of chamLeaveRoom).
+    function chamLeaveGameOver(){
+      const mySid = chamGetSessionId();
+      const myPlayerId = chamMe.myId;
+      const leavingCode = chamState.code;
+      if (myPlayerId && chamState.claimedBy && chamState.claimedBy[myPlayerId] === mySid) {
+        delete chamState.claimedBy[myPlayerId];
+      }
+      if (chamState.hostId === mySid) {
+        const remaining = Object.entries(chamState.claimedBy || {})
+          .sort((a, b) => a[0].localeCompare(b[0]));
+        chamState.hostId = remaining.length ? remaining[0][1] : null;
+      }
+      if (leavingCode) {
+        huddleCallRPC('huddle_leave_seat', { p_table: 'chameleon_rooms', p_code: leavingCode });
+      }
+      chamMe.myId = null;
+      chamState.code = null;
+      try { huddleClearLastRoom('cham'); } catch(e){}
+      if (_chamChannel) {
+        try { window.sb.removeChannel(_chamChannel); } catch(e){}
+        _chamChannel = null; _chamChannelCode = null; _chamChannelSessionId = null;
+        chamResetPresenceState();
+      }
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+    async function chamResetPlayers(){
+      if (!chamIsHost()) return;
+      const ok = await huddleConfirm({
+        title: t('lobby.resetTitle'),
+        body: t('lobby.resetBody'),
+        confirmLabel: t('lobby.resetConfirm'),
+        danger: true,
+      });
+      if (!ok) return;
+      const mySid = chamGetSessionId();
+      const myPlayerId = chamMe.myId;
+      const next = {};
+      if (myPlayerId && mySid) next[myPlayerId] = mySid;
+      chamState.claimedBy = next;
+      renderChamLobbyPlayers();
+      huddleCallRPC('huddle_cham_reset_players', { p_code: chamState.code });
+    }
+
+    // ---------- Topic picker sheet ----------
+    // Built lazily on first open and re-rendered each time so .active reflects current state.
+    let chamTopicSheetCreated = false;
+    function openChamTopicSheet(){
+      if (!chamTopicSheetCreated) chamBuildTopicSheet();
+      chamRenderTopicOptions();
+      document.getElementById('cham-topic-backdrop').classList.add('active');
+    }
+    function closeChamTopicSheet(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'cham-topic-backdrop') return;
+      const el = document.getElementById('cham-topic-backdrop');
+      if (el) el.classList.remove('active');
+    }
+    function chamPickTopic(topicId){
+      chamSetTopic(topicId);
+      setTimeout(() => {
+        const el = document.getElementById('cham-topic-backdrop');
+        if (el) el.classList.remove('active');
+      }, 140);
+    }
+    function chamBuildTopicSheet(){
+      const wrap = document.createElement('div');
+      wrap.className = 'sheet-backdrop';
+      wrap.id = 'cham-topic-backdrop';
+      wrap.onclick = (e) => closeChamTopicSheet(e);
+      // Inline t() rather than data-i18n because applyLang() already ran on page load and
+      // won't process this lazily-built fragment. We re-render title/sub each open below
+      // (in chamRenderTopicOptions) so language switches still update them.
+      wrap.innerHTML = `
+        <div class="sheet" onclick="event.stopPropagation()" style="position:relative">
+          <button class="icon-btn" onclick="closeChamTopicSheet()" aria-label="${t('common.close')}" style="position:absolute;top:8px;right:8px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+          </button>
+          <div class="sheet-handle"></div>
+          <div class="sheet-title" id="cham-topic-sheet-title">${t('cham.topicLabel')}</div>
+          <div class="sheet-body" id="cham-topic-sheet-sub" style="margin-bottom:14px">${t('cham.topicSub')}</div>
+          <div class="theme-options" id="cham-topic-options"></div>
+        </div>
+      `;
+      document.body.appendChild(wrap);
+      chamTopicSheetCreated = true;
+    }
+    function chamRenderTopicOptions(){
+      const wrap = document.getElementById('cham-topic-options');
+      if (!wrap) return;
+      // Refresh title/sub on every open so language switches between opens land here too.
+      const titleEl = document.getElementById('cham-topic-sheet-title');
+      const subEl = document.getElementById('cham-topic-sheet-sub');
+      if (titleEl) titleEl.textContent = t('cham.topicLabel');
+      if (subEl) subEl.textContent = t('cham.topicSub');
+      const topics = [
+        { id: 'mixed',       emoji: '🎲' },
+        { id: 'dogs',        emoji: CHAM_TOPICS.dogs.emoji },
+        { id: 'zoo',         emoji: CHAM_TOPICS.zoo.emoji },
+        { id: 'sea',         emoji: CHAM_TOPICS.sea.emoji },
+        { id: 'birds',       emoji: CHAM_TOPICS.birds.emoji },
+        { id: 'farm',        emoji: CHAM_TOPICS.farm.emoji },
+        { id: 'pizza',       emoji: CHAM_TOPICS.pizza.emoji },
+        { id: 'fruits',      emoji: CHAM_TOPICS.fruits.emoji },
+        { id: 'veggies',     emoji: CHAM_TOPICS.veggies.emoji },
+        { id: 'desserts',    emoji: CHAM_TOPICS.desserts.emoji },
+        { id: 'drinks',      emoji: CHAM_TOPICS.drinks.emoji },
+        { id: 'turkish',     emoji: CHAM_TOPICS.turkish.emoji },
+        { id: 'breakfast',   emoji: CHAM_TOPICS.breakfast.emoji },
+        { id: 'disney',      emoji: CHAM_TOPICS.disney.emoji },
+        { id: 'heroes',      emoji: CHAM_TOPICS.heroes.emoji },
+        { id: 'ballsports',  emoji: CHAM_TOPICS.ballsports.emoji },
+        { id: 'olympic',     emoji: CHAM_TOPICS.olympic.emoji },
+        { id: 'instruments', emoji: CHAM_TOPICS.instruments.emoji },
+        { id: 'hospital',    emoji: CHAM_TOPICS.hospital.emoji },
+        { id: 'trades',      emoji: CHAM_TOPICS.trades.emoji },
+        { id: 'landmarks',   emoji: CHAM_TOPICS.landmarks.emoji },
+        { id: 'kitchen',     emoji: CHAM_TOPICS.kitchen.emoji },
+        { id: 'clothes',     emoji: CHAM_TOPICS.clothes.emoji },
+      ];
+      wrap.innerHTML = topics.map(o => `
+        <button class="theme-option${chamState.topic === o.id ? ' active' : ''}" onclick="chamPickTopic('${o.id}')">
+          <span class="theme-option-icon" style="background:var(--bg-subtle)">${o.emoji}</span>
+          <span class="theme-option-text">
+            <span class="theme-option-title">${t('cham.topic.' + o.id)}</span>
+          </span>
+          <svg class="theme-option-check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        </button>
+      `).join('');
+      parseEmoji(wrap);
+    }
+
+    // ---------- How to play (4-slide animated modal, mirrors Hot Seat) ----------
+    const CHAM_HOWTO_KEY = 'huddle.chamhowto.seen';
+    const CHAM_HOWTO_TOTAL = 4;
+    let chamHowtoCurrent = 1;
+    let chamHowtoTimer = null;
+    function chamUpdateHowToTrigger(){
+      try {
+        const seen = !!localStorage.getItem(CHAM_HOWTO_KEY);
+        document.querySelectorAll('#cham-howto-trigger').forEach(t => t.classList.toggle('pulse', !seen));
+      } catch(e){}
+    }
+    function openChamHowTo(){
+      document.getElementById('cham-howto-modal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      try { localStorage.setItem(CHAM_HOWTO_KEY, '1'); } catch(e){}
+      document.querySelectorAll('#cham-howto-trigger').forEach(t => t.classList.remove('pulse'));
+      chamGoToSlide(1);
+    }
+    function closeChamHowTo(){
+      document.getElementById('cham-howto-modal').classList.remove('active');
+      document.body.style.overflow = '';
+      chamStopAuto();
+    }
+    function chamGoToSlide(n){
+      if (n < 1) n = 1;
+      if (n > CHAM_HOWTO_TOTAL) { closeChamHowTo(); return; }
+      chamHowtoCurrent = n;
+      const root = document.getElementById('cham-howto-modal');
+      root.querySelectorAll('.howto-slide').forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.slide) === n);
+      });
+      root.querySelectorAll('.howto-dot').forEach((d, i) => {
+        d.classList.toggle('active', i + 1 === n);
+      });
+      const btn = document.getElementById('cham-howto-next-btn');
+      if (btn) btn.textContent = (n === CHAM_HOWTO_TOTAL) ? t('howTo.startPlaying') : t('common.next');
+      chamStartAuto();
+    }
+    function chamNextSlide(){ chamGoToSlide(chamHowtoCurrent + 1); }
+    function chamStartAuto(){
+      chamStopAuto();
+      chamHowtoTimer = setTimeout(() => chamGoToSlide(chamHowtoCurrent + 1), HOWTO_DURATION);
+    }
+    function chamStopAuto(){
+      if (chamHowtoTimer) { clearTimeout(chamHowtoTimer); chamHowtoTimer = null; }
+    }
+
+    // ---------- Game flow (real multiplayer) ----------
+    function chamClaimedPlayers(){
+      // Players whose seats have been claimed on a real device, in original order.
+      return (chamState.players || []).filter(p => chamState.claimedBy && chamState.claimedBy[p.id]);
+    }
+
+    async function chamStartGame(ev){
+      // Gate: aria-disabled means a Start condition isn't met. Surface the
+      // hint as a toast instead of silently doing nothing.
+      const _gateBtn = document.getElementById('cham-start-btn');
+      if (_gateBtn && _gateBtn.getAttribute('aria-disabled') === 'true') {
+        const _hintEl = document.getElementById('cham-seats-hint');
+        const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
+        if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
+        return;
+      }
+      // C2 turn 5: server resets game state + picks chameleon + starting
+      // player atomically via huddle_cham_play_again. Client only provides
+      // the topic + grid + secret (dictionary lives in JS).
+      if (!chamIsHost()) return;
+      const claimed = chamClaimedPlayers();
+      if (claimed.length < 3) return;
+      const { activeTopic, gridItems, secretIndex } = chamPickRoundContent();
+      // Disable the start button while the RPC is in flight so a frustrated
+      // double-tap doesn't try to start the game twice.
+      const btn = (ev && ev.currentTarget) || document.getElementById('cham-start-btn');
+      if (btn) { btn.disabled = true; btn.setAttribute('aria-busy','true'); }
+      const res = await huddleCallRPC('huddle_cham_play_again', {
+        p_code:         chamState.code,
+        p_active_topic: activeTopic,
+        p_grid_items:   gridItems,
+        p_secret_index: secretIndex,
+      });
+      // On error, re-enable so retry works. On success, the realtime echo
+      // navigates everyone to the next phase and the button leaves the DOM.
+      if (res && res.error && btn && document.body.contains(btn)) {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+      }
+    }
+
+    // Pure helper: picks topic + builds grid + picks secret index using the
+    // client-side CHAM_TOPICS dictionary. No mutation, no persist.
+    function chamPickRoundContent(){
+      const topicId = chamState.topic === 'mixed'
+        ? CHAM_TOPIC_IDS[Math.floor(Math.random() * CHAM_TOPIC_IDS.length)]
+        : chamState.topic;
+      const lang = (typeof getLang === 'function') ? getLang() : 'en';
+      const fullPool = CHAM_TOPICS[topicId][lang] || CHAM_TOPICS[topicId].en;
+      const shuffled = fullPool.slice();
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+      }
+      const gridItems = shuffled.slice(0, 16);
+      const secretIndex = Math.floor(Math.random() * gridItems.length);
+      return { activeTopic: topicId, gridItems, secretIndex };
+    }
+
+    function chamStartRound(){
+      // C2 turn 5: server picks chameleon + starting player atomically.
+      // Client provides topic + grid + secret (dictionary lives in JS).
+      // Called from chamNextRound for round-to-round transitions.
+      if (!chamIsHost()) return;
+      const claimed = chamClaimedPlayers();
+      if (claimed.length < 3) return;
+      const { activeTopic, gridItems, secretIndex } = chamPickRoundContent();
+      huddleCallRPC('huddle_cham_start_round', {
+        p_code:         chamState.code,
+        p_active_topic: activeTopic,
+        p_grid_items:   gridItems,
+        p_secret_index: secretIndex,
+      });
+    }
+
+    // applyChamSplashContent — sync-driven splash render (no longer goTo here; chamRerender does that)
+    function applyChamSplashContent(){
+      const meIsChameleon = chamState.chameleonId === state.meId;
+      const emojiEl = document.getElementById('cham-splash-emoji');
+      const labelEl = document.getElementById('cham-splash-label');
+      const nameEl = document.getElementById('cham-splash-name');
+      const roleEl = document.getElementById('cham-splash-role');
+      const jobEl = document.getElementById('cham-splash-job');
+
+      labelEl.textContent = t('cham.roundOf', { current: chamState.currentRound, total: chamState.rounds });
+      // Job callout is the same neutral style regardless of role — text + emoji indicate role.
+      jobEl.className = 'cham-splash-job';
+      if (meIsChameleon) {
+        emojiEl.textContent = '🦎';
+        emojiEl.className = 'cham-splash-emoji cham-splash-chameleon';
+        nameEl.textContent = t('cham.youAreChameleon');
+        roleEl.textContent = '';
+        jobEl.innerHTML = `
+          <div class="cham-splash-job-label">🎯 ${t('cham.yourJobLabel')}</div>
+          <div class="cham-splash-job-text">${t('cham.yourJobChameleon')}</div>
+        `;
+      } else {
+        emojiEl.textContent = '👁️';
+        emojiEl.className = 'cham-splash-emoji';
+        nameEl.textContent = t('cham.youArePlayer');
+        const secretWord = chamState.gridItems[chamState.secretIndex];
+        roleEl.innerHTML = t('cham.secretIs', { word: '<strong>' + escapeHTML(secretWord) + '</strong>' });
+        jobEl.innerHTML = `
+          <div class="cham-splash-job-label">🎯 ${t('cham.yourJobLabel')}</div>
+          <div class="cham-splash-job-text">${t('cham.yourJobPlayer')}</div>
+        `;
+      }
+      parseEmoji(emojiEl);
+      parseEmoji(jobEl);
+
+      const splashSection = document.getElementById('screen-cham-splash');
+      const splashEl = splashSection.querySelector('.splash');
+      if (splashEl) {
+        splashEl.style.animation = 'none';
+        void splashEl.offsetWidth;
+        splashEl.style.animation = '';
+      }
+    }
+
+    // Host advances from splash → play (other devices follow via sync).
+    function chamDismissSplash(){
+      if (!chamIsHost()) return;
+      // Server validates host + sets phase='play' (C2 turn 5).
+      huddleCallRPC('huddle_cham_dismiss_splash', { p_code: chamState.code });
+    }
+
+    function applyChamPlayContent(){
+      const meIsChameleon = chamState.chameleonId === state.meId;
+      const topicId = chamState.activeTopic;
+      document.getElementById('cham-play-header').textContent = t('cham.roundOf', { current: chamState.currentRound, total: chamState.rounds });
+      document.getElementById('cham-topic-emoji').textContent = CHAM_TOPICS[topicId].emoji;
+      document.getElementById('cham-topic-name').textContent = t('cham.topic.' + topicId);
+
+      // Role banner — persistent reminder during the hint phase. Neutral style for both
+       // roles; the text + emoji do the differentiation, no colour tint needed.
+      const roleBannerEl = document.getElementById('cham-role-banner');
+      if (roleBannerEl) {
+        roleBannerEl.className = 'cham-role-banner';
+        const emoji = meIsChameleon ? '🦎' : '👁️';
+        const text = meIsChameleon ? t('cham.roleBannerChameleon') : t('cham.roleBannerPlayer');
+        roleBannerEl.innerHTML = `<span class="cham-role-banner-emoji">${emoji}</span><span>${text}</span>`;
+        parseEmoji(roleBannerEl);
+      }
+
+      // Grid — Chameleon sees all cells "blank", Players see the secret highlighted.
+      const gridEl = document.getElementById('cham-play-grid');
+      gridEl.innerHTML = chamState.gridItems.map((item, i) => {
+        const isSecret = !meIsChameleon && i === chamState.secretIndex;
+        return `<div class="cham-grid-cell ${isSecret ? 'secret' : ''}">${escapeHTML(item)}</div>`;
+      }).join('');
+
+      // Instruction — who starts + role-specific cue.
+      ensureClaimantProfiles(Object.values(chamState.claimedBy || {}), applyChamPlayContent);
+      const startingPlayer = chamState.players[chamState.startingPlayerIdx];
+      const startingDisplay = playerDisplayFor(startingPlayer, chamState.claimedBy);
+      const startsText = startingPlayer.id === state.meId
+        ? t('cham.youStart')
+        : t('cham.nameStarts', { name: startingDisplay.name });
+      const roleCue = meIsChameleon ? t('cham.cueChameleon') : t('cham.cuePlayer');
+      document.getElementById('cham-play-instruction').innerHTML = `
+        <div class="cham-instruction-icon">${meIsChameleon ? '🦎' : '💬'}</div>
+        <div><b>${escapeHTML(startsText)}</b><br>${roleCue}</div>
+      `;
+      parseEmoji(document.getElementById('cham-play-instruction'));
+      parseEmoji(document.getElementById('cham-topic-emoji'));
+    }
+
+    // Host advances from play → vote (other devices follow via sync).
+    function chamGoToVote(){
+      if (!chamIsHost()) return;
+      // Server validates host + clears voteResults + sets phase='vote' (C2 turn 5).
+      huddleCallRPC('huddle_cham_go_to_vote', { p_code: chamState.code });
+    }
+
+    function applyChamVoteContent(){
+      const grid = document.getElementById('cham-vote-grid');
+      if (!grid) return;
+      const myId = chamMe.myId;
+      const claimed = chamClaimedPlayers();
+      // Has this device already voted? Look up myId in voteResults.
+      const myVotedFor = myId && chamState.voteResults
+        ? Object.keys(chamState.voteResults).find(target =>
+            (chamState.voteResults[target] || []).includes(myId))
+        : null;
+      const alreadyVoted = !!myVotedFor;
+      // You can't vote for yourself.
+      ensureClaimantProfiles(Object.values(chamState.claimedBy || {}), applyChamVoteContent);
+      grid.innerHTML = claimed
+        .filter(p => p.id !== myId)
+        .map(p => {
+          const selected = (chamState.myVote === p.id) || (myVotedFor === p.id);
+          const onclick = alreadyVoted ? '' : `onclick="chamPickVote('${p.id}')"`;
+          const tileDisplay = playerDisplayFor(p, chamState.claimedBy);
+          return `
+            <div class="cham-vote-tile${selected ? ' selected' : ''}${alreadyVoted ? ' locked' : ''}" ${onclick}>
+              ${avatarHTML(tileDisplay.avatar, 44, { fallback: p.initial })}
+              <div class="cham-vote-tile-name">${escapeHTML(tileDisplay.name)}</div>
+            </div>
+          `;
+        }).join('');
+      parseEmoji(grid);
+
+      const submitBtn = document.getElementById('cham-vote-submit');
+      if (submitBtn) {
+        if (alreadyVoted) {
+          const votedCount = Object.values(chamState.voteResults || {}).reduce((n, arr) => n + arr.length, 0);
+          const total = claimed.length;
+          submitBtn.disabled = true;
+          submitBtn.textContent = t('lobby.seatsHintWaitingHost') /* fallback */;
+          // Use a clearer text if cham.waitingForVotes is missing
+          try {
+            const w = t('cham.waitingForVotes', { n: total - votedCount });
+            if (w && w !== 'cham.waitingForVotes') submitBtn.textContent = w;
+            else submitBtn.textContent = 'Waiting for others… (' + votedCount + '/' + total + ')';
+          } catch(e){
+            submitBtn.textContent = 'Waiting for others… (' + votedCount + '/' + total + ')';
+          }
+        } else {
+          submitBtn.disabled = !chamState.myVote;
+          if (chamState.myVote) {
+            const selectedPlayer = claimed.find(p => p.id === chamState.myVote);
+            if (selectedPlayer) {
+              const display = playerDisplayFor(selectedPlayer, chamState.claimedBy);
+              submitBtn.textContent = t('cham.voteForName', { name: display.name });
+            } else {
+              submitBtn.textContent = t('cham.lockInVote');
+            }
+          } else {
+            submitBtn.textContent = t('cham.lockInVote');
+          }
+        }
+      }
+    }
+
+    function chamPickVote(playerId){
+      if (!chamMe.myId) return;
+      // If already voted, ignore.
+      const already = chamState.voteResults && Object.keys(chamState.voteResults).some(target =>
+        (chamState.voteResults[target] || []).includes(chamMe.myId));
+      if (already) return;
+      chamState.myVote = playerId;
+      applyChamVoteContent();
+    }
+
+    // ---------- Vote submit — REAL multiplayer (no NPC simulation) ----------
+    async function chamSubmitVote(){
+      if (!chamMe.myId) return;
+      if (!chamState.myVote) return;
+      const already = chamState.voteResults && Object.keys(chamState.voteResults).some(target =>
+        (chamState.voteResults[target] || []).includes(chamMe.myId));
+      if (already) return;
+
+      const target = chamState.myVote;
+      // Server records vote + rejects duplicates + rejects self-vote (C2 turn 5).
+      await huddleCallRPC('huddle_cham_submit_vote', {
+        p_code: chamState.code,
+        p_target_id: target,
+      });
+      // After server confirms vote, only the HOST checks "is this the last
+      // vote?" and fires resolve_outcome. Fixes plan note #H11 (no-host-
+      // guard race where multiple devices ran resolve and stomped scores).
+      if (chamIsHost()) {
+        const claimed = chamClaimedPlayers();
+        const votedCount = Object.values(chamState.voteResults || {}).reduce((n, arr) => n + arr.length, 0);
+        if (votedCount >= claimed.length) {
+          huddleCallRPC('huddle_cham_resolve_outcome', { p_code: chamState.code });
+        }
+      }
+      applyChamVoteContent();
+    }
+
+    // ---------- Resolution + scoring (real votes only) ----------
+    function chamResolveOutcome(){
+      // C2 turn 5: scoring + outcome computation moved server-side via
+      // huddle_cham_resolve_outcome. This function is now host-only-gated
+      // at the call site (in chamSubmitVote). Kept for any straggler caller.
+      // Local lifetime bumpWins fires on the device whose user actually won
+      // based on the canonical state once the echo arrives — handled in
+      // applyChamResultContent which renders the result screen.
+      if (!chamIsHost()) return;
+      huddleCallRPC('huddle_cham_resolve_outcome', { p_code: chamState.code });
+    }
+
+    function applyChamResultContent(){
+      const isLastRound = chamState.currentRound >= chamState.rounds;
+      const chameleon = chamState.players.find(p => p.id === chamState.chameleonId);
+      const secretWord = chamState.gridItems[chamState.secretIndex];
+      const chameleonWon = chamState.outcome === 'chameleon';
+
+      document.getElementById('cham-result-header').textContent = isLastRound
+        ? t('cham.gameOver')
+        : t('cham.roundComplete', { n: chamState.currentRound });
+
+      const emojiEl = document.getElementById('cham-result-emoji');
+      emojiEl.textContent = chameleonWon ? '🦎' : '🎉';
+      parseEmoji(emojiEl);
+
+      document.getElementById('cham-result-title').textContent = chameleonWon
+        ? t('cham.chameleonWins')
+        : t('cham.playersWin');
+
+      ensureClaimantProfiles(Object.values(chamState.claimedBy || {}), applyChamResultContent);
+      const chamDisplay = playerDisplayFor(chameleon, chamState.claimedBy);
+      const chameleonIsMe = chameleon && chameleon.id === state.meId;
+      const chameleonNameForCopy = chameleonIsMe ? t('picker.you') : chamDisplay.name;
+
+      // Sub explains *why* — caught or not — using the chameleon's name. Two cases only now.
+      const subText = !chamState.chameleonCaught
+        ? t('cham.resultEscaped', { name: '<strong>' + escapeHTML(chameleonNameForCopy) + '</strong>' })
+        : t('cham.resultCaught', { name: '<strong>' + escapeHTML(chameleonNameForCopy) + '</strong>' });
+      document.getElementById('cham-result-sub').innerHTML = subText;
+
+      document.getElementById('cham-result-secret').innerHTML = t('cham.theSecretWas', {
+        word: '<b>' + escapeHTML(secretWord) + '</b>'
+      });
+
+      // Vote tally — only show CLAIMED players (real votes only).
+      const claimedForTally = chamClaimedPlayers();
+      const tallyEl = document.getElementById('cham-result-tally');
+      if (tallyEl && chamState.voteResults) {
+        const sortedTally = [...claimedForTally].sort((a, b) =>
+          (chamState.voteResults[b.id]?.length || 0) - (chamState.voteResults[a.id]?.length || 0)
+        );
+        tallyEl.innerHTML = sortedTally.map(p => {
+          const votes = chamState.voteResults[p.id]?.length || 0;
+          const isCham = p.id === chamState.chameleonId;
+          const voteKey = votes === 1 ? 'cham.voteCountOne' : 'cham.voteCount';
+          const rowDisplay = playerDisplayFor(p, chamState.claimedBy);
+          return `
+            <div class="cham-tally-row ${isCham ? 'chameleon' : ''}">
+              ${avatarHTML(rowDisplay.avatar, 32, { fallback: p.initial })}
+              <div class="cham-tally-name">${p.id === state.meId ? t('picker.you') : escapeHTML(rowDisplay.name)}${isCham ? ' 🦎' : ''}</div>
+              <div class="cham-tally-votes">${t(voteKey, { n: votes })}</div>
+            </div>
+          `;
+        }).join('');
+        parseEmoji(tallyEl);
+      }
+
+      // Leaderboard — claimed players only.
+      const lb = document.getElementById('cham-leaderboard');
+      const sorted = [...claimedForTally].sort((a, b) =>
+        (chamState.scores[b.id] || 0) - (chamState.scores[a.id] || 0)
+      );
+      lb.innerHTML = sorted.map((p, i) => {
+        const wins = chamState.scores[p.id] || 0;
+        const isCrowned = i === 0 && isLastRound && wins > 0;
+        const isMe = p.id === state.meId;
+        const winsKey = wins === 1 ? 'cham.scoreWinsOne' : 'cham.scoreWins';
+        const rowDisplay = playerDisplayFor(p, chamState.claimedBy);
+        return `
+          <div class="lb-row ${isCrowned ? 'winner' : ''}">
+            <div class="lb-rank">${i+1}</div>
+            ${avatarHTML(rowDisplay.avatar, 44, { fallback: p.initial })}
+            <div class="lb-name">${isMe ? t('picker.you') : escapeHTML(rowDisplay.name)}</div>
+            <div class="lb-score">${t(winsKey, { n: wins })}</div>
+          </div>
+        `;
+      }).join('');
+      parseEmoji(lb);
+
+      // Next button + secondary Leave button — vary by phase + role.
+      //   • Game over + host  → "Play again" + "Leave" (host-leave closes room for everyone)
+      //   • Game over + other → "Waiting for host to start new game…" + "Leave" (just me)
+      //   • Mid-round + host  → "Next round" + "Leave" (just me; transfers host)
+      //   • Mid-round + other → "Waiting for host…" + "Leave" (just me)
+      const nextBtn = document.getElementById('cham-next-btn');
+      const leaveBtn = document.getElementById('cham-result-leave-btn');
+      const amHost = chamIsHost();
+      if (isLastRound) {
+        if (amHost) {
+          nextBtn.textContent = t('result.playAgain');
+          nextBtn.onclick = chamPlayAgain;
+          nextBtn.disabled = false;
+          leaveBtn.textContent = t('result.leaveGame');
+          leaveBtn.onclick = chamCloseRoom;
+        } else {
+          nextBtn.textContent = t('result.waitingForHostNewGame');
+          nextBtn.onclick = null;
+          nextBtn.disabled = true;
+          leaveBtn.textContent = t('result.leaveGame');
+          leaveBtn.onclick = chamLeaveGameOver;
+        }
+      } else if (amHost) {
+        nextBtn.textContent = t('result.nextRound');
+        nextBtn.onclick = chamNextRound;
+        nextBtn.disabled = true;
+        setTimeout(() => { nextBtn.disabled = false; }, 700);
+        leaveBtn.textContent = t('result.leaveGame');
+        leaveBtn.onclick = chamLeaveGameOver;
+      } else {
+        nextBtn.textContent = t('lobby.seatsHintWaitingHost');
+        nextBtn.onclick = null;
+        nextBtn.disabled = true;
+        leaveBtn.textContent = t('result.leaveGame');
+        leaveBtn.onclick = chamLeaveGameOver;
+      }
+
+      // Count a completed game once. Flag rides on synced state and is persisted
+      // immediately so the realtime echo of the round-end persist doesn't wipe
+      // the local flag (wipe-and-replace at line 12445 would otherwise restore
+      // the pre-bump snapshot and re-trigger the bump via applyChamResultContent).
+      if (isLastRound && !chamState._gamesPlayedCounted && typeof bumpGamesPlayed === 'function') {
+        bumpGamesPlayed();
+        chamState._gamesPlayedCounted = true;
+        // Server-side flag set (C2 turn 5) so the realtime echo can't wipe it.
+        huddleCallRPC('huddle_cham_mark_game_counted', { p_code: chamState.code });
+      }
+    }
+
+    function chamNextRound(){
+      if (!chamIsHost()) return;
+      chamState.previousChameleonId = chamState.chameleonId;
+      chamState.currentRound++;
+      chamStartRound();
+    }
+
+    // ============ LIAR'S CUP ============
+    // Bluffing card game inspired by Liar's Bar / Liar's Deck.
+    // Adaptation: replaced Russian Roulette with an "unlucky cup" (cocktail glass)
+    // that fits Huddle's cafe vibe. Mechanic is identical — 6 chambers, X are "spill",
+    // X starts at 1 and increases by 1 each time someone survives a sip.
+    // Single-device pass-the-phone — each player's hand is hidden when passed.
+    //
+    // Deck: 6 Aces + 6 Kings + 6 Queens + 2 Jokers = 20 cards.
+    // Jokers count as ANY rank (always truthful).
+    // Hand size: scales with player count so the 20-card deck always covers the table.
+
+    // Card data — each card is { rank: 'A'|'K'|'Q'|'J', id: unique }
+    // Liar's Bar canonical 20-card deck: 6 Aces, 6 Kings, 6 Queens, 2 Jokers.
+    // Jokers are wild — count as any rank during a LIAR reveal. Same composition as
+    // the source video game by Curve Animation (Steam, 2024).
+    const LIAR_DECK_SPEC = { A: 6, K: 6, Q: 6, J: 2 };
+    // Build the deck, scaling with player count so 5+ players have enough cards.
+    // 2-4 players → 20 cards (6A + 6K + 6Q + 2J)
+    // 5-8 players → 40 cards (12A + 12K + 12Q + 4J), keeping the same A:K:Q:J ratio
+    function liarBuildDeck(playerCount){
+      const multiplier = (playerCount && playerCount > 4) ? 2 : 1;
+      const deck = [];
+      let n = 0;
+      for (let i = 0; i < LIAR_DECK_SPEC.A * multiplier; i++) deck.push({ rank: 'A', id: 'a' + (++n) });
+      for (let i = 0; i < LIAR_DECK_SPEC.K * multiplier; i++) deck.push({ rank: 'K', id: 'k' + (++n) });
+      for (let i = 0; i < LIAR_DECK_SPEC.Q * multiplier; i++) deck.push({ rank: 'Q', id: 'q' + (++n) });
+      for (let i = 0; i < LIAR_DECK_SPEC.J * multiplier; i++) deck.push({ rank: 'J', id: 'j' + (++n) });
+      // Sanity: must have at least playerCount × handSize cards.
+      const expectedMin = (playerCount || 4) * 5;
+      if (deck.length < expectedMin) {
+        console.error('liarBuildDeck: not enough cards', { count: deck.length, expectedMin });
+      }
+      return deck;
+    }
+
+    // Fisher-Yates (Knuth) shuffle — the standard unbiased shuffle. Every permutation
+    // of the deck has equal probability. Used at the start of every round so each
+    // hand and the table-card revealing order are unpredictable.
+    function liarShuffleDeck(deck){
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      return deck;
+    }
+
+    // Hand size — Liar's Cup is locked to 3-4 players (4 lobby seats, 3 min to start).
+    // Both counts get 5 cards; the 20-card deck (6A + 6K + 6Q + 2J) easily covers it.
+    function liarHandSize(_playerCount){
+      return 5;
+    }
+
+    // liarState is the SYNCED ROOM STATE — same shape on every connected device.
+    // Today: persisted to localStorage, broadcast across browser tabs via 'storage' events.
+    // Tomorrow: persisted to Supabase (Postgres row), broadcast via Supabase Realtime.
+    // The transport changes; the state shape stays identical.
+    const liarState = {
+      code: null,              // room code — also the localStorage key suffix
+      phase: 'lobby',          // 'lobby' | 'tablecard' | 'play' | 'reveal' | 'cup' | 'result'
+      hostId: null,            // playerId who created the room
+      claimedBy: {},           // playerId → sessionId (which device claimed this seat)
+      players: [],             // all original players (deep copy of PLAYERS)
+      alivePlayers: [],        // playerIds still in the game (in turn order)
+      hands: {},               // playerId → array of card objects (each device renders only ITS own)
+      pile: [],                // array of all played cards across the round
+      lastPlay: null,          // {count, cards, byPlayerId, claimedRank}
+      recentPlays: {},         // playerId → {count, claimedRank, turnIndex} — most recent play this round, per seat
+      tableCard: 'K',          // 'A' | 'K' | 'Q'
+      currentPlayerIdx: 0,     // index into alivePlayers
+      nextRoundStartIdx: null, // who starts the next round (source-game rule:
+                               // the loser of the previous LIAR call). Set by
+                               // liarAfterSip, consumed server-side when the next
+                               // round is dealt.
+      cupSpills: 1,            // # of "spill" chambers (1..6)
+      pendingLoserId: null,    // who's going to the cup
+      pendingLoserCause: null, // 'lied' | 'wrongAccuse'
+      sipOutcome: null,        // null | 'safe' | 'spilled'
+      sipChamberIdx: null,     // 0..5 — which chamber the cup landed on
+      sipChamberIsSpill: [],   // boolean[6] — pattern for this sip
+      sipTaken: false,         // becomes true once the loser tapped (gates animation on other tabs)
+      wins: {},                // playerId → wins across games
+      winnerId: null,
+      roundCount: 0,
+      revision: 0,             // increments on every persist — helps debugging
+    };
+
+    // liarMe is the LOCAL PER-DEVICE state. Never synced. Lives only on this device.
+    // The `sessionId` is the Supabase auth user ID (stable across page reloads).
+    // If Supabase is unavailable, we fall back to a random per-tab id (no cross-reload stability).
+    const liarMe = {
+      sessionId: null,         // Supabase user ID OR fallback random — set by liarBootstrap()
+      myId: null,              // playerId this device claimed
+      selectedCardIds: [],     // local UI selection — not synced
+      bootstrapped: false,     // becomes true once auth has resolved
+    };
+
+    // Bootstrap: ensure we have a stable per-device identity via Supabase Anonymous Auth.
+    // First load: signs in anonymously, gets a uuid that persists in localStorage.
+    // Subsequent loads on same device: restores the same uuid.
+    // Failure: falls back to a random per-tab id (game still works, just less stable).
+    async function liarBootstrap(){
+      if (liarMe.bootstrapped) return;
+      liarMe.bootstrapped = true;
+      if (!window.sb) {
+        // Supabase didn't load (CDN blocked / offline)
+        liarMe.sessionId = 'tab_' + Math.random().toString(36).slice(2, 10);
+        console.warn('[Huddle] Supabase unavailable — Liar\'s Cup will not sync across devices.');
+        return;
+      }
+      try {
+        const { data: { user } } = await window.sb.auth.getUser();
+        if (user && user.id) {
+          liarMe.sessionId = user.id;
+          return;
+        }
+        const { data, error } = await window.sb.auth.signInAnonymously();
+        if (error) throw error;
+        liarMe.sessionId = data.user.id;
+      } catch (e) {
+        console.warn('[Huddle] Anonymous sign-in failed — using random session id.', e);
+        liarMe.sessionId = 'tab_' + Math.random().toString(36).slice(2, 10);
+      }
+    }
+
+    function liarGetSessionId(){
+      // After liarBootstrap completes, this returns the Supabase user ID.
+      // Before bootstrap, this returns a temporary random id (should not happen
+      // because openLiarLobby awaits bootstrap before any seat-claim).
+      if (!liarMe.sessionId) {
+        liarMe.sessionId = 'tab_' + Math.random().toString(36).slice(2, 10);
+      }
+      return liarMe.sessionId;
+    }
+
+    // ---------- Sync transport (Supabase Realtime + Postgres) ----------
+    // Each game room is one row in the `liar_rooms` table with a JSONB `state` column.
+    // - Persist: upsert the row.
+    // - Load:    select the row by code.
+    // - Sync:    subscribe to postgres_changes on the row via Supabase Realtime channel.
+    //
+    // Race model: last-writer-wins. Turn-based gameplay serializes naturally, so
+    // simultaneous writes are rare. Revision number defends against out-of-order delivery.
+
+    function liarPersist(){
+      // C2 lockdown: direct client writes to `liar_rooms` are now blocked at
+      // the RLS layer. All Liar's Cup state mutations go through server RPCs
+      // (huddle_liar_*). This function is kept as a defensive no-op so any
+      // stray future caller fails loudly in the console instead of silently
+      // attempting a write that would be rejected anyway. Lab mode is a no-op
+      // too, matching the prior behavior so the lab harness keeps working.
+      if (liarState.labMode) return;
+      console.warn('[Huddle] liarPersist() called but is a no-op — route this write through a huddle_liar_* RPC instead.');
+    }
+
+    async function liarLoadRoom(code){
+      if (!window.sb) return false;
+      // Two-attempt retry — when an invitee taps Join the host's row may not
+      // have replicated to this client yet. Without retry the invitee would
+      // silently land in a fresh room with a different code.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const { data, error } = await window.sb
+            .from('liar_rooms')
+            .select('state')
+            .eq('code', code)
+            .maybeSingle();
+          if (error) {
+            console.warn('[Huddle] liarLoadRoom query error (attempt ' + (attempt+1) + '):', error.message || error);
+          } else if (data && data.state) {
+            if (data.state.closedByHost) return false;
+            Object.keys(liarState).forEach(k => delete liarState[k]);
+            Object.assign(liarState, data.state);
+            return true;
+          }
+        } catch (e) {
+          console.warn('[Huddle] liarLoadRoom exception (attempt ' + (attempt+1) + '):', e);
+        }
+        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+      }
+      return false;
+    }
+
+    // Active Realtime channel — re-subscribed when the room code changes.
+    // ===== Liar's Cup multiplayer presence =====
+    // Supabase Presence tracks every device subscribed to the room channel.
+    // We use it to detect when an "expected actor" (the loser of a LIAR call,
+    // whose device drives subsequent state transitions) has actually left, so
+    // another connected peer can take over and the game doesn't stall.
+    //
+    // Reliability beats browser events: `beforeunload`/`pagehide` don't fire on
+    // mobile when the OS kills the browser, but the WebSocket eventually drops
+    // and Supabase emits a `presence.leave` event (~1-2s for clean closes,
+    // ~30-60s for unclean drops like wifi loss). 5-second grace timer covers
+    // legitimate refreshes (auth user ID is stable across reload).
+    let _liarPresentSessions = new Set(); // sessionIds currently connected
+    let _liarLeaveGraceTimers = new Map(); // sessionId → grace timer id
+    // 60s grace — see CHAM_LEAVE_GRACE_MS for the reasoning. Was 5s.
+    const LIAR_LEAVE_GRACE_MS = 60000;
+
+    // Is the player at seat `playerId` actually connected right now?
+    function liarIsPlayerPresent(playerId){
+      if (!playerId) return false;
+      const sid = liarState.claimedBy && liarState.claimedBy[playerId];
+      return sid ? _liarPresentSessions.has(sid) : false;
+    }
+    // Lowest seat in turn order whose claimant is currently connected.
+    // Deterministic: every device computes the same answer for the same state,
+    // so the "who takes over" choice is consistent across peers without a
+    // coordinator. Returns null if nobody is present.
+    function liarLowestSeatConnectedPlayer(){
+      const alive = liarState.alivePlayers || [];
+      const claimedBy = liarState.claimedBy || {};
+      for (const pid of alive) {
+        const sid = claimedBy[pid];
+        if (sid && _liarPresentSessions.has(sid)) return pid;
+      }
+      return null;
+    }
+    // Should THIS device fire the next state transition for `expectedActorId`?
+    // Yes if I'm the expected actor OR the expected actor is gone and I'm
+    // the lowest-seat-connected fallback. Re-checked at every scheduled
+    // fire-time so a mid-flight disconnect can hand the baton over cleanly.
+    function liarShouldITakeAction(expectedActorId){
+      if (!expectedActorId || !liarMe.myId) return false;
+      // Lab mode: a single device runs all 3 players, so every gated action
+      // (auto-advance reveal→cup, take-sip, after-sip, etc.) must fire locally
+      // regardless of which perspective is currently active.
+      if (liarState && liarState.labMode) return true;
+      if (expectedActorId === liarMe.myId) return true;
+      // Graceful degradation: if presence isn't initialized yet (channel
+      // hasn't sync'd, or our own session is missing from the set), fall
+      // back to "only the expected actor fires". Avoids the worst case of
+      // stalling the game before presence handlers wire up.
+      const presenceReady = liarMe.sessionId && _liarPresentSessions.has(liarMe.sessionId);
+      if (!presenceReady) return false;
+      if (liarIsPlayerPresent(expectedActorId)) return false;
+      return liarLowestSeatConnectedPlayer() === liarMe.myId;
+    }
+    // After the 5s grace expires without a rejoin, treat the session as gone.
+    // Only the lowest-connected peer fires the cleanup mutation — everyone
+    // updates their _liarPresentSessions set, but only one peer writes to
+    // Supabase so we avoid a thundering-herd on liarPersist().
+    function liarConfirmUserGone(sessionId){
+      _liarPresentSessions.delete(sessionId);
+      _liarLeaveGraceTimers.delete(sessionId);
+      // Find the seat (playerId) this session had claimed, if any.
+      let goneSeatId = null;
+      Object.keys(liarState.claimedBy || {}).forEach(pid => {
+        if (liarState.claimedBy[pid] === sessionId) goneSeatId = pid;
+      });
+      if (!goneSeatId) {
+        // Sessionless visitor — nothing to clean up.
+        if (typeof liarRerender === 'function') liarRerender();
+        return;
+      }
+      // Only the lowest-connected peer fires the mutation. Others just refresh UI.
+      const isMyJobToWrite = liarLowestSeatConnectedPlayer() === liarMe.myId;
+      if (!isMyJobToWrite) {
+        if (typeof liarRerender === 'function') liarRerender();
+        return;
+      }
+      liarHandleConfirmedDisconnect(goneSeatId);
+    }
+    // Phase-aware cleanup when a seated player is confirmed gone. Only the
+    // lowest-connected peer (the writer) reaches this fn — see liarConfirmUserGone.
+    // C2 turn 3c: server now handles all the phase-aware cleanup logic (seat
+    // removal, host transfer, alive filter, currentPlayerIdx normalization,
+    // forced-spill on disconnected loser, sole-survivor auto-win). Client
+    // resolves the gone session id from local claimedBy and fires the RPC;
+    // the realtime echo delivers canonical state.
+    function liarHandleConfirmedDisconnect(goneSeatId){
+      // Toast surviving players (UI-only side effect, kept client-side).
+      try {
+        const goneName = (() => {
+          const p = liarState.players.find(x => x.id === goneSeatId);
+          if (!p) return goneSeatId;
+          const disp = playerDisplayFor(p, liarState.claimedBy);
+          return disp.name || p.name;
+        })();
+        if (typeof showLobbyToast === 'function' &&
+            liarState.phase !== 'lobby' && liarState.phase !== 'result') {
+          showLobbyToast(t('liar.toastPlayerLeft', { name: goneName }), 3500);
+        }
+      } catch(e){}
+
+      // Resolve session id from current local state BEFORE the echo arrives.
+      const goneSessionId = liarState.claimedBy && liarState.claimedBy[goneSeatId];
+      if (!goneSessionId) {
+        if (typeof liarRerender === 'function') liarRerender();
+        return;
+      }
+      huddleCallRPC('huddle_liar_handle_disconnect', {
+        p_code: liarState.code,
+        p_gone_session_id: goneSessionId,
+      });
+    }
+    function liarStartLeaveGrace(sessionId){
+      // Cancel any prior timer for this session (defensive — shouldn't happen
+      // with cleanly-ordered presence events, but rejoin/leave can race).
+      if (_liarLeaveGraceTimers.has(sessionId)) {
+        clearTimeout(_liarLeaveGraceTimers.get(sessionId));
+      }
+      const tid = setTimeout(() => liarConfirmUserGone(sessionId), LIAR_LEAVE_GRACE_MS);
+      _liarLeaveGraceTimers.set(sessionId, tid);
+    }
+    function liarCancelLeaveGrace(sessionId){
+      if (_liarLeaveGraceTimers.has(sessionId)) {
+        clearTimeout(_liarLeaveGraceTimers.get(sessionId));
+        _liarLeaveGraceTimers.delete(sessionId);
+      }
+    }
+    function liarResetPresenceState(){
+      // Called on channel teardown so a stale presence state doesn't bleed
+      // into the next room.
+      _liarLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
+      _liarLeaveGraceTimers.clear();
+      _liarPresentSessions.clear();
+    }
+
+    let _liarChannel = null;
+    let _liarChannelCode = null;
+    let _liarChannelSessionId = null;
+    function liarWireSync(){
+      if (!window.sb) return;
+      if (!liarState.code) return;
+      // Already subscribed to this code AND for this session id — no-op.
+      // Session id is checked because presence is keyed on liarMe.sessionId at
+      // channel-creation time, so a user-identity change (anon → Google) needs
+      // a rebuild — otherwise our presence keeps echoing the stale anon id.
+      const sid = liarGetSessionId();
+      if (_liarChannel && _liarChannelCode === liarState.code && _liarChannelSessionId === sid) return;
+      // Different code, different session, or stale channel — tear down and re-subscribe.
+      if (_liarChannel) {
+        try { window.sb.removeChannel(_liarChannel); } catch(e){}
+        _liarChannel = null;
+        _liarChannelCode = null;
+        _liarChannelSessionId = null;
+        liarResetPresenceState();
+      }
+      const code = liarState.code;
+      const handler = (payload) => {
+        const newState = payload && payload.new && payload.new.state;
+        if (!newState) return;
+        if (typeof newState.revision === 'number' &&
+            newState.revision <= (liarState.revision || 0)) return;
+        // Host closed the room — auto-leave for every other player still seated.
+        if (newState.closedByHost && liarMe.myId) {
+          if (typeof showLobbyToast === 'function') {
+            try { showLobbyToast(t('lobby.hostClosedRoom'), 3500); } catch(e){}
+          }
+          liarForceLeaveLocal();
+          return;
+        }
+        Object.keys(liarState).forEach(k => delete liarState[k]);
+        Object.assign(liarState, newState);
+        // Only re-navigate if the user is currently on a Liar's Cup screen.
+        // If they've used the back button to leave (e.g. to Games tab), don't yank
+        // them back — state is updated silently and they'll see it on return.
+        const activeId = document.querySelector('.screen.active');
+        const currentId = activeId ? activeId.id.replace('screen-', '') : null;
+        if (currentId && currentId.startsWith('liar-')) {
+          liarRerender();
+        }
+      };
+      // Presence-event handlers. Key is the auth.uid so refresh = same key.
+      const onSync = () => {
+        // Reconcile our local set with the channel's authoritative snapshot.
+        const state = _liarChannel.presenceState();
+        const fresh = new Set(Object.keys(state || {}));
+        // Anyone newly arrived clears their grace timer (refresh covers this).
+        fresh.forEach(sid => {
+          if (_liarLeaveGraceTimers.has(sid)) liarCancelLeaveGrace(sid);
+        });
+        _liarPresentSessions = fresh;
+        if (typeof liarRerender === 'function') liarRerender();
+      };
+      const onJoin = ({ key }) => {
+        if (!key) return;
+        _liarPresentSessions.add(key);
+        liarCancelLeaveGrace(key);
+      };
+      const onLeave = ({ key }) => {
+        if (!key) return;
+        // DON'T delete from _liarPresentSessions immediately — start a grace
+        // timer so a refresh-rejoin (~1-3s) doesn't trigger the "left" flow.
+        liarStartLeaveGrace(key);
+      };
+      _liarChannelSessionId = sid;
+      _liarChannel = window.sb
+        .channel('liar_room:' + code, { config: { presence: { key: liarMe.sessionId || ('tab_' + Math.random()) } } })
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'liar_rooms',
+          filter: 'code=eq.' + code,
+        }, handler)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'liar_rooms',
+          filter: 'code=eq.' + code,
+        }, handler)
+        .on('presence', { event: 'sync'  }, onSync)
+        .on('presence', { event: 'join'  }, onJoin)
+        .on('presence', { event: 'leave' }, onLeave)
+        .subscribe(async (status) => {
+          if (status !== 'SUBSCRIBED') return;
+          if (_liarChannelCode !== code) return;
+          // Announce our presence the moment we're subscribed. The auth user ID
+          // is stable across reload so refresh-rejoin works seamlessly.
+          try {
+            await _liarChannel.track({
+              user_id: liarMe.sessionId,
+              joined_at: Date.now(),
+            });
+          } catch(e){}
+          // Reconcile gap between initial load and live subscription —
+          // catches writes from other devices that landed in the race window.
+          try {
+            const ok = await liarLoadRoom(code);
+            if (ok) {
+              const activeId = document.querySelector('.screen.active');
+              const currentId = activeId ? activeId.id.replace('screen-', '') : null;
+              if (currentId && currentId.startsWith('liar-')) liarRerender();
+            }
+          } catch(e){}
+        });
+      _liarChannelCode = code;
+    }
+    // Best-effort fast-leave when the page is hiding/closing. The server emits
+    // the `leave` event faster when we untrack explicitly than when waiting
+    // for the heartbeat to time out. Doesn't help on mobile-OS-kills (no
+    // event fires there) — that case still relies on the heartbeat timeout.
+    try {
+      const fastUntrack = () => {
+        if (_liarChannel) {
+          try { _liarChannel.untrack(); } catch(e){}
+        }
+      };
+      window.addEventListener('pagehide', fastUntrack, { capture: true });
+      window.addEventListener('beforeunload', fastUntrack, { capture: true });
+    } catch(e){}
+
+    // Re-render whatever screen matches the current phase. Navigates if phase changed.
+    // All in-game phases (tablecard/play/reveal/cup/result) now live on one screen
+    // (#screen-liar-play); a `data-stage` attribute drives which .liar-stage is visible.
+    // Only lobby is a separate screen.
+    //
+    // liarRerender is a thin wrapper around liarRerenderInner. The wrapper enforces
+    // the cross-device sync model: if liarSyncDelayMs() > 0, the new phase is in
+    // the future (writer just stamped phaseStartAt = now + 700ms), so we show the
+    // waiting overlay over the CURRENT content and defer the real render until
+    // the planned moment. Result: writer and watchers display the new phase at
+    // the same wall-clock time, independent of network latency.
+    const __liarRerenderPending = { timer: null };
+    function liarRerender(){
+      huddleSyncGateRerender(liarState, liarRerenderInner, __liarRerenderPending);
+    }
+
+    function liarRerenderInner(){
+      // Reveal + cup phases stay on the play stage — the reveal overlay (inside
+      // the felt) handles the cards-flip + verdict + wheel without a stage swap,
+      // so the felt + seats + ACE-pill position stay continuous across phases.
+      const phaseToStage = {
+        tablecard: 'tablecard',
+        play: 'play',
+        reveal: 'play',
+        cup: 'play',
+        result: 'result',
+      };
+      const stage = phaseToStage[liarState.phase];
+      const targetScreen = stage ? 'liar-play' : 'liar-lobby';
+      const activeId = document.querySelector('.screen.active');
+      const currentId = activeId ? activeId.id.replace('screen-', '') : null;
+      if (currentId !== targetScreen) {
+        goTo(targetScreen);
+      }
+      if (stage) {
+        const screenEl = document.getElementById('screen-liar-play');
+        if (screenEl) screenEl.setAttribute('data-stage', stage);
+      }
+      // Toggle reveal-mode on the SCREEN (not the felt). The overlay lives as a
+      // direct child of the screen so its centre = screen centre. cup-mode is
+      // managed by liarEnterCupMode / liarExitCupMode below.
+      const screenEl2 = document.getElementById('screen-liar-play');
+      if (screenEl2) {
+        const inReveal = liarState.phase === 'reveal' || liarState.phase === 'cup';
+        screenEl2.classList.toggle('reveal-mode', inReveal);
+        if (!inReveal) screenEl2.classList.remove('cup-mode');
+      }
+      // The invite-a-friend sheet is a lobby-only affordance. If a player has
+      // it open when the host starts the game, the sheet would otherwise stay
+      // covering the play screen until they tap the X — leaving them confused
+      // about a hand they can't see. Auto-close on any non-lobby phase.
+      if (liarState.phase !== 'lobby') {
+        const bd = document.getElementById('lobby-invite-backdrop');
+        if (bd && bd.classList.contains('active') && typeof closeLobbyInviteSheet === 'function') {
+          closeLobbyInviteSheet();
+        }
+      }
+      // Always re-render content
+      if (liarState.phase === 'lobby') { liarRenderSeats(); if (typeof renderLobbyInvites === 'function') renderLobbyInvites('liar'); }
+      else if (liarState.phase === 'tablecard') { liarSetHeaderForStage('tablecard'); liarRenderTableCardSplash(); }
+      else if (liarState.phase === 'play') liarRenderPlayScreen();
+      else if (liarState.phase === 'reveal') { liarExitCupMode(); liarRenderRevealContent(); }
+      else if (liarState.phase === 'cup') { liarRenderRevealContent(); liarEnterCupMode(); liarRenderCupInline(); }
+      else if (liarState.phase === 'result') { liarSetHeaderForStage('result'); liarExitCupMode(); liarRenderResultContent(); }
+      // Keep lab perspective bar in sync (visibility + current-turn dot + active chip)
+      if (typeof liarLabRenderBar === 'function') liarLabRenderBar();
+      // Start / stop the sole-survivor polling fallback based on phase. See
+      // liarStartSoloPoll for why this exists.
+      if (liarState.phase === 'play' || liarState.phase === 'reveal' || liarState.phase === 'cup') {
+        liarStartSoloPoll();
+      } else {
+        liarStopSoloPoll();
+      }
+    }
+
+    // ===== Sole-survivor polling fallback =====
+    // Supabase Realtime presence is the PRIMARY mechanism for detecting that a
+    // player left the game (via the leave event → grace timer → liarConfirmUserGone).
+    // But abrupt disconnects (mobile tab killed, network drop, browser crash)
+    // sometimes don't fire `leave`. If the gone player happened to be the
+    // current turn-holder, the remaining players see "Waiting for X" forever.
+    //
+    // This poll is a SAFETY NET on top of presence. Every 4 seconds (after a
+    // 12s grace so presence has time to settle on join), check: of all alive
+    // seats in the game, how many have a session currently in _liarPresentSessions?
+    // If only one and it's me, I'm the sole survivor → declare myself winner.
+    //
+    // Conservative gates ensure no false positives:
+    //   - 12s grace prevents firing during the moment after I join when
+    //     presence hasn't synced yet.
+    //   - Requires my own session to be in _liarPresentSessions (channel
+    //     properly subscribed, not in a broken state).
+    //   - Requires alive seats > 1 (already-solo rooms don't need detection).
+    //   - Requires lowestSeatConnectedPlayer === me (only one peer writes).
+    let _liarSoloPollTimer = null;
+    let _liarSoloPollStartedAt = 0;
+    const LIAR_SOLO_POLL_GRACE_MS = 8000;   // wait 8s after entering play before declaring solo
+    const LIAR_SOLO_POLL_INTERVAL = 3000;   // check every 3s after grace
+    function liarStartSoloPoll(){
+      if (_liarSoloPollTimer) return;
+      _liarSoloPollStartedAt = Date.now();
+      _liarSoloPollTimer = setInterval(liarCheckIfSoleSurvivor, LIAR_SOLO_POLL_INTERVAL);
+    }
+    function liarStopSoloPoll(){
+      if (_liarSoloPollTimer) {
+        clearInterval(_liarSoloPollTimer);
+        _liarSoloPollTimer = null;
+      }
+    }
+    function liarCheckIfSoleSurvivor(){
+      if (!liarState.code || !liarMe.myId) { liarStopSoloPoll(); return; }
+      const phase = liarState.phase;
+      if (phase === 'lobby' || phase === 'result') { liarStopSoloPoll(); return; }
+      if (Date.now() - _liarSoloPollStartedAt < LIAR_SOLO_POLL_GRACE_MS) return;
+      if (!liarMe.sessionId || !_liarPresentSessions.has(liarMe.sessionId)) return;
+      const alive = liarState.alivePlayers || [];
+      if (alive.length <= 1) return;
+      const claimedBy = liarState.claimedBy || {};
+      const presentAlive = alive.filter(pid => {
+        const sid = claimedBy[pid];
+        return sid && _liarPresentSessions.has(sid);
+      });
+      if (presentAlive.length !== 1) return;
+      if (presentAlive[0] !== liarMe.myId) return;
+      // Only the lowest-seat-connected peer writes, defensive against races.
+      if (typeof liarLowestSeatConnectedPlayer === 'function'
+          && liarLowestSeatConnectedPlayer() !== liarMe.myId) return;
+      // I'm provably the only player still here. Declare sole-survivor win
+      // via RPC (C2 turn 3c). Server validates caller is a claimant + alive,
+      // bumps wins[], and sets phase='result'. Realtime echo updates local.
+      liarStopSoloPoll();
+      liarClearAllAutoAdvance && liarClearAllAutoAdvance();
+      huddleCallRPC('huddle_liar_finish_solo', { p_code: liarState.code });
+    }
+
+    // Sets the shared header title for non-play stages. The 'play' stage's title
+    // is dynamic ("Your turn" / "Alex's turn") and managed by liarRenderPlayScreen.
+    function liarSetHeaderForStage(stage){
+      const titleEl = document.getElementById('liar-play-header');
+      if (!titleEl) return;
+      if (stage === 'tablecard') titleEl.textContent = "Liar's Cup";
+      else if (stage === 'reveal') titleEl.textContent = t('liar.revealHeader') || 'The truth';
+      else if (stage === 'result') titleEl.textContent = t('liar.resultHeader') || 'Game over';
+    }
+
+    // Header leave button — phase-aware. Lab mode short-circuits to a local exit
+    // (no Supabase round-trip, no confirm dialog). During result we exit the
+    // game-over flow; any other in-game phase exits a mid-round room.
+    function liarHeaderLeave(){
+      if (liarState && liarState.labMode) return liarLabExit();
+      if (liarState && liarState.phase === 'result') return liarLeaveGameOver();
+      return liarLeaveRoom('midround');
+    }
+
+    // ===== LAB MODE — single-device 3-player test harness =====
+    // Spins up a fully-populated liarState with 3 fake players (Jordan/Alex/Maria)
+    // and lets the tester flip "acting as" perspective between them via the lab bar.
+    // labMode=true makes liarPersist() a no-op so we don't pollute the real
+    // liar_rooms table. The real game render/action functions are used unchanged.
+    const LIAR_LAB_PLAYERS = [
+      { id:'jordan', name:'Jordan', initial:'J' },
+      { id:'alex',   name:'Alex',   initial:'A' },
+      { id:'maria',  name:'Maria',  initial:'M' },
+    ];
+
+    function liarLabResetState(extra){
+      Object.keys(liarState).forEach(k => delete liarState[k]);
+      Object.assign(liarState, {
+        code: null,
+        phase: 'lobby',
+        hostId: null,
+        claimedBy: {},
+        players: [],
+        alivePlayers: [],
+        hands: {},
+        pile: [],
+        lastPlay: null,
+        recentPlays: {},
+        tableCard: 'K',
+        currentPlayerIdx: 0,
+        nextRoundStartIdx: null,
+        cupSpills: 1,
+        pendingLoserId: null,
+        pendingLoserCause: null,
+        sipOutcome: null,
+        sipChamberIdx: null,
+        sipChamberIsSpill: [],
+        sipTaken: false,
+        wins: {},
+        winnerId: null,
+        roundCount: 0,
+        revision: 0,
+      }, extra || {});
+    }
+
+    function liarLabStart(){
+      liarLabResetState({
+        code: 'LAB123',
+        hostId: 'lab_jordan',
+        players: LIAR_LAB_PLAYERS.map(p => ({ ...p, wins:0, bestTimeMs:null })),
+        wins: { jordan:0, alex:0, maria:0 },
+        labMode: true,
+      });
+      LIAR_LAB_PLAYERS.forEach(p => { liarState.claimedBy[p.id] = 'lab_' + p.id; });
+      // Start as Jordan; tester can flip perspective via the lab bar.
+      liarMe.myId = 'jordan';
+      liarMe.sessionId = 'lab_jordan';
+      liarMe.bootstrapped = true;
+      liarMe.selectedCardIds = [];
+      // Jump straight into the game (skip lobby).
+      liarStartGame();
+      liarLabRenderBar();
+    }
+
+    function liarLabSetPerspective(playerId){
+      if (!liarState.labMode) return;
+      liarMe.myId = playerId;
+      liarMe.sessionId = 'lab_' + playerId;
+      liarMe.selectedCardIds = []; // hand changes — drop any old selection
+      liarLabRenderBar();
+      liarRerender();
+    }
+
+    function liarLabExit(){
+      liarClearAllAutoAdvance && liarClearAllAutoAdvance();
+      liarStopAllSfx && liarStopAllSfx();
+      liarLabResetState();
+      liarMe.myId = null;
+      liarMe.selectedCardIds = [];
+      const bar = document.getElementById('liar-lab-bar');
+      if (bar) bar.setAttribute('hidden', '');
+      goTo('profile');
+    }
+
+    // Card style switcher — applies one of 5 visual styles to ALL Liar's Cup
+    // cards (hand cards + reveal flip cards). Pass a name from CARD_STYLES, or
+    // null/undefined to clear and use the built-in default. Persisted in
+    // localStorage so a chosen style sticks across reloads.
+    const CARD_STYLES = [
+      { id:'classic', label:'Classic'  },
+      { id:'onyx',    label:'Onyx'     },
+      { id:'minimal', label:'Minimal'  },
+      { id:'aurora',  label:'Aurora'   },
+      { id:'mono',    label:'Mono'     },
+    ];
+    function liarSetCardStyle(name){
+      CARD_STYLES.forEach(s => document.body.classList.remove('card-style-' + s.id));
+      if (name && CARD_STYLES.some(s => s.id === name)) {
+        document.body.classList.add('card-style-' + name);
+        try { localStorage.setItem('huddle.liar.cardStyle', name); } catch(e){}
+      } else {
+        try { localStorage.removeItem('huddle.liar.cardStyle'); } catch(e){}
+      }
+      // Refresh the lab style-chip row so the active chip highlight updates.
+      if (typeof liarLabRenderStyleChips === 'function') liarLabRenderStyleChips();
+    }
+    // Boot: restore last-picked style, defaulting to 'classic' so first-time
+    // players land on the chosen-as-default front design.
+    (function(){
+      try {
+        const saved = localStorage.getItem('huddle.liar.cardStyle');
+        liarSetCardStyle(saved || 'classic');
+      } catch(e){ liarSetCardStyle('classic'); }
+    })();
+
+    // Card BACK switcher — independent of front style. Controls how the back of
+    // a card looks (the side shown during the flip animation before each reveal
+    // card turns face-up, AND face-down hand cards). All 5 backs use cream-gold
+    // tones to pair cleanly with the Classic front.
+    const CARD_BACKS = [
+      { id:'pinstripe', label:'Pinstripe' },
+      { id:'royal',     label:'Royal'     },
+      { id:'lattice',   label:'Lattice'   },
+      { id:'sunburst',  label:'Sunburst'  },
+      { id:'bordered',  label:'Bordered'  },
+    ];
+    function liarSetCardBack(name){
+      CARD_BACKS.forEach(b => document.body.classList.remove('card-back-' + b.id));
+      if (name && CARD_BACKS.some(b => b.id === name)) {
+        document.body.classList.add('card-back-' + name);
+        try { localStorage.setItem('huddle.liar.cardBack', name); } catch(e){}
+      } else {
+        try { localStorage.removeItem('huddle.liar.cardBack'); } catch(e){}
+      }
+      if (typeof liarLabRenderBackChips === 'function') liarLabRenderBackChips();
+    }
+    // Boot: restore last-picked back, defaulting to Royal so first-time players
+    // land on the chosen-as-default back design.
+    (function(){
+      try {
+        const saved = localStorage.getItem('huddle.liar.cardBack');
+        liarSetCardBack(saved || 'royal');
+      } catch(e){ liarSetCardBack('royal'); }
+    })();
+
+    // Wheel style switcher — changes the wheel's border, hub, and pointer.
+    // Wedge colours (red/green) stay intact so safe/poison semantics are unchanged.
+    const WHEEL_STYLES = [
+      { id:'emerald',  label:'Wood'     },
+      { id:'mint',     label:'Mint'     },
+      { id:'roulette', label:'Roulette' },
+      { id:'lime',     label:'Lime'     },
+      { id:'forest',   label:'Forest'   },
+      { id:'casino',   label:'Casino'   },
+      { id:'royal',    label:'Royal'    },
+      { id:'neon',     label:'Neon'     },
+      { id:'vintage',  label:'Vintage'  },
+      { id:'minimal',  label:'Minimal'  },
+    ];
+    function liarSetWheelStyle(name){
+      WHEEL_STYLES.forEach(w => document.body.classList.remove('wheel-style-' + w.id));
+      if (name && WHEEL_STYLES.some(w => w.id === name)) {
+        document.body.classList.add('wheel-style-' + name);
+        try { localStorage.setItem('huddle.liar.wheelStyle', name); } catch(e){}
+      } else {
+        try { localStorage.removeItem('huddle.liar.wheelStyle'); } catch(e){}
+      }
+      if (typeof liarLabRenderWheelChips === 'function') liarLabRenderWheelChips();
+    }
+    (function(){
+      try {
+        let saved = localStorage.getItem('huddle.liar.wheelStyle');
+        // One-time migration: users on the old default ('vintage') get
+        // upgraded to the new default ('emerald'). Users who explicitly
+        // picked any other style keep their pick.
+        if (saved === 'vintage') saved = null;
+        liarSetWheelStyle(saved || 'emerald');
+      } catch(e){ liarSetWheelStyle('emerald'); }
+    })();
+
+    function liarLabRenderWheelChips(){
+      const chips = document.getElementById('liar-lab-wheel-chips');
+      if (!chips) return;
+      const active = (() => {
+        for (const w of WHEEL_STYLES) if (document.body.classList.contains('wheel-style-' + w.id)) return w.id;
+        return null;
+      })();
+      chips.innerHTML = WHEEL_STYLES.map(w => {
+        const isActive = active === w.id;
+        return '<button class="liar-lab-bar-chip ' + (isActive?'active':'') + '" type="button" onclick="liarSetWheelStyle(\'' + w.id + '\')">' + w.label + '</button>';
+      }).join('');
+    }
+
+    // ============================================================
+    // Cross-device sync — phaseStartAt + 6 waiting-animation styles
+    // ============================================================
+    // Problem this fixes: when one phone writes a phase change (e.g. accuser
+    // taps "Liar!"), the writer's device re-renders synchronously while peers
+    // wait on the Supabase Realtime broadcast (~200-800ms on phones). All
+    // subsequent setTimeout-driven animations (card flips, reveal dwell, cup
+    // brace) start on each device's local clock from receipt — so the writer
+    // is consistently ahead.
+    //
+    // Fix: every phase mutation calls liarMarkPhaseStart() which writes
+    // phaseStartAt = Date.now() + LIAR_SYNC_BUFFER_MS into state. liarRerender
+    // (wrapped further down) defers actual rendering until that wall-clock
+    // moment. The buffer is wide enough that the broadcast lands on slow peers
+    // BEFORE phaseStartAt, so every device renders the new phase together.
+    //
+    // The waiting overlay is what fills that ~700ms gap. Six styles are
+    // available, picked in the lab bar; the choice is persisted to
+    // localStorage so the production game uses whatever the owner selected.
+    // Sync buffer choice — research-grounded (see /docs lookup 2026-05).
+    //   • Supabase Broadcast P95 = 28–49 ms in their own k6 benchmarks
+    //     (https://supabase.com/docs/guides/realtime/benchmarks)
+    //   • postgres_changes adds ~100–200 ms (Postgres write + logical
+    //     replication + RLS check per subscriber)
+    //   • Mobile carrier hop adds ~50–150 ms typical
+    //   • Realistic end-to-end P95 on phones ≈ 250–400 ms
+    //   • Doherty Threshold (IBM 1982): 400 ms = perceived-instant ceiling for
+    //     UI actions, above which users feel lag
+    //   • Turn-based multiplayer guidance (ACM Comp Surveys 2022): buffer just
+    //     needs to exceed slowest-likely receiver lag — no need for headroom
+    //     beyond p95 since p99 stragglers degrade gracefully (render
+    //     immediately, no error).
+    //
+    // 450 ms is the sweet spot: covers ~p95 mobile, sits just above the
+    // Doherty ceiling (combined with the button shimmer affordance the
+    // perceived feel is "snappy + acknowledged"), and is 36% faster than
+    // the earlier conservative 700 ms.
+    //
+    // Configurable from the lab if testing across slower networks.
+    const LIAR_SYNC_BUFFER_CHOICES = [
+      { id: 'snappy',  ms: 250, label: '250ms' }, // aggressive — works only on fast LAN/WiFi
+      { id: 'default', ms: 450, label: '450ms' }, // RECOMMENDED — covers p95 mobile
+      { id: 'safe',    ms: 700, label: '700ms' }, // conservative — slow networks / cross-region
+    ];
+    function liarSyncBufferMs(){
+      try {
+        const saved = localStorage.getItem('huddle.liar.syncBuffer');
+        const hit = LIAR_SYNC_BUFFER_CHOICES.find(c => c.id === saved);
+        if (hit) return hit.ms;
+      } catch(e){}
+      return 450;
+    }
+    function liarSetSyncBuffer(id){
+      const valid = LIAR_SYNC_BUFFER_CHOICES.find(c => c.id === id);
+      try {
+        if (valid) localStorage.setItem('huddle.liar.syncBuffer', id);
+        else localStorage.removeItem('huddle.liar.syncBuffer');
+      } catch(e){}
+      if (typeof liarLabRenderSyncBufferChips === 'function') liarLabRenderSyncBufferChips();
+    }
+    // ============================================================
+    // GENERIC CROSS-DEVICE SYNC — works for ANY game with a state row
+    // ============================================================
+    // To add sync to a NEW game (e.g. a future "Werewolf" mode):
+    //   1. Before every persist() at a phase boundary, call:
+    //        huddleSyncMarkPhaseStart(yourState, optionalTappedButton)
+    //   2. Make your rerender a 3-line wrapper:
+    //        const _wPending = {timer:null};
+    //        function yourRerender(){
+    //          huddleSyncGateRerender(yourState, yourRerenderInner, _wPending);
+    //        }
+    //   3. That's it. The buffer (450ms default), lab style picker, button
+    //      shimmer, migration, and silent overlay all work automatically.
+    //
+    // The "huddle" prefix marks these as shared across all Huddle games
+    // (the app name) — they live above any per-game code.
+    function huddleSyncMarkPhaseStart(state, tapTargetEl){
+      if (!state) return;
+      const bufferMs = liarSyncBufferMs();
+      state.phaseStartAt = Date.now() + bufferMs;
+      if (tapTargetEl && tapTargetEl.classList) {
+        tapTargetEl.classList.add('is-syncing');
+        setTimeout(() => { try { tapTargetEl.classList.remove('is-syncing'); } catch(e){} }, bufferMs + 80);
+      }
+    }
+    function huddleSyncDelayMs(state){
+      const target = state && state.phaseStartAt;
+      if (!target) return 0;
+      return Math.max(0, target - Date.now());
+    }
+    function huddleSyncGateRerender(state, rerenderInnerFn, pendingHolder){
+      const delay = huddleSyncDelayMs(state);
+      if (delay > 0) {
+        liarSyncShow(); // global overlay, no-op when style=silent (the default)
+        if (pendingHolder.timer) clearTimeout(pendingHolder.timer);
+        pendingHolder.timer = setTimeout(() => {
+          pendingHolder.timer = null;
+          liarSyncHide();
+          rerenderInnerFn();
+        }, delay);
+        return true;
+      }
+      if (pendingHolder.timer) { clearTimeout(pendingHolder.timer); pendingHolder.timer = null; }
+      liarSyncHide();
+      rerenderInnerFn();
+      return false;
+    }
+    // PRODUCTION DEFAULT IS 'silent' — no overlay shown during the 450ms buffer.
+    // The previous screen stays visible (Linear/Notion/Instagram pattern: never
+    // show a full-screen loading state for an action the user initiated when
+    // there's already context on screen). The tapped button gets a press+pulse
+    // affordance instead (see .liar-btn-syncing below).
+    //
+    // The 6 visible animations are kept for the lab so the owner can preview
+    // them, but production stays invisible. Devices still sync via the same
+    // phaseStartAt mechanism — that math is independent of the visual choice.
+    const LIAR_SYNC_STYLES = [
+      { id:'silent',  label:'Silent'  }, // DEFAULT — no overlay, button-only feedback
+      { id:'dots',    label:'Dots'    }, // iMessage-style triad
+      { id:'cards',   label:'Cards'   }, // settling deck — on-theme
+      { id:'cup',     label:'Cup'     }, // micro Liar's Cup + sweat drop
+      { id:'ring',    label:'Ring'    }, // sonar pulse
+      { id:'bar',     label:'Bar'     }, // Material 3 indeterminate bar
+      { id:'shuffle', label:'Shuffle' }, // rotating card-fan
+    ];
+
+    function liarSetSyncStyle(name){
+      LIAR_SYNC_STYLES.forEach(s => document.body.classList.remove('sync-style-' + s.id));
+      const valid = LIAR_SYNC_STYLES.some(s => s.id === name);
+      const id = valid ? name : 'silent';
+      document.body.classList.add('sync-style-' + id);
+      try { localStorage.setItem('huddle.liar.syncStyle', id); } catch(e){}
+      if (typeof liarLabRenderSyncChips === 'function') liarLabRenderSyncChips();
+    }
+    // One-shot migration — earlier iterations of this code shipped with a
+    // visible default (`dots`) AND the boot IIFE saved that default to
+    // localStorage on every load. So every browser that loaded those earlier
+    // builds has `huddle.liar.syncStyle = "dots"` cached, and the new
+    // `silent` default never takes effect for them.
+    //
+    // This block clears any stored sync-style preference ONCE per browser,
+    // gated by a version key. After the migration runs, the user can pick
+    // any style in the lab and it persists normally — the migration won't
+    // re-fire.
+    (function liarMigrateSyncDefaults(){
+      const CURRENT_MIGRATION = '2026-05-silent-default';
+      try {
+        const seen = localStorage.getItem('huddle.liar.syncStyleMigration');
+        if (seen !== CURRENT_MIGRATION) {
+          localStorage.removeItem('huddle.liar.syncStyle');
+          localStorage.setItem('huddle.liar.syncStyleMigration', CURRENT_MIGRATION);
+        }
+      } catch(e){}
+    })();
+
+    (function(){
+      try {
+        const saved = localStorage.getItem('huddle.liar.syncStyle');
+        liarSetSyncStyle(saved || 'silent');
+      } catch(e){ liarSetSyncStyle('silent'); }
+    })();
+
+    function liarLabRenderSyncChips(){
+      const chips = document.getElementById('liar-lab-sync-chips');
+      if (!chips) return;
+      const active = (() => {
+        for (const s of LIAR_SYNC_STYLES) if (document.body.classList.contains('sync-style-' + s.id)) return s.id;
+        return 'silent';
+      })();
+      chips.innerHTML = LIAR_SYNC_STYLES.map(s => {
+        const isActive = active === s.id;
+        return '<button class="liar-lab-bar-chip ' + (isActive?'active':'') + '" type="button" onclick="liarSetSyncStyle(\'' + s.id + '\')">' + s.label + '</button>';
+      }).join('');
+    }
+
+    // Lab control for the cross-device buffer length. Default = 450ms (covers
+    // p95 mobile per Supabase Realtime benchmarks). Drop to 250ms on fast
+    // LAN/WiFi for max snappiness; raise to 700ms if testing across regions
+    // or on poor cell coverage.
+    function liarLabRenderSyncBufferChips(){
+      const chips = document.getElementById('liar-lab-sync-buffer-chips');
+      if (!chips) return;
+      let activeId = 'default';
+      try {
+        const saved = localStorage.getItem('huddle.liar.syncBuffer');
+        if (LIAR_SYNC_BUFFER_CHOICES.find(c => c.id === saved)) activeId = saved;
+      } catch(e){}
+      chips.innerHTML = LIAR_SYNC_BUFFER_CHOICES.map(c => {
+        const isActive = activeId === c.id;
+        const tag = c.id === 'default' ? ' ✓' : '';
+        return '<button class="liar-lab-bar-chip ' + (isActive?'active':'') + '" type="button" onclick="liarSetSyncBuffer(\'' + c.id + '\')">' + c.label + tag + '</button>';
+      }).join('');
+    }
+
+    // Per-style inner markup for the animation stage. Each one fits inside a
+    // 120×80 box so the surrounding card sizing is identical across styles.
+    function liarSyncAnimMarkup(){
+      const map = {
+        dots:    '<span class="liar-sync-dot"></span>',
+        cards:   '<div class="liar-sync-card-mini"></div><div class="liar-sync-card-mini"></div><div class="liar-sync-card-mini"></div>',
+        cup:     '<div class="liar-sync-cup"><div class="liar-sync-cup-body"></div><div class="liar-sync-cup-fill"></div><div class="liar-sync-cup-drop"></div></div>',
+        ring:    '<div class="liar-sync-ring-wave"></div><div class="liar-sync-ring-wave"></div><div class="liar-sync-ring-core"></div>',
+        bar:     '<div class="liar-sync-bar-track"><div class="liar-sync-bar-fill"></div></div>',
+        shuffle: '<div class="liar-sync-fan"><div class="liar-sync-fan-card"></div><div class="liar-sync-fan-card"></div><div class="liar-sync-fan-card"></div></div>',
+      };
+      const active = (() => {
+        for (const s of LIAR_SYNC_STYLES) if (document.body.classList.contains('sync-style-' + s.id)) return s.id;
+        return 'dots';
+      })();
+      return map[active] || map.dots;
+    }
+
+    // Short, phase-aware label so the overlay doesn't feel like a generic
+    // spinner. Falls back to a neutral "Syncing players…" if phase is unknown.
+    function liarSyncLabelText(){
+      if (!liarState) return 'Syncing players…';
+      if (liarState.phase === 'cup' && liarState.sipTaken) return 'Spinning the wheel…';
+      const map = {
+        tablecard: 'Dealing the round…',
+        play:      'Starting the round…',
+        reveal:    'Revealing the cards…',
+        cup:       'Heading to the cup…',
+        result:    'Tallying the round…',
+      };
+      return map[liarState.phase] || 'Syncing players…';
+    }
+
+    // Lazily-created overlay container. We don't pre-render it in HTML because
+    // (a) it lives at body level so it stacks above everything, and (b) the
+    // animation markup is style-dependent and rebuilt on each show.
+    function liarSyncEnsureNode(){
+      let el = document.getElementById('liar-sync-overlay');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'liar-sync-overlay';
+        el.className = 'liar-sync-overlay';
+        el.setAttribute('aria-live', 'polite');
+        el.setAttribute('role', 'status');
+        document.body.appendChild(el);
+      }
+      return el;
+    }
+    function liarSyncShow(labelOverride){
+      // Silent style: skip the overlay entirely. This is the production default —
+      // the user keeps seeing the previous phase's UI while phaseStartAt approaches,
+      // exactly like Linear/Notion/Instagram. Sync still happens; nothing flashes.
+      if (document.body.classList.contains('sync-style-silent')) return;
+      const el = liarSyncEnsureNode();
+      const label = labelOverride || liarSyncLabelText();
+      el.innerHTML =
+        '<div class="liar-sync-card">' +
+          '<div class="liar-sync-anim">' + liarSyncAnimMarkup() + '</div>' +
+          '<div class="liar-sync-label">' + escapeHTML(label) + '</div>' +
+        '</div>';
+      el.classList.add('active');
+    }
+    function liarSyncHide(){
+      const el = document.getElementById('liar-sync-overlay');
+      if (el) el.classList.remove('active');
+    }
+
+    // Lab: preview the currently-selected style for 1.6s so the owner can
+    // eyeball it without entering a real game. For 'silent', show a brief
+    // confirmation toast-style message instead of nothing (so it's clear the
+    // preview button worked, just that the production behaviour is invisible).
+    function liarSyncPreview(){
+      if (document.body.classList.contains('sync-style-silent')) {
+        const el = liarSyncEnsureNode();
+        el.innerHTML =
+          '<div class="liar-sync-card" style="padding:14px 22px">' +
+            '<div class="liar-sync-label" style="margin:0;font-size:13px">' +
+              'Silent — no overlay shown in production.<br>' +
+              '<span style="opacity:.65;font-weight:500">Devices still sync invisibly.</span>' +
+            '</div>' +
+          '</div>';
+        el.classList.add('active');
+        setTimeout(liarSyncHide, 1800);
+        return;
+      }
+      liarSyncShow('Preview — ' + (function(){
+        for (const s of LIAR_SYNC_STYLES) if (document.body.classList.contains('sync-style-' + s.id)) return s.label;
+        return 'Dots';
+      })());
+      setTimeout(liarSyncHide, 1600);
+    }
+
+    // Called at every phase-boundary mutation, JUST BEFORE liarPersist().
+    // Writer sets phaseStartAt = now + buffer; every device (writer + peers)
+    // gates their rerender on it, so the new phase lands at the same wall-
+    // clock moment everywhere. Phone clock skew (~50ms via NTP) is the only
+    // residual drift; well below human-perceptible.
+    //
+    // Optional `tapTargetEl` — the DOM element the user just tapped to cause
+    // this transition. We mark it with .is-syncing so it visibly stays pressed
+    // through the silent buffer. Provides button-level feedback in lieu of the
+    // (now-suppressed) full-screen overlay.
+    // Liar's Cup thin wrappers — delegate to the generic huddleSync* helpers.
+    // Kept as-is so existing call sites don't need to be touched.
+    function liarMarkPhaseStart(tapTargetEl){
+      huddleSyncMarkPhaseStart(liarState, tapTargetEl);
+    }
+    function liarSyncDelayMs(){
+      return huddleSyncDelayMs(liarState);
+    }
+
+    function liarLabRenderBackChips(){
+      const chips = document.getElementById('liar-lab-back-chips');
+      if (!chips) return;
+      const active = (() => {
+        for (const b of CARD_BACKS) if (document.body.classList.contains('card-back-' + b.id)) return b.id;
+        return null;
+      })();
+      chips.innerHTML = CARD_BACKS.map(b => {
+        const isActive = active === b.id;
+        return '<button class="liar-lab-bar-chip ' + (isActive?'active':'') + '" type="button" onclick="liarSetCardBack(\'' + b.id + '\')">' + b.label + '</button>';
+      }).join('');
+    }
+
+    function liarLabRenderStyleChips(){
+      const chips = document.getElementById('liar-lab-style-chips');
+      if (!chips) return;
+      const active = (() => {
+        for (const s of CARD_STYLES) if (document.body.classList.contains('card-style-' + s.id)) return s.id;
+        return null;
+      })();
+      chips.innerHTML = CARD_STYLES.map(s => {
+        const isActive = active === s.id;
+        return '<button class="liar-lab-bar-chip ' + (isActive?'active':'') + '" type="button" onclick="liarSetCardStyle(\'' + s.id + '\')">' + s.label + '</button>';
+      }).join('');
+    }
+
+    function liarLabRenderBar(){
+      const bar = document.getElementById('liar-lab-bar');
+      if (!bar) return;
+      if (!liarState.labMode) { bar.setAttribute('hidden', ''); return; }
+      bar.removeAttribute('hidden');
+      const chips = document.getElementById('liar-lab-bar-chips');
+      if (chips) {
+        const currentTurnPid = liarState.alivePlayers && liarState.alivePlayers[liarState.currentPlayerIdx];
+        chips.innerHTML = LIAR_LAB_PLAYERS.map(p => {
+          const isMe = liarMe.myId === p.id;
+          const isCurrent = currentTurnPid === p.id;
+          return '<button class="liar-lab-bar-chip ' + (isMe?'active':'') + ' ' + (isCurrent?'current':'') + '" type="button" onclick="liarLabSetPerspective(\'' + p.id + '\')">' + p.name + '</button>';
+        }).join('');
+      }
+      // Render the wheel-style + sync-style + sync-buffer chip rows.
+      liarLabRenderWheelChips();
+      liarLabRenderSyncChips();
+      liarLabRenderSyncBufferChips();
+    }
+
+    // Toggle the screen into "cup mode" — overlay reveal content fades, wheel
+    // scales in. Idempotent so calling it on every rerender is safe.
+    function liarEnterCupMode(){
+      const screen = document.getElementById('screen-liar-play');
+      if (screen) screen.classList.add('cup-mode');
+      const waiting = document.getElementById('liar-reveal-waiting');
+      if (waiting) waiting.style.display = 'none';
+      const section = document.getElementById('liar-cup-section');
+      if (section) {
+        section.setAttribute('aria-hidden', 'false');
+        // Force reflow before adding .entering so the transition fires
+        // even when the section is freshly visible in the DOM tree.
+        if (!section.classList.contains('entering')) {
+          void section.offsetWidth;
+          section.classList.add('entering');
+        }
+      }
+    }
+    function liarExitCupMode(){
+      const screen = document.getElementById('screen-liar-play');
+      if (screen) screen.classList.remove('cup-mode');
+      const section = document.getElementById('liar-cup-section');
+      if (section) {
+        section.classList.remove('entering');
+        section.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    // Defensive scrub of all cup-phase visual state. Called by goTo() when
+    // the user navigates AWAY from the liar-play screen mid-spin — without
+    // this, the wheel's .spinning class + the cached __liarLastAnimatedSipKey
+    // can leave a returning user looking at a half-spun wheel that won't
+    // re-animate because the renderer skips work when the sip key matches.
+    // Re-entering the screen calls liarRerender → liarRenderCupInline, which
+    // rebuilds the correct visuals from server truth. Safe to call from any
+    // phase: every reset is a no-op if the targeted element doesn't exist
+    // or is already in its baseline state.
+    function liarResetCupVisuals(){
+      try {
+        if (typeof liarCancelScheduledSfx === 'function') liarCancelScheduledSfx();
+        if (typeof liarClearAutoSip === 'function') liarClearAutoSip();
+      } catch(e) {}
+      try { __liarLastAnimatedSipKey = null; } catch(e) {}
+      const screen = document.getElementById('screen-liar-play');
+      if (screen) screen.classList.remove('cup-mode', 'reveal-mode');
+      const wheelEl = document.getElementById('liar-wheel');
+      if (wheelEl) {
+        wheelEl.classList.remove('spinning');
+        wheelEl.style.removeProperty('--liar-wheel-target');
+      }
+      const stamp = document.getElementById('liar-wheel-stamp');
+      if (stamp) { stamp.className = 'liar-wheel-stamp'; stamp.textContent = ''; }
+      const spotwedge = document.getElementById('liar-wheel-spotwedge');
+      if (spotwedge) spotwedge.className = 'liar-wheel-spotwedge';
+      const resultEl = document.getElementById('liar-cup-result');
+      if (resultEl) resultEl.style.display = 'none';
+      const stage = document.getElementById('liar-cup-stage');
+      if (stage) stage.className = 'liar-cup-stage liar-wheel-stage';
+    }
+
+    // ---------- Lobby ----------
+    // Entry paths:
+    //   1) First device this session — generates a code, creates the row in Supabase.
+    //   2) Same browser, returning visit — uses cached code from localStorage and tries to
+    //      load the room from Supabase. If the row was deleted, creates a new room.
+    //   3) Different device joining the same room — (future: via URL with ?room=CODE).
+    //      For now, the host shares the code/QR verbally and the other device generates
+    //      their own — same code only if they share localStorage. Tomorrow: URL-based joins.
+    // Builds the public URL that, when opened, drops the visitor straight into this room.
+    // Used for the QR code in the lobby and the "share" button.
+    function liarJoinUrl(code){
+      // Use generic joinUrl so the QR carries ?game=liar — autoOpen IIFE routes off it.
+      if (typeof joinUrl === 'function') return joinUrl(code, 'liar');
+      const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+      return origin + '/?room=' + encodeURIComponent(code);
+    }
+
+    // Reads ?room=CODE from the URL bar. Used on lobby open so a phone scanning
+    // the QR (or pasting the link) joins the SAME room as the host.
+    function liarReadUrlRoom(){
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('room');
+        const game = params.get('game');
+        if (!code) return null;
+        // Don't honor URLs whose ?game= belongs to a different game (would
+        // try to load a Hot Seat / Chameleon code from liar_rooms and fail).
+        // Absent ?game= is allowed for back-compat with legacy URLs.
+        if (game && game !== 'liar') return null;
+        return code.toUpperCase().trim();
+      } catch(e){ return null; }
+    }
+
+    // Update the browser URL bar so the current room is shareable / bookmarkable.
+    // Uses replaceState so we don't create a history entry.
+    function liarSyncUrlToRoom(code){
+      if (!code) return;
+      try {
+        const newUrl = '/?room=' + encodeURIComponent(code) + '&game=liar';
+        history.replaceState(history.state, '', newUrl);
+      } catch(e){}
+    }
+
+    // ============================================================
+    // ===================== MAFIA (Game #4) ======================
+    // ============================================================
+    // The cafe-Mafia game with a dedicated narrator.
+    // Architecture mirrors Liar's Cup (Supabase Realtime, server-validated
+    // RPCs) but with stricter privacy: roles never enter public state.
+    // See `huddle_c2_mafia.sql` for the schema + RPC contracts.
+    //
+    // State naming convention:
+    //   • mafiaState — PUBLIC synced state from mafia_rooms.state. Same on
+    //     every connected device. NEVER contains roles.
+    //   • mafiaMe   — per-device private. sessionId, myId (seat id), myRole
+    //     (fetched via RPC after game starts).
+
+    const mafiaState = {
+      code: null,
+      phase: 'lobby',
+      hostId: null,
+      narratorUid: null,
+      claimedBy: {},
+      aliveIds: [],
+      deadIds: [],
+      round: 0,
+      revision: 0,
+      closedByHost: false,
+      // ephemeral fields populated in later phases (kill/save/vote/etc.) —
+      // present here for completeness but not used in Phase 3.
+      killTarget: null, saveTarget: null, detectiveTarget: null,
+      voteTally: {}, votedBy: {}, beatId: 'lobby',
+      winner: null, roleReveal: {},
+    };
+
+    const mafiaMe = {
+      sessionId: null,
+      myId: null,
+      myRole: null,
+      myTeammates: [],
+    };
+
+    // ----- Mafia Cards variant flag (Phase 2 stub) -----
+    // When true, the lobby is showing the "Mafia Cards" variant — same
+    // lobby UI as classic, but the title swaps and Start Game routes to
+    // the card-style game placeholder (which Phases 3+ will fill in).
+    // Reset to false whenever the classic Mafia tile is opened so the
+    // flag doesn't leak across tile entries.
+    let mafiaCardsMode = false;
+
+    async function openMafiaCardsLobby(){
+      // Reuse the entire classic Mafia lobby plumbing (seat-claim, narrator
+      // pick, role-mix, optional roles toggles). Only differences are the
+      // header title (dynamic, see mafiaUpdateLobbyTitle) and what happens
+      // when the host taps Start Game (see mafiaStartGame branch).
+      await openMafiaLobby('cards');
+    }
+
+    // Updates the lobby header title between "Mafia" and "Mafia Cards"
+    // based on the current variant. Called whenever the lobby renders.
+    function mafiaUpdateLobbyTitle(){
+      const titleEls = document.querySelectorAll('#screen-mafia-lobby .header-title');
+      const key = mafiaCardsMode ? 'games.mafiaCards' : 'games.mafia';
+      titleEls.forEach(el => {
+        el.setAttribute('data-i18n', key);
+        el.textContent = t(key);
+      });
+    }
+
+    // ----- Session / auth bootstrap -----
+    // Anonymous Supabase auth gives us a stable uuid across reloads so the
+    // user's seat survives refresh. If Supabase fails to load (offline / CDN
+    // blocked), fall back to a per-tab random id — local-only mode.
+    function mafiaGetSessionId(){ return mafiaMe.sessionId; }
+
+    async function mafiaBootstrap(){
+      if (mafiaMe.sessionId) return; // already bootstrapped
+      if (window.sb && window.sb.auth) {
+        try {
+          const { data: userData } = await window.sb.auth.getUser();
+          if (userData && userData.user && userData.user.id) {
+            mafiaMe.sessionId = userData.user.id;
+            return;
+          }
+          const { data: signInData, error } = await window.sb.auth.signInAnonymously();
+          if (!error && signInData && signInData.user && signInData.user.id) {
+            mafiaMe.sessionId = signInData.user.id;
+            return;
+          }
+          console.warn('[Mafia] anon sign-in failed:', error && error.message);
+        } catch(e){ console.warn('[Mafia] bootstrap error:', e); }
+      }
+      // Fallback: per-tab random id (local-only mode).
+      mafiaMe.sessionId = 'tab_' + Math.random().toString(36).slice(2, 10);
+    }
+
+    // ----- Transport: load room state by code -----
+    // Timestamp of the most recent successful mafiaLoadRoom. Used by the
+    // realtime SUBSCRIBED callback to skip the reconcile-snapshot fetch
+    // when the snapshot we already have is fresh — the original code path
+    // unconditionally fired a second mafiaLoadRoom ~300-500ms after entry,
+    // costing an extra round-trip per Mafia lobby open. The debounce
+    // window (1500ms) is wide enough to cover the typical subscribe
+    // round-trip but tight enough that any genuinely-needed reconcile
+    // (e.g. user backgrounded the tab for a while) still runs.
+    let __mafiaLastLoadTs = 0;
+    async function mafiaLoadRoom(code){
+      if (!code) return false;
+      if (!(window.sb && window.sb.from)) return false;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const { data, error } = await window.sb
+            .from('mafia_rooms').select('state').eq('code', code).maybeSingle();
+          if (error) {
+            console.warn('[Mafia] mafiaLoadRoom error (attempt ' + (attempt+1) + '):', error.message || error);
+            if (attempt < 1) { await new Promise(r => setTimeout(r, 400)); continue; }
+            return false;
+          }
+          if (!data || !data.state) return false;
+          Object.assign(mafiaState, data.state);
+          __mafiaLastLoadTs = Date.now();
+          return true;
+        } catch(e){
+          console.warn('[Mafia] mafiaLoadRoom exception:', e);
+          if (attempt < 1) { await new Promise(r => setTimeout(r, 400)); continue; }
+          return false;
+        }
+      }
+      return false;
+    }
+
+    // ----- Transport: subscribe to room updates via Realtime -----
+    // ───── Presence tracking (Phase 2b) ─────────────────────────────────
+    // Same pattern as Chameleon/Hot Seat — 60s grace timer covers refresh
+    // and brief app-switches; after grace, the NARRATOR fires the cleanup
+    // RPC (huddle_mafia_handle_disconnect requires narrator-or-self authz).
+    // The function expects the gone player's SEAT KEY (e.g. 'p3'), not a
+    // session UUID, so we look it up from claimedBy before the call.
+    let _mafiaPresentSessions = new Set();
+    let _mafiaLeaveGraceTimers = new Map();
+    const MAFIA_LEAVE_GRACE_MS = 60000;
+
+    function mafiaIsSessionPresent(sid){
+      return !!(sid && _mafiaPresentSessions.has(sid));
+    }
+    function mafiaConfirmUserGone(sessionId){
+      _mafiaPresentSessions.delete(sessionId);
+      _mafiaLeaveGraceTimers.delete(sessionId);
+
+      // Find the seat key occupied by the gone session (if any — narrator
+      // may not be in claimedBy).
+      let goneSeatId = null;
+      Object.keys(mafiaState.claimedBy || {}).forEach(pid => {
+        if (mafiaState.claimedBy[pid] === sessionId) goneSeatId = pid;
+      });
+
+      // No seat AND not narrator → nothing to clean up server-side, just refresh.
+      const wasNarrator = mafiaState.narratorUid === sessionId;
+      if (!goneSeatId && !wasNarrator) {
+        if (typeof mafiaRerender === 'function') mafiaRerender();
+        return;
+      }
+
+      // Only the narrator's client can fire the cleanup RPC (the server-side
+      // function's authz rejects everyone else). If I'm not the narrator,
+      // just refresh local view; the actual seat removal happens when the
+      // narrator's client confirms the disconnect on their end.
+      const mySid = mafiaGetSessionId();
+      const iAmNarrator = !!(mySid && mafiaState.narratorUid === mySid);
+      if (!iAmNarrator) {
+        if (typeof mafiaRerender === 'function') mafiaRerender();
+        return;
+      }
+
+      // Narrator firing cleanup. Only seats (not narrator itself) can be
+      // removed via this RPC — the narrator slot has separate handling.
+      if (!goneSeatId) {
+        if (typeof mafiaRerender === 'function') mafiaRerender();
+        return;
+      }
+      Promise.resolve(huddleCallRPC('huddle_mafia_handle_disconnect', {
+        p_code: mafiaState.code,
+        p_player_id: goneSeatId,
+      })).catch(e => console.warn('[Mafia] handle_disconnect failed:', e && e.message));
+    }
+    function mafiaStartLeaveGrace(sessionId){
+      if (_mafiaLeaveGraceTimers.has(sessionId)) {
+        clearTimeout(_mafiaLeaveGraceTimers.get(sessionId));
+      }
+      const tid = setTimeout(() => mafiaConfirmUserGone(sessionId), MAFIA_LEAVE_GRACE_MS);
+      _mafiaLeaveGraceTimers.set(sessionId, tid);
+    }
+    function mafiaCancelLeaveGrace(sessionId){
+      if (_mafiaLeaveGraceTimers.has(sessionId)) {
+        clearTimeout(_mafiaLeaveGraceTimers.get(sessionId));
+        _mafiaLeaveGraceTimers.delete(sessionId);
+      }
+    }
+    function mafiaResetPresenceState(){
+      _mafiaLeaveGraceTimers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
+      _mafiaLeaveGraceTimers = new Map();
+      _mafiaPresentSessions = new Set();
+    }
+
+    let mafiaSyncChannel = null;
+    let _mafiaChannelCode = null;
+    let _mafiaChannelSessionId = null;
+    function mafiaWireSync(){
+      if (!mafiaState.code) return;
+      if (!(window.sb && window.sb.channel)) return;
+      const mySid = mafiaGetSessionId();
+      // Tear down any prior subscription before re-wiring.
+      if (mafiaSyncChannel) {
+        try { mafiaSyncChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(mafiaSyncChannel); } catch(e){}
+        mafiaSyncChannel = null;
+        _mafiaChannelCode = null;
+        _mafiaChannelSessionId = null;
+        mafiaResetPresenceState();
+      }
+      const code = mafiaState.code;
+
+      // Presence-event handlers (mirror Chameleon's). Key = session UUID so
+      // refresh-rejoin appears as the same key and naturally cancels grace.
+      const onPresenceSync = () => {
+        const presState = mafiaSyncChannel.presenceState();
+        const fresh = new Set(Object.keys(presState || {}));
+        fresh.forEach(sid => {
+          if (_mafiaLeaveGraceTimers.has(sid)) mafiaCancelLeaveGrace(sid);
+        });
+        _mafiaPresentSessions = fresh;
+        if (typeof mafiaRerender === 'function') mafiaRerender();
+      };
+      const onPresenceJoin = ({ key }) => {
+        if (!key) return;
+        _mafiaPresentSessions.add(key);
+        mafiaCancelLeaveGrace(key);
+      };
+      const onPresenceLeave = ({ key }) => {
+        if (!key) return;
+        mafiaStartLeaveGrace(key);
+      };
+
+      _mafiaChannelCode = code;
+      _mafiaChannelSessionId = mySid;
+      mafiaSyncChannel = window.sb
+        .channel('mafia_room:' + code, { config: { presence: { key: mySid || ('tab_' + Math.random()) } } })
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'mafia_rooms',
+          filter: 'code=eq.' + code,
+        }, (payload) => {
+          if (payload && payload.new && payload.new.state) {
+            const incomingRev = payload.new.state.revision || 0;
+            if (incomingRev >= (mafiaState.revision || 0)) {
+              Object.assign(mafiaState, payload.new.state);
+              mafiaRerender();
+            }
+          }
+        })
+        .on('presence', { event: 'sync'  }, onPresenceSync)
+        .on('presence', { event: 'join'  }, onPresenceJoin)
+        .on('presence', { event: 'leave' }, onPresenceLeave)
+        .subscribe(async (status) => {
+          if (status !== 'SUBSCRIBED' || _mafiaChannelCode !== code) return;
+          // Announce our presence the moment we're subscribed
+          try {
+            await mafiaSyncChannel.track({
+              user_id: mySid,
+              joined_at: Date.now(),
+            });
+          } catch(e){}
+          // Reconcile after SUBSCRIBED to catch updates that landed during the
+          // gap between initial fetch and subscription becoming live.
+          // DEBOUNCED — if mafiaLoadRoom just ran (<1.5s ago) the snapshot
+          // is already fresh and the realtime channel will deliver anything
+          // newer than that. Skipping the redundant fetch saves a full
+          // network round-trip on every Mafia lobby entry.
+          if (mafiaState.code) {
+            const sinceLastLoad = Date.now() - __mafiaLastLoadTs;
+            if (sinceLastLoad < 1500) return;
+            mafiaLoadRoom(mafiaState.code).then(loaded => { if (loaded) mafiaRerender(); });
+          }
+        });
+    }
+
+    // ----- Create fresh room (via universal RPC) -----
+    async function mafiaStateReset(code){
+      const sid = mafiaGetSessionId();
+      // First-claimant key: 'p1'. Other seats fill as 'p2'…'p8'.
+      const firstSeat = 'p1';
+      Object.keys(mafiaState).forEach(k => delete mafiaState[k]);
+      Object.assign(mafiaState, {
+        code: code,
+        phase: 'lobby',
+        hostId: sid,
+        narratorUid: null,
+        claimedBy: { [firstSeat]: sid },
+        aliveIds: [],
+        deadIds: [],
+        round: 0,
+        killTarget: null, saveTarget: null, detectiveTarget: null,
+        voteTally: {}, votedBy: {},
+        beatId: 'lobby',
+        winner: null, roleReveal: {},
+        closedByHost: false,
+        revision: 1,
+      });
+      mafiaMe.myId = firstSeat;
+      const snapshot = JSON.parse(JSON.stringify(mafiaState));
+      try {
+        await huddleCallRPC('huddle_create_room', {
+          p_table: 'mafia_rooms',
+          p_code: code,
+          p_initial_state: snapshot,
+        });
+      } catch(e){
+        console.warn('[Mafia] create_room RPC failed:', e && e.message);
+      }
+      try { huddlePersistLastRoom('mafia',code); } catch(e){}
+    }
+
+    // ----- URL helpers -----
+    function mafiaJoinUrl(code){
+      if (typeof joinUrl === 'function') return joinUrl(code, 'mafia');
+      const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+      return origin + '/?room=' + encodeURIComponent(code) + '&game=mafia';
+    }
+    function mafiaReadUrlRoom(){
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('room');
+        const game = params.get('game');
+        if (!code) return null;
+        if (game && game !== 'mafia') return null;
+        return code.toUpperCase().trim();
+      } catch(e){ return null; }
+    }
+    function mafiaSyncUrlToRoom(code){
+      if (!code) return;
+      try {
+        const newUrl = '/?room=' + encodeURIComponent(code) + '&game=mafia';
+        history.replaceState(history.state, '', newUrl);
+      } catch(e){}
+    }
+    function mafiaFindRecentRoomCode(){
+      try { return huddleReadLastRoom('mafia'); }
+      catch(e){ return null; }
+    }
+    function handleMafiaQrError(){
+      const fb = document.getElementById('mafia-room-qr-fallback');
+      if (fb) fb.classList.add('show');
+    }
+
+    // ----- Role mix lookup (must match huddle_mafia_start_game in SQL) -----
+    // Detective reinstated; minimum lowered from 6 → 5. Mirror of the SQL table
+    // in huddle_c2_mafia_detective_return.sql.
+    // The optional flags are consulted by Mafia Cards mode — when the host
+    // toggles any of them, the role queue is adjusted slot-for-slot so the
+    // total still equals player_count. Classic Mafia passes only includeDetective.
+    //   includeDetective: OFF → Detective slot becomes an extra Villager.
+    //   includeChild:     ON  → steals ONE Villager slot (Child plays as Villager
+    //                           but takes one player with them when they die).
+    //   includeLeader:    ON  → steals ONE Mafia slot (Godfather — appears
+    //                           innocent to the Detective; still on Mafia team).
+    // Mirror of the SQL in huddle_c2_mafia_optional_roles_v2.sql — keep these
+    // two formulas identical or the server will reject with role_count_mismatch.
+    function mafiaRoleMixFor(playerCount, includeDetective, includeChild, includeLeader){
+      if (includeDetective === undefined) includeDetective = true;
+      includeChild  = !!includeChild;
+      includeLeader = !!includeLeader;
+      const det = includeDetective ? 1 : 0;
+      let mafia, villager;
+      if      (playerCount === 5) { mafia = 1; villager = 2; }
+      else if (playerCount === 6) { mafia = 1; villager = 3; }
+      else if (playerCount === 7) { mafia = 2; villager = 3; }
+      else if (playerCount === 8) { mafia = 2; villager = 4; }
+      else return null;
+      if (!includeDetective) villager += 1;
+      const leader = (includeLeader && mafia > 0) ? 1 : 0;
+      if (leader) mafia -= 1;
+      const child = (includeChild && villager > 0) ? 1 : 0;
+      if (child) villager -= 1;
+      return { mafia, mafia_leader: leader, detective: det, doctor: 1, child, villager };
+    }
+
+    // ----- Computed helpers -----
+    function mafiaPlayerSeats(){
+      // Player seats = claimedBy keys whose value !== narratorUid.
+      const narr = mafiaState.narratorUid;
+      const out = [];
+      Object.entries(mafiaState.claimedBy || {}).forEach(([seatId, uid]) => {
+        if (!narr || uid !== narr) out.push(seatId);
+      });
+      // Stable order: by seat id (p1, p2, ...).
+      out.sort();
+      return out;
+    }
+    function mafiaSeatNameFor(seatId){
+      // Try the real claimant's profile first. The profile cache is fed
+      // by ensureClaimantProfiles() — see mafiaPrimeClaimantProfiles().
+      const uid = mafiaState.claimedBy && mafiaState.claimedBy[seatId];
+      if (uid) {
+        const profile = profileForClaim(uid);
+        if (profile) {
+          const name = claimDisplayName(profile, null);
+          if (name) return name;
+        }
+      }
+      // Fallback: "Player N" — used in the test lab (where seat UIDs are
+      // synthetic 'lab_p1' strings, not real auth.uid values) and during
+      // the brief window before the profiles cache lands for a real room.
+      const n = parseInt(seatId.replace(/^p/, ''), 10);
+      return t('mafia.playerN', { n: isNaN(n) ? '?' : n });
+    }
+
+    // Kick a profile fetch for every claimant in the current room. Called
+    // from the narrator dashboard + role card renders so the cache is
+    // populated quickly; ensureClaimantProfiles re-renders when data lands.
+    function mafiaPrimeClaimantProfiles(){
+      if (typeof ensureClaimantProfiles !== 'function') return;
+      const uids = mafiaState.claimedBy ? Object.values(mafiaState.claimedBy) : [];
+      ensureClaimantProfiles(uids, mafiaRerender);
+    }
+
+    async function openMafiaLobby(variant){
+      // Drop any seat we still hold in OTHER game lobbies before claiming
+      // one here — invariant: one user, one seat across all games.
+      try { huddleLeaveOtherGameSeats('mafia'); } catch(e){}
+      // Mafia is now Cards-only (the classic server-driven flow was removed).
+      // The variant argument is kept for backwards compat with old callers,
+      // but mafiaCardsMode is FORCED true regardless so no caller (URL room,
+      // realtime sync, etc.) can accidentally route to the deleted classic
+      // game screens.
+      mafiaCardsMode = true;
+      // Priority: ?room= in URL → cached lastRoom → fresh room.
+      const urlRoom = mafiaReadUrlRoom();
+      const existingCode = urlRoom || mafiaFindRecentRoomCode();
+
+      const authPromise = mafiaBootstrap();
+      const loadPromise = existingCode ? mafiaLoadRoom(existingCode) : Promise.resolve(false);
+      await authPromise;
+      const sessionId = mafiaGetSessionId();
+      const loaded = await loadPromise;
+
+      if (urlRoom && !loaded) {
+        try { history.replaceState(history.state, '', '/'); } catch(e){}
+        if (typeof showLobbyToast === 'function') {
+          try { showLobbyToast(t('lobby.joinFailed')); } catch(e){}
+        }
+        goTo('games');
+        return;
+      }
+
+      let cachedRoomGone = !!existingCode && !loaded;
+
+      if (loaded) {
+        const claimed = Object.entries(mafiaState.claimedBy || {}).find(([pid, sid]) => sid === sessionId);
+        mafiaMe.myId = claimed ? claimed[0] : null;
+        if (mafiaMe.myId) {
+          try { huddlePersistLastRoom('mafia',existingCode); } catch(e){}
+        } else if (urlRoom) {
+          try { huddlePersistLastRoom('mafia',existingCode); } catch(e){}
+        } else {
+          try { huddleClearLastRoom('mafia'); } catch(e){}
+          await mafiaStateReset(generateCode());
+          cachedRoomGone = true;
+        }
+        // Reconnect-stale check: if mid-game and we have no seat, bounce.
+        const inGamePhase = mafiaState.phase && mafiaState.phase !== 'lobby' && mafiaState.phase !== 'end';
+        if (inGamePhase && !mafiaMe.myId && mafiaState.narratorUid !== sessionId) {
+          if (typeof showLobbyToast === 'function') {
+            try { showLobbyToast(t('mafia.toastReconnectStale'), 4500); } catch(e){}
+          }
+          goTo('games');
+          return;
+        }
+      } else {
+        await mafiaStateReset(generateCode());
+      }
+
+      mafiaWireSync();
+      await mafiaAutoClaimIfNeeded();
+      mafiaSyncUrlToRoom(mafiaState.code);
+
+      // Pre-prime claimant profiles BEFORE the screen flips, not after the
+      // first render. The previous flow called mafiaPrimeClaimantProfiles
+      // from inside mafiaRenderLobby() (the very first render), which meant
+      // the user saw "Player 1 / Player 2" placeholders for 100-400ms while
+      // the profile batch fetch was in flight, then a re-render with real
+      // names. Kicking the fetch off here moves that latency in parallel
+      // with the screen paint — by the time mafiaRerender() runs below,
+      // profiles are often already cached and the first render shows real
+      // names. If they're not cached, the in-flight promise resolves moments
+      // later and triggers the same re-render (no regression). Fire-and-
+      // forget — don't await, we don't want to block the screen flip.
+      mafiaPrimeClaimantProfiles();
+
+      goTo('mafia-lobby');
+      document.getElementById('mafia-room-code').textContent = mafiaState.code;
+      const fb = document.getElementById('mafia-room-qr-fallback');
+      if (fb) fb.classList.remove('show');
+      if (typeof setRoomQrSrc === 'function' && typeof qrUrl === 'function') {
+        setRoomQrSrc(document.getElementById('mafia-room-qr'), qrUrl(mafiaJoinUrl(mafiaState.code)));
+      }
+
+      mafiaUpdateHowToTrigger();
+      mafiaRerender();
+
+      if (cachedRoomGone && typeof showLobbyToast === 'function') {
+        try { showLobbyToast(t('lobby.previousRoomGone')); } catch(e){}
+      }
+    }
+
+    async function mafiaAutoClaimIfNeeded(){
+      const sid = mafiaGetSessionId();
+      if (!sid) return;
+      // Already claimed? Done.
+      const existingSeat = Object.entries(mafiaState.claimedBy || {}).find(([pid, s]) => s === sid);
+      if (existingSeat) {
+        mafiaMe.myId = existingSeat[0];
+        return;
+      }
+      // Find lowest free seat id from p1..p8.
+      for (let n = 1; n <= 8; n++) {
+        const seatId = 'p' + n;
+        if (!mafiaState.claimedBy[seatId]) {
+          try {
+            const newState = await huddleCallRPC('huddle_claim_seat', {
+              p_table: 'mafia_rooms',
+              p_code: mafiaState.code,
+              p_player_id: seatId,
+            });
+            if (newState) {
+              Object.assign(mafiaState, newState);
+              mafiaMe.myId = seatId;
+            }
+          } catch(e){
+            console.warn('[Mafia] auto-claim failed:', e && e.message);
+          }
+          return;
+        }
+      }
+    }
+
+    // ----- Render dispatcher -----
+    // Decides which screen to be on based on (phase, my-role, alive/dead),
+    // navigates if needed, then re-renders that screen's content. Called on
+    // every Realtime state change AND when the user takes a local action.
+    function mafiaCurrentScreen(){
+      const s = document.querySelector('.screen.active');
+      if (!s) return null;
+      const id = s.id || '';
+      if (!id.startsWith('screen-mafia-')) return null;
+      return id.replace('screen-', '');
+    }
+    function mafiaIsOnMafiaScreen(){ return !!mafiaCurrentScreen(); }
+
+    function mafiaRerender(){
+      // Only dispatch while a Mafia screen is active — otherwise the user
+      // navigated away (e.g. tapped back) and we shouldn't re-route them.
+      if (!mafiaIsOnMafiaScreen()) return;
+      // Track lobby → active transitions so the narrator dashboard knows
+      // whether this tab was present when the game started. If we missed
+      // the transition (tab closed/refreshed mid-game), the narrator-side
+      // local dashboard state is lost and the renderer shows a clear
+      // "Game ended" overlay instead of a misleading empty dashboard.
+      mafiaCardsTrackPhase();
+      // Sync the local Cards-mode flag from room state. The host sets it
+      // when they tap the Mafia Cards tile (local true), AND the server
+      // writes state.variant='cards' on start_game (so friends sync it
+      // via realtime). Once either signal is true for this room, every
+      // render here picks it up. Reset on lobby return (variant absent).
+      // Mafia is Cards-only — force the flag regardless of stored state.
+      mafiaCardsMode = true;
+
+      const sid = mafiaGetSessionId();
+      const isNarrator = !!(mafiaState.narratorUid && mafiaState.narratorUid === sid);
+      const phase = mafiaState.phase || 'lobby';
+
+      // Mafia is Cards-only. Three routes:
+      //   lobby phase   → shared mafia-lobby screen
+      //   narrator      → narrator dashboard (cheat sheet + script)
+      //   other players → secret role card
+      if (phase === 'lobby') {
+        if (mafiaCurrentScreen() !== 'mafia-lobby') goTo('mafia-lobby');
+        mafiaRenderLobby();
+        return;
+      }
+      if (isNarrator) {
+        if (mafiaCurrentScreen() !== 'mafia-cards-game') goTo('mafia-cards-game');
+        if (!mafiaMe.narratorRoles) mafiaFetchNarratorState();
+        mafiaCardsRenderNarrator();
+        return;
+      }
+      if (mafiaCurrentScreen() !== 'mafia-cards-role') goTo('mafia-cards-role');
+      mafiaCardsRenderRole();
+    }
+
+
+    // ----- Fetch & cache my role -----
+    // Called once after game starts (mafiaCardsRenderRole schedules it on
+    // first paint if mafiaMe.myRole is null). Survives refresh because the
+    // RPC re-derives from the server-side roles table.
+    let _mafiaRoleFetchPromise = null;
+    async function mafiaFetchMyRole(force){
+      if (mafiaMe.myRole && !force) return mafiaMe.myRole;
+      if (_mafiaRoleFetchPromise) return _mafiaRoleFetchPromise;
+      _mafiaRoleFetchPromise = (async () => {
+        try {
+          const result = await huddleCallRPC('huddle_mafia_get_my_role', {
+            p_code: mafiaState.code,
+          });
+          // RPC contract (from huddle_c2_mafia.sql):
+          //   { role: 'mafia'|'detective'|'doctor'|'villager',
+          //     teammates: ['p3','p7'] }   // only populated for mafia
+          if (result && result.role) {
+            mafiaMe.myRole = result.role;
+            mafiaMe.myTeammates = Array.isArray(result.teammates) ? result.teammates : [];
+            // Re-dispatch through mafiaRerender so the dispatcher routes
+            // to mafiaCardsRenderRole with the freshly-cached role.
+            mafiaRerender();
+          } else {
+            // No role for this caller — likely they're the narrator or not seated.
+            mafiaMe.myRole = null;
+          }
+        } catch(e){
+          console.warn('[Mafia] get_my_role failed:', e && e.message);
+        } finally {
+          _mafiaRoleFetchPromise = null;
+        }
+        return mafiaMe.myRole;
+      })();
+      return _mafiaRoleFetchPromise;
+    }
+
+    // ----- Render: role card (Phase 4 primary screen for non-narrator players) -----
+    let _mafiaRoleHidden = false;
+    // ===== Mafia Cards — narrator dashboard (Phase 4) ====================
+    // Local-only state. Reset when a new Mafia Cards game starts (see
+    // mafiaStartGame). Never written to SQL — the narrator IS the source
+    // of truth at the table.
+    let mafiaCardsLocalPhase = 'night';            // 'night' | 'day'
+    const mafiaCardsDeadPlayers = new Set();       // seatIds marked dead by narrator
+
+    // True once THIS tab observed the game transition from lobby → active
+    // (either because the user started the game here, or because realtime
+    // delivered the transition while the tab was open). If a narrator
+    // closes the tab and reopens — or refreshes mid-game — we miss the
+    // transition, flag stays false, and the "Game ended" overlay surfaces
+    // instead of a lying empty-dashboard. The local dashboard state (phase
+    // pill, dead set) is in-memory only by design, per owner direction.
+    let _mafiaCardsGameOwnedInThisTab = false;
+    let _mafiaCardsPrevPhase = null;
+    function mafiaCardsTrackPhase(){
+      const cur = (typeof mafiaState !== 'undefined' && mafiaState && mafiaState.phase) ? mafiaState.phase : 'lobby';
+      // Observed transition out of lobby → we are present for this game.
+      if (_mafiaCardsPrevPhase === 'lobby' && cur !== 'lobby') {
+        _mafiaCardsGameOwnedInThisTab = true;
+      }
+      // Back to lobby (new round or End game) → clear so the next round
+      // starts fresh without a stale "ended" overlay if narrator refreshes
+      // before tapping Start.
+      if (cur === 'lobby') _mafiaCardsGameOwnedInThisTab = false;
+      _mafiaCardsPrevPhase = cur;
+    }
+
+    function mafiaCardsResetNarratorLocalState(){
+      mafiaCardsLocalPhase = 'night';
+      mafiaCardsDeadPlayers.clear();
+      // Reset every player's local reveal state too — a new game means
+      // their role is hidden again until they tap Reveal Role.
+      mafiaCardsRoleRevealed = false;
+      // Reset round-progress signal so the script panel defaults back to
+      // "opening expanded, every-round collapsed" for the new game.
+      mafiaCardsHasSeenDay = false;
+    }
+
+    function mafiaCardsTogglePhase(){
+      mafiaCardsLocalPhase = (mafiaCardsLocalPhase === 'night') ? 'day' : 'night';
+      // The first time the narrator flips to Day, we know the opening
+      // night is done. Used by the script render to auto-collapse the
+      // "READ ONCE" section and auto-expand the "EVERY ROUND" sections.
+      if (mafiaCardsLocalPhase === 'day') mafiaCardsHasSeenDay = true;
+      mafiaCardsRenderNarrator();
+    }
+
+    function mafiaCardsToggleDead(seatId){
+      if (!seatId) return;
+      if (mafiaCardsDeadPlayers.has(seatId)) {
+        mafiaCardsDeadPlayers.delete(seatId);
+      } else {
+        mafiaCardsDeadPlayers.add(seatId);
+      }
+      mafiaCardsRenderNarrator();
+    }
+
+    async function mafiaCardsEndGame(){
+      if (!confirm(t('mafiaCards.narrator.endGameConfirm'))) return;
+      // Reset the narrator's local dashboard state immediately (phase pill,
+      // dead set, round progress). These are client-only so we can do them
+      // before/regardless of the server call.
+      mafiaCardsResetNarratorLocalState();
+      // Clear the narrator's role-map cache so the next start_game re-fetches.
+      mafiaMe.narratorRoles = null;
+      mafiaMe.myRole = null;
+      mafiaMe.myTeammates = [];
+      // Call the server reset so every connected phone (players + narrator)
+      // hears about the lobby reset via realtime and routes back together.
+      try {
+        const newState = await huddleCallRPC('huddle_mafia_reset_to_lobby', {
+          p_code: mafiaState.code,
+        });
+        if (newState) Object.assign(mafiaState, newState);
+      } catch(e){
+        // If the RPC fails we still want the narrator to leave the dashboard.
+        // Log and fall through — local state is already reset.
+        console.warn('[Mafia] reset_to_lobby failed:', e && e.message);
+      }
+      mafiaRerender();
+    }
+
+    // Reference-script content. Each section is a NESTED collapsible inside
+    // the "What do I say?" panel, with a "kind" label (READ ONCE / EVERY
+    // ROUND / ENDGAME) prominently displayed so the narrator can see at a
+    // glance which lines are one-time vs repeating. Defaults to open in
+    // round 1 (opening) or after round 1 (every-round + endgame) — see
+    // mafiaCardsHasSeenDay for the round-progress signal.
+    const MAFIA_CARDS_SCRIPT = [
+      {
+        id: 'opening',
+        titleKey: 'mafiaCards.script.openingTitle',
+        kindKey: 'mafiaCards.script.kindOnce',
+        defaultOpenWhen: 'round1',
+        lines: [
+          { key: 'mafia.script.opening.night1Open.text' },
+          { key: 'mafia.script.opening.night1MafiaMeet.text' },
+          { key: 'mafia.script.opening.night1MafiaSleep.text' },
+          { key: 'mafia.script.opening.day0Morning.text' },
+        ],
+      },
+      {
+        id: 'round-loop',
+        titleKey: 'mafiaCards.script.roundLoopTitle',
+        kindKey: 'mafiaCards.script.kindEveryRound',
+        defaultOpenWhen: 'afterRound1',
+        lines: [
+          { type: 'subheading', textKey: 'mafiaCards.script.subNight' },
+          { key: 'mafia.script.middle.nightOpen.text' },
+          { key: 'mafia.script.middle.mafiaWake.text' },
+          { key: 'mafia.script.middle.mafiaSleep.text' },
+          { key: 'mafia.script.middle.detectiveWake.text', hintKey: 'mafiaCards.script.detectiveHint', requiresRole: 'detective' },
+          { key: 'mafia.script.middle.leaderHint.text',     requiresRole: 'mafiaLeader' },
+          { key: 'mafia.script.middle.detectiveSleep.text', requiresRole: 'detective' },
+          { key: 'mafia.script.middle.doctorWake.text' },
+          { key: 'mafia.script.middle.doctorSleep.text' },
+          { key: 'mafia.script.middle.childNightDeath.text', requiresRole: 'child' },
+          { type: 'subheading', textKey: 'mafiaCards.script.subDay' },
+          { key: 'mafia.script.middle.dayReveal.text', hintKey: 'mafiaCards.script.dayRevealHint' },
+          { key: 'mafia.script.middle.dayDiscuss.text' },
+          { key: 'mafiaCards.script.voteCardsLine' },
+          { key: 'mafia.script.middle.childVoteDeath.text', requiresRole: 'child' },
+        ],
+      },
+      {
+        id: 'endgame',
+        titleKey: 'mafiaCards.script.endgameTitle',
+        kindKey: 'mafiaCards.script.kindEndgame',
+        defaultOpenWhen: 'never',
+        lines: [
+          { key: 'mafiaCards.script.endgameTownWins' },
+          { key: 'mafiaCards.script.endgameMafiaWins' },
+        ],
+      },
+    ];
+
+    // Narrator-only rules — three focused rules with detailed explanations.
+    // bodyKey can include <strong> tags for emphasis on key phrases.
+    const MAFIA_CARDS_NARRATOR_RULES = [
+      { titleKey: 'mafiaCards.rules.r1.title', bodyKey: 'mafiaCards.rules.r1.body' },
+      { titleKey: 'mafiaCards.rules.r2.title', bodyKey: 'mafiaCards.rules.r2.body' },
+      { titleKey: 'mafiaCards.rules.r3.title', bodyKey: 'mafiaCards.rules.r3.body' },
+    ];
+
+    // Tracks whether the narrator has flipped to Day at least once. Used to
+    // decide default open/closed state for script subsections: round 1 →
+    // opening expanded; round 2+ → every-round sections expanded, opening
+    // collapsed. Reset on every new game start.
+    let mafiaCardsHasSeenDay = false;
+
+    function mafiaCardsRenderRules(){
+      const list = document.getElementById('mafia-cards-rules-list');
+      if (!list) return;
+      list.innerHTML = MAFIA_CARDS_NARRATOR_RULES.map(r =>
+        '<li class="mafia-cards-rules-item">'
+          + '<div class="mafia-cards-rules-item-title">' + t(r.titleKey) + '</div>'
+          + '<div class="mafia-cards-rules-item-body">' + t(r.bodyKey) + '</div>'
+        + '</li>'
+      ).join('');
+    }
+
+    function mafiaCardsRenderScript(){
+      const body = document.getElementById('mafia-cards-script-body');
+      if (!body) return;
+      const detectiveActive = mafiaIsDetectiveActive();
+      const childActive     = mafiaIsChildActive();
+      const leaderActive    = mafiaIsLeaderActive();
+      // Subheading lines always pass; cue lines are filtered by requiresRole.
+      const lineActive = (line) => {
+        if (line.type === 'subheading') return true;
+        if (line.requiresRole === 'detective')  return detectiveActive;
+        if (line.requiresRole === 'child')      return childActive;
+        if (line.requiresRole === 'mafiaLeader')return leaderActive;
+        return true;
+      };
+      // Decide default open state: opening is auto-collapsed once Day has
+      // been triggered at least once; every-round sections auto-open at
+      // that point. Narrator can manually override either way.
+      const inRound1 = !mafiaCardsHasSeenDay;
+      const shouldOpen = (section) => {
+        if (section.defaultOpenWhen === 'round1') return inRound1;
+        if (section.defaultOpenWhen === 'afterRound1') return !inRound1;
+        return false; // 'never' = always collapsed by default
+      };
+      const renderLine = (line) => {
+        if (line.type === 'subheading') {
+          return '<div class="mafia-cards-script-subheading">' + t(line.textKey) + '</div>';
+        }
+        return '<div class="mafia-cards-script-line">'
+          + t(line.key)
+          + (line.hintKey ? '<em>' + t(line.hintKey) + '</em>' : '')
+        + '</div>';
+      };
+      body.innerHTML = MAFIA_CARDS_SCRIPT.map(section => {
+        const activeLines = section.lines.filter(lineActive);
+        // If everything left is just subheadings (no real cues), skip the
+        // section entirely. Otherwise render.
+        const hasRealCues = activeLines.some(l => l.type !== 'subheading');
+        if (!hasRealCues) return '';
+        const openAttr = shouldOpen(section) ? ' open' : '';
+        return '<details class="mafia-cards-script-section"' + openAttr + '>'
+          + '<summary class="mafia-cards-script-section-summary">'
+          +   '<span class="mafia-cards-script-section-kind">' + t(section.kindKey) + '</span>'
+          +   '<span class="mafia-cards-script-section-title">' + t(section.titleKey) + '</span>'
+          +   '<span class="mafia-cards-script-section-chevron" aria-hidden="true">▾</span>'
+          + '</summary>'
+          + '<div class="mafia-cards-script-section-lines">'
+          +   activeLines.map(renderLine).join('')
+          + '</div>'
+        + '</details>';
+      }).join('');
+    }
+
+    function mafiaCardsRenderNarrator(){
+      // "Game ended" guard — if this tab missed the lobby → active
+      // transition, the in-memory dashboard state (phase pill, dead set,
+      // round progress) is gone. Show the ended overlay and hide the
+      // dashboard panels so the narrator doesn't act on stale defaults.
+      // The End game button stays visible — it's the only way out.
+      const endedOverlay = document.getElementById('mafia-cards-ended-overlay');
+      const _isLost = !_mafiaCardsGameOwnedInThisTab
+                      && (mafiaState && mafiaState.phase && mafiaState.phase !== 'lobby');
+      if (endedOverlay) endedOverlay.hidden = !_isLost;
+      ['mafia-cards-narrator-phase',
+       'mafia-cards-players-panel',
+       'mafia-cards-rules-panel',
+       'mafia-cards-script-details'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = _isLost ? 'none' : '';
+      });
+      if (_isLost) return; // skip dashboard work — overlay is the whole UI
+
+      // Phase pill
+      const phaseEmoji = document.getElementById('mafia-cards-narrator-phase-emoji');
+      const phaseLabel = document.getElementById('mafia-cards-narrator-phase-label');
+      if (phaseEmoji && phaseLabel) {
+        const isNight = mafiaCardsLocalPhase === 'night';
+        phaseEmoji.textContent = isNight ? '🌙' : '☀️';
+        phaseLabel.textContent = t(isNight ? 'mafiaCards.narrator.phaseNight' : 'mafiaCards.narrator.phaseDay');
+        phaseLabel.setAttribute('data-i18n', isNight ? 'mafiaCards.narrator.phaseNight' : 'mafiaCards.narrator.phaseDay');
+      }
+
+      // Alive/out stats chip — uses the local dead set + the narrator's
+      // role map total to compute live counts. Hidden until roles load
+      // (no point showing "0 alive" during the brief fetch window).
+      const statsEl = document.getElementById('mafia-cards-narrator-stats');
+      if (statsEl) {
+        const allSeats = mafiaMe.narratorRoles ? Object.keys(mafiaMe.narratorRoles) : [];
+        if (allSeats.length === 0) {
+          statsEl.textContent = '';
+        } else {
+          const dead = allSeats.filter(s => mafiaCardsDeadPlayers.has(s)).length;
+          const alive = allSeats.length - dead;
+          statsEl.innerHTML = t('mafiaCards.narrator.statsAliveOut', {
+            alive: '<b>' + alive + '</b>',
+            out:   '<b>' + dead + '</b>',
+          });
+        }
+      }
+
+      // Roster
+      const roster = document.getElementById('mafia-cards-narrator-roster');
+      if (!roster) return;
+      const roleMap = mafiaMe.narratorRoles;
+      if (!roleMap) {
+        // Not loaded yet — show loading state and trigger a fetch.
+        roster.innerHTML = '<div class="mafia-cards-narrator-loading">' + t('mafiaCards.narrator.loadingRoles') + '</div>';
+        mafiaFetchNarratorState();
+        return;
+      }
+      // Cheat-sheet labels. Mafia Leader uses its OWN name so the narrator
+      // can spot them at a glance — critical for the Godfather behavior
+      // (narrator must give thumbs-DOWN when the Detective investigates them).
+      const ROLE_META = {
+        mafia:        { emoji:'🔪',  nameKey:'mafia.rules.role.mafia.name' },
+        mafia_leader: { emoji:'🎩',  nameKey:'mafia.cheatSheet.mafiaLeader' },
+        doctor:       { emoji:'🩺',  nameKey:'mafia.rules.role.doctor.name' },
+        detective:    { emoji:'🕵️', nameKey:'mafia.rules.role.detective.name' },
+        child:        { emoji:'👶',  nameKey:'mafia.rules.role.child.name' },
+        villager:     { emoji:'👤',  nameKey:'mafia.rules.role.villager.name' },
+      };
+      const seats = Object.keys(roleMap).sort(); // p1, p2, ... — stable order
+      const rows = seats.map(seatId => {
+        const role = roleMap[seatId];
+        const meta = ROLE_META[role] || ROLE_META.villager;
+        const isDead = mafiaCardsDeadPlayers.has(seatId);
+        const name = mafiaSeatNameFor(seatId);
+        return '<button type="button" class="mafia-cards-narrator-row' + (isDead ? ' is-dead' : '') + '" onclick="mafiaCardsToggleDead(\'' + seatId + '\')">'
+          + '<span class="mafia-cards-narrator-row-name">' + name + '</span>'
+          + '<span class="mafia-cards-narrator-row-emoji">' + meta.emoji + '</span>'
+          + '<span class="mafia-cards-narrator-row-role">' + t(meta.nameKey) + '</span>'
+          + '<span class="mafia-cards-narrator-row-mark" aria-hidden="true">✗</span>'
+        + '</button>';
+      }).join('');
+      roster.innerHTML = rows || '<div class="mafia-cards-narrator-loading">' + t('mafiaCards.narrator.loadingRoles') + '</div>';
+
+      // Narrator rules + reference script panels. Both render even when
+      // collapsed so the content is ready the moment the narrator opens
+      // the <details>.
+      mafiaCardsRenderRules();
+      mafiaCardsRenderScript();
+      // Prime the profiles cache so the cheat sheet shows real names
+      // ("Ahmed") instead of "Player 3". No-op in lab mode (synthetic UIDs).
+      mafiaPrimeClaimantProfiles();
+    }
+
+    // ===== Mafia Cards — player role screen (full-screen reveal) =========
+    // Default: HIDDEN. Player taps "Reveal Role" to see their role + power
+    // (mirrors classic Mafia layout). Toggle again with "Hide Role". Local
+    // reveal state is reset when a new game starts.
+    let mafiaCardsRoleRevealed = false;
+
+    function mafiaCardsToggleRoleReveal(){
+      // Don't toggle into the revealed state until the role data is loaded.
+      if (!mafiaCardsRoleRevealed && !mafiaMe.myRole) {
+        mafiaFetchMyRole();
+        return;
+      }
+      mafiaCardsRoleRevealed = !mafiaCardsRoleRevealed;
+      mafiaCardsRenderRole();
+    }
+
+    function mafiaCardsRenderRole(){
+      const role = mafiaMe.myRole;
+      if (!role) {
+        // Role not loaded yet — kick a fetch; render again when it lands
+        // (mafiaFetchMyRole calls mafiaRerender on success).
+        mafiaFetchMyRole();
+        return;
+      }
+      // Role-specific copy. Reuses the classic Mafia roleCard i18n keys so
+      // the wording stays identical to the classic role screen.
+      const ROLE_INFO = {
+        mafia:        { emoji:'🔪',  titleKey:'mafia.roleCard.mafia.title',        descKey:'mafia.roleCard.mafia.desc' },
+        mafia_leader: { emoji:'🎩',  titleKey:'mafia.roleCard.mafiaLeader.title',  descKey:'mafia.roleCard.mafiaLeader.desc' },
+        doctor:       { emoji:'🩺',  titleKey:'mafia.roleCard.doctor.title',       descKey:'mafia.roleCard.doctor.desc' },
+        detective:    { emoji:'🕵️', titleKey:'mafia.roleCard.detective.title',    descKey:'mafia.roleCard.detective.desc' },
+        child:        { emoji:'👶',  titleKey:'mafia.roleCard.child.title',        descKey:'mafia.roleCard.child.desc' },
+        villager:     { emoji:'👤',  titleKey:'mafia.roleCard.villager.title',     descKey:'mafia.roleCard.villager.desc' },
+      };
+      const info = ROLE_INFO[role] || ROLE_INFO.villager;
+
+      // Populate the shown-state content (emoji, title, description, teammates).
+      const emojiEl = document.getElementById('mafia-cards-role-emoji');
+      const titleEl = document.getElementById('mafia-cards-role-title');
+      const descEl  = document.getElementById('mafia-cards-role-desc');
+      const teammatesEl = document.getElementById('mafia-cards-role-teammates');
+      if (emojiEl) emojiEl.textContent = info.emoji;
+      if (titleEl) titleEl.textContent = t(info.titleKey);
+      if (descEl)  descEl.textContent  = t(info.descKey);
+      if (teammatesEl) {
+        // Mafia Leader is on the Mafia team — they see (and are seen as) a
+        // teammate by regular Mafia. Server populates teammates for both roles.
+        const isMafiaTeam = (role === 'mafia' || role === 'mafia_leader');
+        if (isMafiaTeam && Array.isArray(mafiaMe.myTeammates) && mafiaMe.myTeammates.length > 0) {
+          const names = mafiaMe.myTeammates.map(mafiaSeatNameFor).join(' · ');
+          teammatesEl.innerHTML =
+            '<span class="mafia-cards-role-teammates-label">' + t('mafia.roleCard.teammatesLabel') + '</span>' + names;
+          teammatesEl.hidden = false;
+        } else {
+          teammatesEl.hidden = true;
+        }
+      }
+
+      // Toggle visibility of hidden vs shown state.
+      const hiddenState = document.getElementById('mafia-cards-role-hidden-state');
+      const shownState  = document.getElementById('mafia-cards-role-shown-state');
+      if (hiddenState) hiddenState.hidden = mafiaCardsRoleRevealed;
+      if (shownState)  shownState.hidden  = !mafiaCardsRoleRevealed;
+
+      // Toggle button label.
+      const labelEl = document.getElementById('mafia-cards-role-toggle-label');
+      if (labelEl) {
+        const key = mafiaCardsRoleRevealed ? 'mafiaCards.role.hideBtn' : 'mafiaCards.role.revealBtn';
+        labelEl.textContent = t(key);
+        labelEl.setAttribute('data-i18n', key);
+      }
+    }
+
+
+
+    // ----- Narrator role cache -----
+    // The narrator needs to know roles for the day-reveal copy ("X was killed,
+    // they were a Y") and for the end-game role reveal. Fetched once via
+    // huddle_mafia_get_narrator_state and cached in mafiaMe.narratorRoles.
+    // Players never call this — RPC rejects them with not_narrator.
+    // De-duped in-flight promise so rapid rerenders only spawn one fetch.
+    // Captures the room code at fetch-time and only commits the cache if
+    // we're still in the same room when the promise resolves (prevents an
+    // old-room fetch from contaminating a new room after a regenerate/replay).
+    let _mafiaNarratorStateFetch = null;
+    async function mafiaFetchNarratorState(force){
+      if (!force && mafiaMe.narratorRoles) return mafiaMe.narratorRoles;
+      if (_mafiaNarratorStateFetch) return _mafiaNarratorStateFetch;
+      const fetchForCode = mafiaState.code;
+      _mafiaNarratorStateFetch = (async () => {
+        try {
+          const result = await huddleCallRPC('huddle_mafia_get_narrator_state', {
+            p_code: fetchForCode,
+          });
+          // Stale guard: only commit the cache if the room code hasn't changed.
+          if (result && result.roles && mafiaState.code === fetchForCode) {
+            mafiaMe.narratorRoles = result.roles;
+            // Re-render now that we have role data — day-reveal copy and
+            // end-game reveal both depend on this map.
+            mafiaRerender();
+            return result.roles;
+          }
+        } catch(e){
+          console.warn('[Mafia] get_narrator_state failed:', e && e.message);
+        } finally {
+          _mafiaNarratorStateFetch = null;
+        }
+        return null;
+      })();
+      return _mafiaNarratorStateFetch;
+    }
+
+
+    function mafiaRenderLobby(){
+      mafiaUpdateLobbyTitle();
+      mafiaRenderNarratorCard();
+      mafiaRenderSeats();
+      mafiaRenderRoleMix();
+      mafiaRenderOptionalRoles();
+      mafiaRenderStartButton();
+      mafiaRenderHeaderActions();
+      // Prime profile names so seat tiles show real names rather than "Player N".
+      mafiaPrimeClaimantProfiles();
+    }
+
+    function mafiaRenderNarratorCard(){
+      const card = document.getElementById('mafia-narrator-card');
+      const titleEl = document.getElementById('mafia-narrator-title');
+      const subEl = document.getElementById('mafia-narrator-sub');
+      const statusEl = document.getElementById('mafia-narrator-status');
+      if (!card) return;
+      const sid = mafiaGetSessionId();
+      const isHost = mafiaState.hostId === sid;
+      const narratorUid = mafiaState.narratorUid;
+      card.classList.remove('claimed', 'claimed-by-me');
+
+      // "Needs attention" pulse — when the lobby has enough players to start
+      // (5-8) AND the host hasn't picked a narrator yet, the narrator card
+      // is the ONLY thing blocking Start. Without this nudge users scroll
+      // past the picker, tap a dim Start button, and have no idea why it
+      // does nothing. Only pulse for the host (guests can't pick anyway).
+      const _playerCount = (typeof mafiaPlayerSeats === 'function') ? mafiaPlayerSeats().length : 0;
+      const _narratorIsBlocker = !narratorUid && isHost && _playerCount >= 5 && _playerCount <= 8;
+      card.classList.toggle('needs-attention', _narratorIsBlocker);
+
+      if (!narratorUid) {
+        // Unfilled
+        titleEl.textContent = isHost
+          ? t('mafia.narratorNotSet')
+          : t('mafia.narratorNotSetGuest');
+        subEl.textContent = t('mafia.narratorSub');
+        statusEl.textContent = '';
+        card.disabled = !isHost;
+      } else {
+        // Find which seat the narrator owns to display their seat name.
+        const narratorSeat = Object.entries(mafiaState.claimedBy || {})
+          .find(([pid, uid]) => uid === narratorUid);
+        const narratorName = narratorSeat ? mafiaSeatNameFor(narratorSeat[0]) : t('mafia.unknownPlayer');
+        titleEl.textContent = narratorName;
+        subEl.textContent = t('mafia.narratorAssignedSub');
+        statusEl.textContent = (narratorUid === sid)
+          ? t('mafia.narratorIsYou')
+          : t('mafia.narratorTagline');
+        card.classList.add('claimed');
+        if (narratorUid === sid) card.classList.add('claimed-by-me');
+        card.disabled = !isHost; // host can re-pick
+      }
+    }
+
+    function mafiaRenderSeats(){
+      const grid = document.getElementById('mafia-seats');
+      const hint = document.getElementById('mafia-seats-hint');
+      if (grid && huddleLobbyHydrating(mafiaState && mafiaState.code)) {
+        grid.innerHTML = huddleLobbySkeletonHTML(8);
+        return;
+      }
+      if (!grid) return;
+      const sid = mafiaGetSessionId();
+      const narratorUid = mafiaState.narratorUid;
+
+      // Render 8 slots (max supported player count). Each slot shows either
+      // a claim/invite tile or a claimed player.
+      const html = [];
+      for (let n = 1; n <= 8; n++) {
+        const seatId = 'p' + n;
+        const uid = mafiaState.claimedBy[seatId];
+        const isNarrator = uid && narratorUid && uid === narratorUid;
+        const isMe = uid && uid === sid;
+        if (!uid) {
+          // Empty seat → render an Invite tile (not a claim button). The host
+          // is auto-claimed on entry, so tapping an empty seat used to *switch*
+          // their seat instead of doing anything useful. Now it opens the
+          // shared lobby invite sheet so the seat gets filled by a real friend.
+          html.push(
+            `<button class="mafia-seat mafia-seat-invite" type="button" onclick="openLobbyInviteSheet('mafia')" data-empty="1">
+               <div class="mafia-seat-invite-icon">+</div>
+               <div class="mafia-seat-info">
+                 <div class="mafia-seat-name">${t('mafia.inviteFriend')}</div>
+                 <div class="mafia-seat-status">${t('mafia.emptySeat')}</div>
+               </div>
+             </button>`
+          );
+        } else {
+          const cls = ['mafia-seat'];
+          if (isMe) cls.push('claimed-by-me');
+          if (isNarrator) cls.push('is-narrator');
+          // Resolve avatar from the claimant's profile (same pattern as
+          // Hot Seat / Chameleon / Liar's Cup lobbies) so joined players
+          // are visually identified by their chosen symbol + colour, not
+          // just by name. Falls back to deterministicAvatar(uid) so the
+          // tile shows SOMETHING even before the profile cache lands.
+          let avatarData;
+          if (isMe && myProfile && myProfile.avatar) {
+            avatarData = myProfile.avatar;
+          } else {
+            const profile = (typeof profileForClaim === 'function') ? profileForClaim(uid) : null;
+            avatarData = (profile && profile.avatar) ? profile.avatar : deterministicAvatar(uid);
+          }
+          const avatar = avatarHTML(avatarData, 32, { fallback: String(n) });
+          html.push(
+            `<button class="${cls.join(' ')}" type="button" disabled>
+               ${avatar}
+               <div class="mafia-seat-info">
+                 <div class="mafia-seat-name">${mafiaSeatNameFor(seatId)}</div>
+                 <div class="mafia-seat-status">${
+                   isNarrator ? t('mafia.statusNarrator')
+                     : (isMe ? t('mafia.statusYou') : t('mafia.statusClaimed'))
+                 }</div>
+               </div>
+             </button>`
+          );
+        }
+      }
+      grid.innerHTML = html.join('');
+      // Re-parse the freshly-rendered avatar symbols so twemoji swaps them
+      // into centered SVGs (matches the Hot Seat / Liar / Chameleon lobbies).
+      // No-op when the twemoji CDN is unreachable — native glyphs stay.
+      if (typeof parseEmoji === 'function') parseEmoji(grid);
+
+      // Hint text below the grid
+      const playerCount = mafiaPlayerSeats().length;
+      const narratorSet = !!narratorUid;
+      let hintText = '';
+      if (playerCount < 5) {
+        const needed = 5 - playerCount;
+        hintText = t('mafia.hintNeedMorePlayers', { n: needed });
+      } else if (!narratorSet) {
+        hintText = t('mafia.hintNeedNarrator');
+      } else if (playerCount > 8) {
+        // Shouldn't happen (only 8 seats) but defensive.
+        hintText = t('mafia.hintTooMany');
+      } else {
+        hintText = t('mafia.hintReady', { n: playerCount });
+      }
+      if (hint) hint.textContent = hintText;
+
+      // Keep the shared invite sheet fresh if it's open (a friend may have
+      // just joined, so their tile should flip to "Joined").
+      if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen('mafia');
+    }
+
+    function mafiaRenderRoleMix(){
+      const row = document.getElementById('mafia-rolemix-row');
+      if (!row) return;
+      const count = mafiaPlayerSeats().length;
+      const opt = mafiaGetOptionalRoles();
+      const includeDetective = mafiaIsDetectiveActive();
+      const mix = mafiaRoleMixFor(count, includeDetective, opt.child, opt.mafiaLeader);
+      if (!mix) {
+        row.innerHTML = `<div class="mafia-rolemix-empty">${t('mafia.rolemixWaiting')}</div>`;
+        return;
+      }
+      // Only render pills whose count > 0 so the row stays compact when
+      // optional roles are off. Order: Mafia, Mafia Leader, Detective, Doctor,
+      // Child, Villager — keeps team groupings adjacent.
+      const allPills = [
+        ['mafia.role.mafia',        mix.mafia,        '🔪'],
+        ['mafia.role.mafiaLeader',  mix.mafia_leader, '🎩'],
+        ['mafia.role.detective',    mix.detective,    '🕵️'],
+        ['mafia.role.doctor',       mix.doctor,       '🩺'],
+        ['mafia.role.child',        mix.child,        '👶'],
+        ['mafia.role.villager',     mix.villager,     '👤'],
+      ];
+      row.innerHTML = allPills
+        .filter(([, n]) => n > 0)
+        .map(([key, n, emoji]) =>
+          `<span class="mafia-rolemix-pill"><span class="count">${n}</span> ${emoji} ${t(key)}</span>`
+        ).join('');
+    }
+
+    // ===== Optional roles (UI-only — no game logic yet) ====================
+    // Toggles persist host-side in localStorage. They do NOT sync to other
+    // phones and they do NOT affect role assignment yet. When we wire the
+    // gameplay phase, this state will move to room state (synced via SQL).
+    const MAFIA_OPTIONAL_KEY = 'huddle.mafia.optionalRoles';
+    const MAFIA_OPTIONAL_ROLES = [
+      // Detective is OFF by default in Mafia Cards (host opts in). When on:
+      // role is dealt + narrator script includes Detective cues. Only shown
+      // in Cards mode — classic Mafia keeps Detective as a standard role.
+      { id: 'detective',   emoji: '🕵️', nameKey: 'mafia.optional.detective.name',   descKey: 'mafia.optional.detective.desc', cardsOnly: true },
+      // Child + Leader powers are Cards-mode-only because they need a narrator
+      // to enforce them (Child's "take someone with me" is verbal; Leader's
+      // "appears innocent" is the narrator lying to the Detective). Classic
+      // Mafia has a server-driven game loop and would need significant
+      // additional logic to support them.
+      { id: 'child',       emoji: '👶', nameKey: 'mafia.optional.child.name',       descKey: 'mafia.optional.child.desc',       cardsOnly: true },
+      { id: 'mafiaLeader', emoji: '🎩', nameKey: 'mafia.optional.mafiaLeader.name', descKey: 'mafia.optional.mafiaLeader.desc', cardsOnly: true },
+    ];
+    function mafiaGetOptionalRoles(){
+      try {
+        const raw = localStorage.getItem(MAFIA_OPTIONAL_KEY);
+        if (!raw) return { child: false, mafiaLeader: false, detective: false };
+        const obj = JSON.parse(raw);
+        return {
+          child: !!(obj && obj.child),
+          mafiaLeader: !!(obj && obj.mafiaLeader),
+          detective: !!(obj && obj.detective),
+        };
+      } catch(e) {
+        return { child: false, mafiaLeader: false, detective: false };
+      }
+    }
+
+    // Resolves whether Detective is active in the CURRENT game. Outside Cards
+    // mode (classic Mafia), Detective is always a standard role. In Cards
+    // mode, the host's lobby toggle controls it (default OFF).
+    function mafiaIsDetectiveActive(){
+      if (!mafiaCardsMode) return true;
+      return !!mafiaGetOptionalRoles().detective;
+    }
+    // Child + Leader are Cards-mode-only — never active in classic Mafia.
+    function mafiaIsChildActive(){
+      if (!mafiaCardsMode) return false;
+      return !!mafiaGetOptionalRoles().child;
+    }
+    function mafiaIsLeaderActive(){
+      if (!mafiaCardsMode) return false;
+      return !!mafiaGetOptionalRoles().mafiaLeader;
+    }
+    function mafiaSetOptionalRole(id, value){
+      const current = mafiaGetOptionalRoles();
+      current[id] = !!value;
+      try { localStorage.setItem(MAFIA_OPTIONAL_KEY, JSON.stringify(current)); } catch(e){}
+    }
+    function mafiaToggleOptionalRole(id){
+      const sid = mafiaGetSessionId();
+      // Defensive — only the host should ever be able to fire this (the card
+      // is hidden for non-hosts), but double-check before mutating storage.
+      if (mafiaState.hostId !== sid) return;
+      const current = mafiaGetOptionalRoles();
+      mafiaSetOptionalRole(id, !current[id]);
+      mafiaRenderOptionalRoles();
+      // All three optional toggles now change the role-mix count, so any of
+      // them needs to refresh the pills below. (Previously only Detective
+      // changed the count — Child + Leader were UI stubs.)
+      mafiaRenderRoleMix();
+    }
+    function mafiaRenderOptionalRoles(){
+      const card = document.getElementById('mafia-optional-card');
+      const rows = document.getElementById('mafia-optional-rows');
+      if (!card || !rows) return;
+      const sid = mafiaGetSessionId();
+      const isHost = mafiaState.hostId === sid;
+      // Hide entirely for non-hosts. Also hide once the game has left lobby
+      // (toggles are a pre-game decision; no point showing them mid-night).
+      const inLobby = (mafiaState.phase || 'lobby') === 'lobby';
+      card.hidden = !(isHost && inLobby);
+      if (card.hidden) return;
+      const state = mafiaGetOptionalRoles();
+      // cardsOnly entries are filtered out when classic Mafia opened the
+      // lobby — they belong to the Cards variant only.
+      const visibleRoles = MAFIA_OPTIONAL_ROLES.filter(r => !r.cardsOnly || mafiaCardsMode);
+      rows.innerHTML = visibleRoles.map(r => {
+        const on = !!state[r.id];
+        return `<button type="button" class="mafia-optional-row" aria-pressed="${on}" onclick="mafiaToggleOptionalRole('${r.id}')">`
+          + `<span class="mafia-optional-row-emoji">${r.emoji}</span>`
+          + `<span class="mafia-optional-row-text">`
+          +   `<span class="mafia-optional-row-name">${t(r.nameKey)}</span>`
+          +   `<span class="mafia-optional-row-desc">${t(r.descKey)}</span>`
+          + `</span>`
+          + `<span class="mafia-optional-row-mark" aria-hidden="true">✓</span>`
+        + `</button>`;
+      }).join('');
+    }
+
+    function mafiaRenderStartButton(){
+      const btn = document.getElementById('mafia-start-btn');
+      if (!btn) return;
+      const sid = mafiaGetSessionId();
+      const isHost = mafiaState.hostId === sid;
+      const playerCount = mafiaPlayerSeats().length;
+      const narratorSet = !!mafiaState.narratorUid;
+      const meIsInRoom = !!mafiaMe.myId || mafiaState.narratorUid === sid;
+      const ready = isHost && playerCount >= 5 && playerCount <= 8 && narratorSet && meIsInRoom;
+      if (ready) btn.removeAttribute('aria-disabled');
+      else       btn.setAttribute('aria-disabled', 'true');
+      // Subtle hint on the button text when host but not ready (helps host
+      // see what's still missing — non-host just sees the default label).
+      if (!isHost) {
+        btn.textContent = t('mafia.startWaitingHost');
+      } else {
+        btn.textContent = t('lobby.startGame');
+      }
+    }
+
+    function mafiaRenderHeaderActions(){
+      const sid = mafiaGetSessionId();
+      const isHost = mafiaState.hostId === sid;
+      const meIsInRoom = !!mafiaMe.myId || mafiaState.narratorUid === sid;
+      const resetBtn = document.getElementById('mafia-reset-btn');
+      const leaveBtn = document.getElementById('mafia-leave-btn');
+      if (resetBtn) resetBtn.hidden = !isHost;
+      if (leaveBtn) leaveBtn.hidden = !meIsInRoom;
+    }
+
+    // ----- Actions -----
+
+    function mafiaOpenNarratorPicker(){
+      const sid = mafiaGetSessionId();
+      if (mafiaState.hostId !== sid) return;
+      const list = document.getElementById('mafia-narrator-picker-list');
+      if (!list) return;
+      // Show all current claimants (including self) as picker options.
+      const items = Object.entries(mafiaState.claimedBy || {})
+        .sort(([a],[b]) => a.localeCompare(b))
+        .map(([seatId, uid]) => {
+          const isYou = uid === sid;
+          const isCurrent = uid === mafiaState.narratorUid;
+          const cls = ['mafia-narrator-picker-item'];
+          if (isCurrent) cls.push('is-current');
+          return `<button class="theme-option ${isCurrent ? 'active' : ''}" type="button" onclick="mafiaPickNarrator('${seatId}')">
+            <div class="theme-option-icon">🎙️</div>
+            <div class="theme-option-content">
+              <div class="theme-option-title">${mafiaSeatNameFor(seatId)}${isYou ? ' · ' + t('mafia.you') : ''}</div>
+              <div class="theme-option-sub">${isCurrent ? t('mafia.narratorCurrent') : t('mafia.narratorPickThis')}</div>
+            </div>
+            ${isCurrent ? '<svg class="theme-option-check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+          </button>`;
+        });
+      if (items.length === 0) {
+        list.innerHTML = `<div class="mafia-rolemix-empty" style="padding:14px;text-align:center">${t('mafia.narratorPickerEmpty')}</div>`;
+      } else {
+        list.innerHTML = items.join('');
+      }
+      const bd = document.getElementById('mafia-narrator-picker-backdrop');
+      if (bd) bd.classList.add('active');
+    }
+    function mafiaCloseNarratorPicker(event){
+      if (event && event.target !== event.currentTarget) return;
+      const bd = document.getElementById('mafia-narrator-picker-backdrop');
+      if (bd) bd.classList.remove('active');
+    }
+    async function mafiaPickNarrator(seatId){
+      try {
+        const newState = await huddleCallRPC('huddle_mafia_set_narrator', {
+          p_code: mafiaState.code,
+          p_narrator_seat: seatId,
+        });
+        if (newState) {
+          Object.assign(mafiaState, newState);
+          mafiaRerender();
+        }
+      } catch(e){
+        console.warn('[Mafia] setNarrator failed:', e && e.message);
+      }
+      mafiaCloseNarratorPicker();
+    }
+
+    function mafiaLeaveRoom(){
+      // Optimistic leave: flip the screen + tear down local state IMMEDIATELY
+      // so the user doesn't sit on the lobby for 200-500ms waiting on the
+      // round-trip. The seat-release RPC runs in the background and the
+      // server-side validation (huddle_leave_seat enforces session ownership)
+      // is the actual security boundary — the optimistic client state is
+      // just UX. On RPC failure, other players' realtime channels will see
+      // the stale seat until the next state push reconciles it; logging
+      // the failure here is enough for now.
+      const codeAtLeave = mafiaState.code;
+      mafiaMe.myId = null;
+      try { huddleClearLastRoom('mafia'); } catch(e){}
+      if (mafiaSyncChannel) {
+        try { mafiaSyncChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(mafiaSyncChannel); } catch(e){}
+        mafiaSyncChannel = null;
+        _mafiaChannelCode = null;
+        _mafiaChannelSessionId = null;
+        if (typeof mafiaResetPresenceState === 'function') mafiaResetPresenceState();
+      }
+      goTo('games');
+      if (codeAtLeave) {
+        // Fire-and-forget — captured code so a fast subsequent action that
+        // mutates mafiaState.code can't poison the release request.
+        Promise.resolve(huddleCallRPC('huddle_leave_seat', {
+          p_table: 'mafia_rooms',
+          p_code: codeAtLeave,
+        })).catch(e => console.warn('[Mafia] leave failed:', e && e.message));
+      }
+    }
+    async function mafiaResetPlayers(){
+      // For Mafia (lobby-only in this phase), "reset" just regenerates the
+      // room code, which orphans the old room (cleanup TBD) and gives us a
+      // clean slate. Simpler than a dedicated reset RPC for now.
+      await regenerateMafiaRoom();
+    }
+    async function regenerateMafiaRoom(){
+      if (!mafiaState.code) return;
+      const newCode = generateCode();
+      try {
+        const newState = await huddleCallRPC('huddle_mafia_regenerate_room', {
+          p_old_code: mafiaState.code,
+          p_new_code: newCode,
+        });
+        if (newState) {
+          Object.assign(mafiaState, newState);
+          mafiaState.code = newCode;
+          try { huddlePersistLastRoom('mafia',newCode); } catch(e){}
+          mafiaSyncUrlToRoom(newCode);
+          // Re-wire realtime to the new code
+          mafiaWireSync();
+          document.getElementById('mafia-room-code').textContent = newCode;
+          if (typeof setRoomQrSrc === 'function' && typeof qrUrl === 'function') {
+            setRoomQrSrc(document.getElementById('mafia-room-qr'), qrUrl(mafiaJoinUrl(newCode)));
+          }
+          mafiaRerender();
+        }
+      } catch(e){
+        console.warn('[Mafia] regenerate failed:', e && e.message);
+      }
+    }
+
+    async function mafiaStartGame(){
+      // Gate: aria-disabled means a Start condition isn't met (e.g. no
+      // narrator picked, not enough players). Surface the hint as a toast.
+      // Bonus for Mafia: if the narrator-not-picked branch is the blocker
+      // AND the narrator card is off-screen, scroll to it so the pulse
+      // animation we added is visible.
+      const _gateBtn = document.getElementById('mafia-start-btn');
+      if (_gateBtn && _gateBtn.getAttribute('aria-disabled') === 'true') {
+        const _hintEl = document.getElementById('mafia-seats-hint');
+        const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
+        if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
+        const _playerCount = (typeof mafiaPlayerSeats === 'function') ? mafiaPlayerSeats().length : 0;
+        if (!mafiaState.narratorUid && _playerCount >= 5 && _playerCount <= 8) {
+          const _card = document.getElementById('mafia-narrator-card');
+          if (_card) { try { _card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_){} }
+        }
+        return;
+      }
+      const sid = mafiaGetSessionId();
+      if (mafiaState.hostId !== sid) return;
+      const btn = document.getElementById('mafia-start-btn');
+      if (btn) { btn.disabled = true; btn.textContent = t('mafia.starting'); }
+      try {
+        // Cards mode passes BOTH the host's Detective lobby toggle AND the
+        // variant ('cards') to SQL. The variant is written into the room
+        // state — friends' phones realtime-sync and read state.variant to
+        // know they're in a Cards game (vs the host's local flag, which
+        // never reached them before).
+        const rpcArgs = { p_code: mafiaState.code };
+        if (mafiaCardsMode) {
+          rpcArgs.p_include_detective    = mafiaIsDetectiveActive();
+          rpcArgs.p_include_child        = mafiaIsChildActive();
+          rpcArgs.p_include_mafia_leader = mafiaIsLeaderActive();
+          rpcArgs.p_variant              = 'cards';
+        }
+        const newState = await huddleCallRPC('huddle_mafia_start_game', rpcArgs);
+        if (newState) {
+          Object.assign(mafiaState, newState);
+          // Reset cached role on host's device so we refetch (we never had one).
+          mafiaMe.myRole = null;
+          mafiaMe.myTeammates = [];
+          mafiaMe.narratorRoles = null; // clear narrator-side cache too
+          _mafiaRoleHidden = false;
+          // Mafia Cards mode: bypass the rules-gate dispatcher and route
+          // straight into the card-style screens. Also reset the narrator's
+          // local dashboard state (phase pill back to Night, dead set cleared)
+          // so a new game starts fresh even if the host launches twice.
+          if (mafiaCardsMode) {
+            mafiaCardsResetNarratorLocalState();
+            mafiaRerender();
+            return;
+          }
+          // Classic Mafia: dispatcher routes to role card / narrator stub
+          // based on who I am and what phase the server set. Other devices
+          // get there via Realtime.
+          mafiaRerender();
+        }
+      } catch(e){
+        const msg = (e && e.message) || String(e);
+        alert(t('mafia.startFailed', { msg }));
+        if (btn) { btn.disabled = false; btn.textContent = t('lobby.startGame'); }
+      }
+    }
+
+    // ===== How To Play — animated video player with ElevenLabs voiceover ====
+    // The 6 scenes are sequenced by audio.currentTime. Each entry's startSec
+    // matches the per-scene cue exported from generate_howto_voiceover.js
+    // (see assets/howto/mafia-en.alignment.json). End card fires after the
+    // last scene finishes — that's the natural "outro" before the user closes.
+    const MAFIA_HOWTO_SCENE_CUES = [
+      { scene: '1', startSec: 0     },
+      { scene: '2', startSec: 8.86  },
+      { scene: '3', startSec: 20.48 },
+      { scene: '4', startSec: 37.04 },
+      { scene: '5', startSec: 43.34 },
+      { scene: '6', startSec: 50.77 },
+      { scene: 'end', startSec: 58.7 },
+    ];
+    const MAFIA_HOWTO_AUDIO_SRC = 'assets/howto/mafia-en.mp3';
+    let mafiaHowToReturnScreen = 'mafia-lobby';
+    let mafiaHowToRafId = null;
+
+    // Languages we have a finished how-to video for. When the active language
+    // isn't in this set, the "How to play" trigger is hidden entirely so we
+    // don't promise something we can't deliver. (Turkish video pending — needs
+    // Creator-tier ElevenLabs for the native Doga voice.)
+    const MAFIA_HOWTO_LANGS = new Set(['en']);
+
+    function mafiaUpdateHowToTrigger(){
+      const trig = document.getElementById('mafia-howto-trigger');
+      if (!trig) return;
+      const lang = (typeof getLang === 'function') ? getLang() : 'en';
+      if (!MAFIA_HOWTO_LANGS.has(lang)) {
+        trig.hidden = true;
+        return;
+      }
+      trig.hidden = false;
+      let seen = false;
+      try { seen = localStorage.getItem('huddle.mafiahowto.seen') === '1'; } catch(e){}
+      trig.classList.toggle('pulse', !seen);
+    }
+
+    function openMafiaHowTo(){
+      // Belt-and-braces: even if the trigger somehow fires for an unsupported
+      // language, refuse to open rather than play the English audio with no
+      // matching captions. Returns silently — user just sees the button do
+      // nothing instead of getting a broken experience.
+      const lang = (typeof getLang === 'function') ? getLang() : 'en';
+      if (!MAFIA_HOWTO_LANGS.has(lang)) {
+        console.info('[Mafia HowTo] suppressed — no video for language:', lang);
+        return;
+      }
+
+      // Remember where the user came from so we can route back on close. If
+      // they're already on the lobby (the only place with the trigger button
+      // today), this just falls through to mafia-lobby — but a future entry
+      // point (e.g. games tile preview) would set its own return screen.
+      try {
+        const active = document.querySelector('.screen.active');
+        if (active && active.id && active.id !== 'screen-mafia-howto') {
+          mafiaHowToReturnScreen = active.id.replace(/^screen-/, '');
+        }
+      } catch(e) {}
+
+      try { localStorage.setItem('huddle.mafiahowto.seen', '1'); } catch(e){}
+      mafiaUpdateHowToTrigger();
+
+      const audio = document.getElementById('mh-audio');
+      if (audio) {
+        if (audio.src !== window.location.origin + '/' + MAFIA_HOWTO_AUDIO_SRC && !audio.src.endsWith(MAFIA_HOWTO_AUDIO_SRC)) {
+          audio.src = MAFIA_HOWTO_AUDIO_SRC;
+        }
+        audio.currentTime = 0;
+      }
+      goTo('mafia-howto');
+      // Reset visual state — kill any leftover .is-active so the first scene
+      // animates in cleanly on every open.
+      document.querySelectorAll('#screen-mafia-howto .mh-scene').forEach(el => el.classList.remove('is-active'));
+      // Activate scene 1 immediately so the user sees something before the
+      // audio's first frame loads.
+      const s1 = document.querySelector('#screen-mafia-howto .mh-scene[data-scene="1"]');
+      if (s1) s1.classList.add('is-active');
+
+      const btn = document.getElementById('mh-play-pause');
+      if (btn) btn.classList.remove('is-paused');
+
+      if (audio) {
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') p.catch(err => {
+          // Mobile autoplay block — surface a paused state so the user can tap play.
+          console.warn('[Mafia HowTo] autoplay blocked:', err && err.message);
+          if (btn) btn.classList.add('is-paused');
+        });
+      }
+      // Wire scrub handlers (idempotent — guarded by data-wired on the bar).
+      mafiaHowToWireScrubber();
+      mafiaHowToStartTicker();
+    }
+
+    function closeMafiaHowTo(){
+      mafiaHowToStopTicker();
+      const audio = document.getElementById('mh-audio');
+      if (audio) { audio.pause(); audio.currentTime = 0; }
+      goTo(mafiaHowToReturnScreen || 'mafia-lobby');
+    }
+
+    function toggleMafiaHowToPlay(){
+      const audio = document.getElementById('mh-audio');
+      const btn   = document.getElementById('mh-play-pause');
+      if (!audio || !btn) return;
+      if (audio.paused) {
+        audio.play();
+        btn.classList.remove('is-paused');
+      } else {
+        audio.pause();
+        btn.classList.add('is-paused');
+      }
+    }
+
+    function replayMafiaHowTo(){
+      const audio = document.getElementById('mh-audio');
+      if (audio) { audio.currentTime = 0; audio.play(); }
+      document.querySelectorAll('#screen-mafia-howto .mh-scene').forEach(el => el.classList.remove('is-active'));
+      const s1 = document.querySelector('#screen-mafia-howto .mh-scene[data-scene="1"]');
+      if (s1) s1.classList.add('is-active');
+      const btn = document.getElementById('mh-play-pause');
+      if (btn) btn.classList.remove('is-paused');
+    }
+
+    function mafiaHowToFormatTime(sec){
+      if (!isFinite(sec) || sec < 0) sec = 0;
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return m + ':' + (s < 10 ? '0' + s : s);
+    }
+
+    function mafiaHowToTick(){
+      const audio = document.getElementById('mh-audio');
+      if (!audio) { mafiaHowToStopTicker(); return; }
+      const t = audio.currentTime || 0;
+      const dur = audio.duration || 58.7;
+
+      // Decide which scene should be active based on currentTime.
+      let activeSceneId = MAFIA_HOWTO_SCENE_CUES[0].scene;
+      for (const cue of MAFIA_HOWTO_SCENE_CUES) {
+        if (t >= cue.startSec - 0.05) activeSceneId = cue.scene;
+      }
+      const currentlyActive = document.querySelector('#screen-mafia-howto .mh-scene.is-active');
+      const shouldBeActive  = document.querySelector(`#screen-mafia-howto .mh-scene[data-scene="${activeSceneId}"]`);
+      if (currentlyActive !== shouldBeActive) {
+        if (currentlyActive) currentlyActive.classList.remove('is-active');
+        if (shouldBeActive)  shouldBeActive.classList.add('is-active');
+      }
+
+      // Update progress bar + time label. The knob rides the fill edge so
+      // its center sits exactly at the playhead — same X position as the
+      // right edge of the gold fill.
+      const pct = Math.min(100, Math.max(0, (t / dur) * 100));
+      const fill = document.getElementById('mh-progress-fill');
+      if (fill) fill.style.width = pct + '%';
+      const knob = document.getElementById('mh-progress-knob');
+      if (knob) knob.style.left = pct + '%';
+      const bar = document.getElementById('mh-progress');
+      if (bar) bar.setAttribute('aria-valuenow', Math.round(pct));
+      const time = document.getElementById('mh-time');
+      if (time) time.textContent = mafiaHowToFormatTime(t);
+
+      // When audio ends, pin the end card.
+      if (audio.ended) {
+        const btn = document.getElementById('mh-play-pause');
+        if (btn) btn.classList.add('is-paused');
+        // Stay on end scene — don't tick further until user replays/closes.
+        mafiaHowToStopTicker();
+        return;
+      }
+      mafiaHowToRafId = requestAnimationFrame(mafiaHowToTick);
+    }
+    function mafiaHowToStartTicker(){
+      mafiaHowToStopTicker();
+      mafiaHowToRafId = requestAnimationFrame(mafiaHowToTick);
+    }
+    function mafiaHowToStopTicker(){
+      if (mafiaHowToRafId) { cancelAnimationFrame(mafiaHowToRafId); mafiaHowToRafId = null; }
+    }
+
+    // ----- Progress-bar scrubbing (click to seek, drag to scrub) -----
+    // Pointer Events are used so the same code path covers mouse, touch, and
+    // pen. Browsers without PointerEvent (very old) get nothing — graceful
+    // degradation back to a non-scrubbable bar, same as before this change.
+    //
+    // While scrubbing, the audio is paused (regardless of prior state) so the
+    // user can drag without stutter. On release, playback resumes ONLY if it
+    // was playing before the scrub started. This matches YouTube / native
+    // <video> scrub behavior.
+    let _mhScrubbing = false;
+    let _mhResumePlaying = false;
+
+    function mafiaHowToWireScrubber(){
+      const bar = document.getElementById('mh-progress');
+      const audio = document.getElementById('mh-audio');
+      if (!bar || !audio || bar.dataset.wired === '1') return;
+      bar.dataset.wired = '1';
+
+      if (!('PointerEvent' in window)) return;  // unsupported — leave the bar inert
+
+      const seekFromEvent = (ev) => {
+        const rect = bar.getBoundingClientRect();
+        const x = ev.clientX - rect.left;
+        const pct = Math.min(1, Math.max(0, x / rect.width));
+        const dur = audio.duration || 58.7;
+        audio.currentTime = pct * dur;
+        // Force an immediate visual sync — scene + fill + label all update
+        // without waiting for the next rAF tick.
+        if (typeof mafiaHowToTick === 'function') {
+          // tick() reschedules itself; only do that if the audio is playing
+          // (otherwise we'd start a runaway loop while paused). Call the
+          // body inline via a one-shot frame.
+          requestAnimationFrame(mafiaHowToTick);
+        }
+      };
+
+      bar.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        _mhScrubbing = true;
+        _mhResumePlaying = !audio.paused;
+        audio.pause();
+        bar.classList.add('is-scrubbing');
+        bar.setPointerCapture(ev.pointerId);  // pointermove keeps firing even if user drags off the bar
+        seekFromEvent(ev);
+      });
+
+      bar.addEventListener('pointermove', (ev) => {
+        if (!_mhScrubbing) return;
+        seekFromEvent(ev);
+      });
+
+      const endScrub = (ev) => {
+        if (!_mhScrubbing) return;
+        _mhScrubbing = false;
+        bar.classList.remove('is-scrubbing');
+        try { bar.releasePointerCapture(ev.pointerId); } catch(e){}
+        // If audio ended exactly at the scrub target, leave the end card
+        // showing rather than auto-replaying.
+        if (_mhResumePlaying && audio.currentTime < (audio.duration || 0) - 0.1) {
+          audio.play().catch(()=>{});
+          const btn = document.getElementById('mh-play-pause');
+          if (btn) btn.classList.remove('is-paused');
+          mafiaHowToStartTicker();
+        } else {
+          // Paused state — re-sync visuals once and stop the ticker.
+          if (typeof mafiaHowToTick === 'function') requestAnimationFrame(mafiaHowToTick);
+          if (audio.paused) {
+            const btn = document.getElementById('mh-play-pause');
+            if (btn) btn.classList.add('is-paused');
+          }
+        }
+      };
+      bar.addEventListener('pointerup', endScrub);
+      bar.addEventListener('pointercancel', endScrub);
+
+      // Keyboard accessibility — left/right arrows skip ±5s.
+      bar.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+        ev.preventDefault();
+        const delta = ev.key === 'ArrowRight' ? 5 : -5;
+        const dur = audio.duration || 58.7;
+        audio.currentTime = Math.min(dur, Math.max(0, audio.currentTime + delta));
+        if (typeof mafiaHowToTick === 'function') requestAnimationFrame(mafiaHowToTick);
+      });
+    }
+
+    async function openLiarLobby(){
+      // Drop any seat we still hold in OTHER game lobbies before claiming
+      // one here — invariant: one user, one seat across all games.
+      try { huddleLeaveOtherGameSeats('liar'); } catch(e){}
+      liarMe.selectedCardIds = [];
+
+      // Priority order for which room to load:
+      //   1) ?room=CODE in the URL bar (QR scan / shared link)
+      //   2) most-recent room from localStorage (returning visit on same device)
+      //   3) fall through → create a fresh room
+      const urlRoom = liarReadUrlRoom();
+      const existingCode = urlRoom || liarFindRecentRoomCode();
+
+      // Fire auth + room-load IN PARALLEL. RLS is open on liar_rooms (prototype),
+      // so the SELECT doesn't actually need auth to complete — we can overlap them.
+      // This roughly halves the perceived load time on first visit.
+      const authPromise = liarBootstrap();
+      const loadPromise = existingCode ? liarLoadRoom(existingCode) : Promise.resolve(false);
+      await authPromise;
+      const sessionId = liarGetSessionId();
+      const loaded = await loadPromise;
+
+      // Invitee arrived via URL but the room load failed — surface it and
+      // route to Games instead of silently creating a fresh room.
+      if (urlRoom && !loaded) {
+        try { history.replaceState(history.state, '', '/'); } catch(e){}
+        if (typeof showLobbyToast === 'function') {
+          try { showLobbyToast(t('lobby.joinFailed')); } catch(e){}
+        }
+        goTo('games');
+        return;
+      }
+
+      let cachedRoomGone = !!existingCode && !loaded;
+
+      if (loaded) {
+        const claimed = Object.entries(liarState.claimedBy || {}).find(([pid, sid]) => sid === sessionId);
+        liarMe.myId = claimed ? claimed[0] : null;
+        if (liarMe.myId) {
+          // Returning to a room we already own a seat in (refresh / re-open).
+          try { huddlePersistLastRoom('liar',existingCode); } catch(e){}
+        } else if (urlRoom) {
+          // Intentional join via URL/invite — keep the cached code.
+          try { huddlePersistLastRoom('liar',existingCode); } catch(e){}
+        } else {
+          // Cached room but we have no claim and no invite — don't barge in.
+          try { huddleClearLastRoom('liar'); } catch(e){}
+          await liarStateReset(generateCode());
+          cachedRoomGone = true;
+        }
+
+        // === Reconnect protection ===
+        // If we returned to a room that's already mid-game (play / reveal / cup)
+        // but we no longer own a seat, don't strand the user on a "Waiting for X"
+        // screen they can't act on. This happens when:
+        //   (a) Supabase anonymous auth is disabled / failing → sessionId is
+        //       random per tab → no claim ever matches across reloads.
+        //   (b) Another peer's presence cleanup freed our claim while we were
+        //       offline, then everyone else also left, so nothing reaped the
+        //       remaining claims (peer-driven cleanup needs at least one online
+        //       peer — see liarHandleConfirmedDisconnect's `isMyJobToWrite`).
+        // Either way the user can't participate. Bounce to Games with a toast
+        // so they see "game is over" instead of phantom players.
+        const inGamePhase = liarState.phase
+          && liarState.phase !== 'lobby'
+          && liarState.phase !== 'result';
+        if (inGamePhase && !liarMe.myId) {
+          if (typeof showLobbyToast === 'function') {
+            try { showLobbyToast(t('liar.toastReconnectStale'), 4500); } catch(e){}
+          }
+          liarForceLeaveLocal();
+          return;
+        }
+      } else {
+        const code = generateCode();
+        await liarStateReset(code);
+      }
+
+      // Subscribe to Realtime for THIS room (idempotent — no-op if already subscribed).
+      liarWireSync();
+
+      // Auto-claim first empty seat so the user doesn't have to tap a tile.
+      // Awaited so the seat commits before render — see hotAutoClaimIfNeeded
+      // for the "joiner had to refresh" race this fixes.
+      await liarAutoClaimIfNeeded();
+
+      // Sync the URL bar so the host can share their browser URL directly.
+      liarSyncUrlToRoom(liarState.code);
+
+      // Update lobby DOM
+      document.getElementById('liar-room-code').textContent = liarState.code;
+      const fb = document.getElementById('liar-room-qr-fallback');
+      if (fb) fb.classList.remove('show');
+      // QR encodes the full join URL so scanning it on a phone opens
+      // roundlly.com/?room=CODE and auto-joins this exact room.
+      setRoomQrSrc(document.getElementById('liar-room-qr'), qrUrl(liarJoinUrl(liarState.code)));
+
+      liarUpdateHowToTrigger();
+      // Phase may have been advanced by another device — render whatever is current
+      liarRerender();
+
+      if (cachedRoomGone && typeof showLobbyToast === 'function') {
+        showLobbyToast(t('lobby.previousRoomGone'));
+      }
+    }
+
+    async function liarStateReset(code){
+      // Wipe and seed a fresh room. Called when no existing room is found, or when
+      // "Regenerate room code" is tapped. The creator owns host AND seat 0
+      // immediately so the first persist is a single atomic write — an invitee
+      // can never load a partial state and grab the host role or seat 0.
+      const playersCopy = JSON.parse(JSON.stringify(PLAYERS));
+      const sid = liarGetSessionId();
+      const firstSeat = playersCopy[0] && playersCopy[0].id;
+      Object.keys(liarState).forEach(k => delete liarState[k]);
+      Object.assign(liarState, {
+        code: code,
+        phase: 'lobby',
+        hostId: sid,
+        claimedBy: firstSeat ? { [firstSeat]: sid } : {},
+        players: playersCopy,
+        alivePlayers: playersCopy.map(p => p.id),
+        hands: {},
+        pile: [],
+        lastPlay: null,
+        tableCard: 'K',
+        currentPlayerIdx: 0,
+        cupSpills: 1,
+        pendingLoserId: null,
+        pendingLoserCause: null,
+        sipOutcome: null,
+        sipChamberIdx: null,
+        sipChamberIsSpill: [],
+        sipTaken: false,
+        wins: Object.fromEntries(playersCopy.map(p => [p.id, 0])),
+        winnerId: null,
+        roundCount: 0,
+        revision: 0,
+      });
+      liarMe.myId = firstSeat || null;
+      // Server-validated room creation (C2: closes direct-write hole). The
+      // server inserts the row with this initial state under SECURITY DEFINER;
+      // the realtime echo delivers canonical state back to this device.
+      if (!liarState.labMode) {
+        const snapshot = JSON.parse(JSON.stringify(liarState));
+        huddleCallRPC('huddle_create_room', {
+          p_table: 'liar_rooms',
+          p_code: code,
+          p_initial_state: snapshot,
+        });
+      }
+      // Cache "last room I was in" for the next visit on this device
+      try { huddlePersistLastRoom('liar',code); } catch(e){}
+    }
+
+    function liarFindRecentRoomCode(){
+      try {
+        return huddleReadLastRoom('liar');
+      } catch(e){ return null; }
+    }
+
+    // Generate a fresh room code (anyone can tap; resets the room for everyone)
+    async function regenerateLiarRoom_v2(){
+      const code = generateCode();
+      await liarStateReset(code);
+      // Resubscribe to the NEW room code's Realtime channel
+      liarWireSync();
+      liarSyncUrlToRoom(code);
+      document.getElementById('liar-room-code').textContent = code;
+      const fb = document.getElementById('liar-room-qr-fallback');
+      if (fb) fb.classList.remove('show');
+      setRoomQrSrc(document.getElementById('liar-room-qr'), qrUrl(liarJoinUrl(code)));
+      const btn = document.querySelector('#screen-liar-lobby .room-code-action button[onclick*="regenerateLiarRoom"]');
+      if (btn) {
+        btn.classList.remove('spinning');
+        void btn.offsetWidth;
+        btn.classList.add('spinning');
+        setTimeout(() => btn.classList.remove('spinning'), 520);
+      }
+      liarRerender();
+    }
+
+    async function liarClaimSeat(playerId){
+      const sessionId = liarGetSessionId();
+      const currentClaim = liarState.claimedBy[playerId];
+      // If someone else holds this seat, ignore
+      if (currentClaim && currentClaim !== sessionId) return;
+      // Optimistic local update for snappy UI — if the RPC rejects, the next
+      // realtime echo will overwrite this with the canonical server state.
+      if (liarMe.myId && liarState.claimedBy[liarMe.myId] === sessionId) {
+        delete liarState.claimedBy[liarMe.myId];
+      }
+      liarState.claimedBy[playerId] = sessionId;
+      if (!liarState.hostId) liarState.hostId = sessionId;
+      liarMe.myId = playerId;
+      liarRenderSeats();
+      // Server-validated claim. RPC handles seat-switching (releases old seat
+      // held by caller) and rejects seat-stealing attempts at the database
+      // layer (C2 turn 2).
+      await huddleCallRPC('huddle_claim_seat', {
+        p_table: 'liar_rooms',
+        p_code: liarState.code,
+        p_player_id: playerId,
+      });
+    }
+
+    async function liarAutoClaimIfNeeded(){
+      if (liarMe.myId) return;
+      if (liarState.phase && liarState.phase !== 'lobby') return;
+      const empty = (liarState.players || []).find(p => !liarState.claimedBy || !liarState.claimedBy[p.id]);
+      if (!empty) return;
+      await liarClaimSeat(empty.id);
+    }
+
+    function liarRenderSeats(){
+      const el = document.getElementById('liar-seats');
+      if (el && huddleLobbyHydrating(liarState && liarState.code)) {
+        el.innerHTML = huddleLobbySkeletonHTML(6);
+        return;
+      }
+      if (!el) return;
+      const sessionId = liarGetSessionId();
+      const claimedCount = Object.keys(liarState.claimedBy || {}).length;
+      const claimedSessionIds = Object.values(liarState.claimedBy || {});
+      ensureClaimantProfiles(claimedSessionIds, liarRenderSeats);
+      // Prefer @username (globally unique) over display_name first-word so
+      // two players with the same first name render distinctly. See
+      // claimDisplayName for the matching rule on OTHER players' tiles.
+      const myName = (myProfile && myProfile.username)
+        ? '@' + myProfile.username
+        : ((myProfile && myProfile.name && myProfile.name.trim().split(/\s+/)[0]) || 'You');
+      const myAvatar = (myProfile && myProfile.avatar) ? myProfile.avatar : null;
+      el.innerHTML = liarState.players.map(p => {
+        const claimedSession = liarState.claimedBy[p.id];
+        const claimedByMe = claimedSession === sessionId;
+        const claimedByOther = !!claimedSession && !claimedByMe;
+        const claimProfile = claimedByOther ? profileForClaim(claimedSession) : null;
+
+        // Empty seat → render an Invite tile (not a claim button). Tapping it
+        // opens the invite sheet so the user fills the seat with a real friend
+        // instead of "claiming" a fake-named slot.
+        if (!claimedSession) {
+          return `
+            <button class="liar-seat liar-seat-invite" type="button" onclick="openLobbyInviteSheet('liar')" data-empty="1">
+              <span class="liar-seat-invite-icon" aria-hidden="true">+</span>
+              <div class="liar-seat-info">
+                <div class="liar-seat-name" data-i18n="liar.seatInviteTap">Invite friend</div>
+                <div class="liar-seat-status" data-i18n="liar.seatEmpty">Empty seat</div>
+              </div>
+            </button>
+          `;
+        }
+
+        // Claimed seat — render with the claimant's REAL identity (no Maria/Kenji).
+        let cls = 'liar-seat';
+        let status, nameText, avatarData;
+        if (claimedByMe) {
+          cls += ' claimed-by-me';
+          status = t('liar.seatYou');
+          nameText = myName;
+          avatarData = myAvatar || avatarForPlayer(p);
+        } else {
+          cls += ' claimed-by-other';
+          status = t('liar.seatTaken');
+          nameText = claimDisplayName(claimProfile, '…');
+          avatarData = (claimProfile && claimProfile.avatar) ? claimProfile.avatar : avatarForPlayer(p);
+        }
+        return `
+          <div class="${cls}" data-seat-id="${p.id}">
+            ${avatarHTML(avatarData, 32, { fallback: p.initial })}
+            <div class="liar-seat-info">
+              <div class="liar-seat-name">${escapeHTML(nameText)}</div>
+              <div class="liar-seat-status">${status}</div>
+            </div>
+            ${claimedByMe ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--success);flex-shrink:0"><path d="M20 6 9 17l-5-5"></path></svg>' : ''}
+          </div>
+        `;
+      }).join('');
+      parseEmoji(el);
+      // Apply translations to any new data-i18n nodes inside the freshly-rendered seats
+      if (typeof applyLang === 'function') applyLang(el);
+
+      // Update start-button state — need at least 2 seats claimed AND I have a seat
+      const startBtn = document.getElementById('liar-start-btn');
+      if (startBtn) {
+        const canStart = claimedCount >= 2 && !!liarMe.myId;
+        if (canStart) startBtn.removeAttribute('aria-disabled');
+        else          startBtn.setAttribute('aria-disabled', 'true');
+      }
+      // Update the seats-status hint
+      const hint = document.getElementById('liar-seats-hint');
+      if (hint) {
+        if (!liarMe.myId) hint.textContent = t('liar.seatsHintNotPicked');
+        else if (claimedCount < 2) hint.textContent = t('liar.seatsHintNeedMore', { n: 2 - claimedCount });
+        else hint.textContent = t('liar.seatsHintReady');
+      }
+      // Leave / Reset visibility — now in the top-right of the Players header
+      const leaveBtn = document.getElementById('liar-leave-btn');
+      const resetBtn = document.getElementById('liar-reset-btn');
+      const hasSeat = !!liarMe.myId;
+      const amHost = liarGetSessionId() === liarState.hostId;
+      if (leaveBtn) leaveBtn.hidden = !hasSeat;
+      if (resetBtn) resetBtn.hidden = !(hasSeat && amHost && claimedCount > 1);
+      // Keep the invite sheet content fresh if it's open (e.g. a friend just
+      // joined / accepted / cancelled). Cheap if sheet is closed.
+      if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen('liar');
+    }
+
+    // ---------- Lobby invite sheet (shared across all 3 game lobbies) ----------
+    // Opened when a player taps an empty seat tile in any lobby. Surfaces the
+    // friends list (with per-friend Invite buttons), or a graceful fallback
+    // when the user has no friends yet (room code + go-to-friends CTA), or a
+    // sign-in nudge for anonymous users.
+    let lobbyInviteSheetGameKey = null;
+    function openLobbyInviteSheet(gameKey){
+      const bd = document.getElementById('lobby-invite-backdrop');
+      if (!bd) return;
+      lobbyInviteSheetGameKey = gameKey;
+      // Fresh search state on every open — stale filter from a previous session would
+      // surprise the user ("why don't I see anyone?").
+      lobbyInviteSearchQuery = '';
+      lobbyInviteSearchFocused = false;
+      renderLobbyInviteSheetContent(gameKey);
+      bd.classList.add('active');
+    }
+    function closeLobbyInviteSheet(event){
+      if (event && event.currentTarget !== event.target) return;
+      const bd = document.getElementById('lobby-invite-backdrop');
+      if (bd) bd.classList.remove('active');
+      lobbyInviteSheetGameKey = null;
+      lobbyInviteSearchQuery = '';
+      lobbyInviteSearchFocused = false;
+    }
+    function refreshLobbyInviteSheetIfOpen(gameKey){
+      const bd = document.getElementById('lobby-invite-backdrop');
+      if (!bd || !bd.classList.contains('active')) return;
+      // If a specific game asked to refresh, only do so when that's the open one.
+      if (gameKey && gameKey !== lobbyInviteSheetGameKey) return;
+      renderLobbyInviteSheetContent(lobbyInviteSheetGameKey);
+    }
+    function renderLobbyInviteSheetContent(gameKey){
+      const wrap = document.getElementById('lobby-invite-sheet-content');
+      if (!wrap) return;
+      const ctx = (typeof inviteLobbyContextForGame === 'function') ? inviteLobbyContextForGame(gameKey) : null;
+      const code = (ctx && ctx.code) ? ctx.code : '';
+
+      // Anonymous user — friend invites need a real account, so nudge sign-in.
+      if (typeof friendsState === 'undefined' || !friendsState.me) {
+        wrap.innerHTML = `
+          <div style="padding:8px 0 4px">
+            <div style="font-size:14px;color:var(--text-secondary);line-height:1.5;margin-bottom:14px">${friendsEscape(t('lobby.inviteSignInPrompt'))}</div>
+            <button class="btn btn-primary" style="width:100%" onclick="closeLobbyInviteSheet();goTo('login')">${friendsEscape(t('login.signIn'))}</button>
+            ${code ? `<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text-secondary);text-align:center;line-height:1.5">${friendsEscape(t('lobby.inviteShareInstead'))}<br><strong style="color:var(--text);font-size:16px;letter-spacing:.05em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${friendsEscape(code)}</strong></div>` : ''}
+          </div>`;
+        return;
+      }
+
+      // Signed in but no friends yet — point at the Friends tab.
+      if (!friendsState.friends || friendsState.friends.length === 0) {
+        wrap.innerHTML = `
+          <div style="padding:8px 0 4px">
+            <div style="font-size:14px;color:var(--text-secondary);line-height:1.5;margin-bottom:14px">${friendsEscape(t('lobby.inviteNoFriendsYet'))}</div>
+            <button class="btn btn-primary" style="width:100%" onclick="closeLobbyInviteSheet();goTo('friends')">${friendsEscape(t('friends.addFriend'))}</button>
+            ${code ? `<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text-secondary);text-align:center;line-height:1.5">${friendsEscape(t('lobby.inviteShareInstead'))}<br><strong style="color:var(--text);font-size:16px;letter-spacing:.05em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${friendsEscape(code)}</strong></div>` : ''}
+          </div>`;
+        return;
+      }
+
+      // Real friends list — per-friend tile with Invite/Invited/Joined action.
+      // Search threshold: hide the input below 5 friends (scanning is faster than typing
+      // at that point); show it once the list crosses the scan-friction line.
+      const SEARCH_THRESHOLD = 5;
+      const showSearch = friendsState.friends.length >= SEARCH_THRESHOLD;
+      const query = (lobbyInviteSearchQuery || '').trim().toLowerCase();
+      const claimedSessions = Object.values((ctx && ctx.claimedBy) || {});
+
+      const visible = !query ? friendsState.friends : friendsState.friends.filter(entry => {
+        const p = entry.profile;
+        const name = (friendsDisplayName(p) || '').toLowerCase();
+        const uname = (p.username || '').toLowerCase();
+        return name.indexOf(query) !== -1 || uname.indexOf(query) !== -1;
+      });
+
+      // Sort into Online / Offline buckets using the existing friendsPresence Set populated
+      // by friendsWirePresence(). Online friends bubble to the top so the host can invite
+      // people who can actually join in real time. Each bucket sorted by display name.
+      const presence = (typeof friendsPresence !== 'undefined') ? friendsPresence : new Set();
+      const byName = (a, b) => friendsDisplayName(a.profile).localeCompare(friendsDisplayName(b.profile), undefined, { sensitivity: 'base' });
+      const onlineEntries = visible.filter(e => presence.has(e.otherId)).slice().sort(byName);
+      const offlineEntries = visible.filter(e => !presence.has(e.otherId)).slice().sort(byName);
+
+      const renderRow = (entry) => {
+        const p = entry.profile;
+        const name = friendsDisplayName(p);
+        const handle = p.username ? '@' + p.username : '';
+        const avatar = p.avatar || deterministicAvatar(entry.otherId);
+        const isOnline = presence.has(entry.otherId);
+        const outgoing = invitesState.outgoing.find(o =>
+          o.row.to_user_id === entry.otherId && o.row.room_code === code && o.row.game === gameKey
+        );
+        const isJoined = claimedSessions.indexOf(entry.otherId) !== -1;
+        let actionHtml;
+        if (isJoined) {
+          actionHtml = `<span class="lobby-invite-btn joined" aria-disabled="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            ${friendsEscape(t('invite.joined'))}
+          </span>`;
+        } else if (outgoing) {
+          // Suppress the Cancel button while the entry is still optimistic
+          // (no server-issued id yet — Cancel would error). Cancel re-appears
+          // a tick later when invitesLoad() replaces this with the canonical
+          // row. Practically invisible to the user — the optimistic window
+          // is ~200-500ms.
+          const showCancel = !(outgoing.row && outgoing.row._optimistic);
+          actionHtml = `
+            <span class="lobby-invite-btn invited" aria-disabled="true">${friendsEscape(t('invite.invited'))}</span>
+            ${showCancel ? `<button class="lobby-invite-cancel" onclick="inviteCancel('${friendsEscape(outgoing.row.id)}', event)">${friendsEscape(t('invite.cancel'))}</button>` : ''}
+          `;
+        } else {
+          actionHtml = `<button class="lobby-invite-btn" onclick="inviteSend('${friendsEscape(entry.otherId)}', '${friendsEscape(code)}', '${friendsEscape(gameKey)}', event)">${friendsEscape(t('invite.invite'))}</button>`;
+        }
+        return `
+          <div class="lobby-invite-tile ${isOnline ? 'is-online' : 'is-offline'}">
+            ${avatarHTML(avatar, 36, { fallback: (name[0] || '?').toUpperCase(), online: isOnline })}
+            <div class="friend-info">
+              <div class="friend-name">${friendsEscape(name)}</div>
+              <div class="friend-status">${friendsEscape(handle)}</div>
+            </div>
+            <div class="lobby-invite-actions">${actionHtml}</div>
+          </div>
+        `;
+      };
+
+      // Only show section headers when both buckets have entries — saves vertical space
+      // when everyone happens to be online or everyone is offline.
+      const showHeaders = onlineEntries.length > 0 && offlineEntries.length > 0;
+      let rows = '';
+      if (onlineEntries.length) {
+        if (showHeaders) {
+          rows += `<div class="lobby-invite-section">${friendsEscape(t('lobby.inviteOnline'))} <span class="lobby-invite-section-count">· ${onlineEntries.length}</span></div>`;
+        }
+        rows += onlineEntries.map(renderRow).join('');
+      }
+      if (offlineEntries.length) {
+        if (showHeaders) {
+          rows += `<div class="lobby-invite-section">${friendsEscape(t('lobby.inviteOffline'))} <span class="lobby-invite-section-count">· ${offlineEntries.length}</span></div>`;
+        }
+        rows += offlineEntries.map(renderRow).join('');
+      }
+
+      const searchHtml = showSearch ? `
+        <div class="lobby-invite-search-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" class="lobby-invite-search" id="lobby-invite-search-input"
+                 placeholder="${friendsEscape(t('lobby.inviteSearchPlaceholder'))}"
+                 value="${friendsEscape(lobbyInviteSearchQuery || '')}"
+                 oninput="lobbyInviteOnSearchInput(this.value)" autocomplete="off" />
+        </div>
+      ` : '';
+
+      const listHtml = visible.length === 0
+        ? `<div class="lobby-invite-no-match">${friendsEscape(t('lobby.inviteNoMatch', { q: lobbyInviteSearchQuery || '' }))}</div>`
+        : `<div class="lobby-invite-list">${rows}</div>`;
+
+      wrap.innerHTML = searchHtml + listHtml;
+      parseEmoji(wrap);
+
+      // Restore caret to end of search input after re-render so typing isn't interrupted.
+      if (showSearch) {
+        const input = document.getElementById('lobby-invite-search-input');
+        if (input && document.activeElement !== input && lobbyInviteSearchFocused) {
+          input.focus();
+          const v = input.value; input.value = ''; input.value = v;
+        }
+      }
+    }
+
+    // Search state lives outside the render function so it survives re-renders triggered
+    // by invite-state updates (e.g. when an outgoing invite resolves). Without this, typing
+    // would be lost the moment another player joined the room.
+    let lobbyInviteSearchQuery = '';
+    let lobbyInviteSearchFocused = false;
+    function lobbyInviteOnSearchInput(v){
+      lobbyInviteSearchQuery = v;
+      lobbyInviteSearchFocused = true;
+      renderLobbyInviteSheetContent(lobbyInviteSheetGameKey);
+    }
+
+    async function liarLeaveRoom(context){
+      if (!liarMe.myId) return;
+      const midRound = context === 'midround';
+      const ok = await huddleConfirm({
+        title: t(midRound ? 'common.leaveMidRoundTitle' : 'lobby.leaveTitle'),
+        body:  t(midRound ? 'common.leaveMidRoundBody'  : 'lobby.leaveBody'),
+        confirmLabel: t('lobby.leaveConfirm'),
+        danger: true,
+      });
+      if (!ok) return;
+      // Cancel any pending auto-advance timers — we're leaving the room, so
+      // firing them later would push state into a room we're no longer in.
+      liarClearAllAutoAdvance();
+      // Kill any queued SFX + in-flight audio so leaving mid-animation
+      // doesn't leave the cup ticking/draining in the background.
+      liarStopAllSfx();
+      const mySid = liarGetSessionId();
+      const myPlayerId = liarMe.myId;
+      const leavingCode = liarState.code;
+      // Optimistic local update so the UI reflects "I left" instantly. The
+      // server-validated leave (C2 turn 2) happens via RPC; on success its
+      // canonical state echoes back. On failure the next echo restores the
+      // server's truth — but we still navigate away locally.
+      if (liarState.claimedBy && liarState.claimedBy[myPlayerId] === mySid) {
+        delete liarState.claimedBy[myPlayerId];
+      }
+      if (liarState.hostId === mySid) {
+        const remaining = Object.entries(liarState.claimedBy || {})
+          .sort((a, b) => a[0].localeCompare(b[0]));
+        liarState.hostId = remaining.length ? remaining[0][1] : null;
+      }
+      if (leavingCode) {
+        huddleCallRPC('huddle_leave_seat', { p_table: 'liar_rooms', p_code: leavingCode });
+      }
+      if (typeof inviteCancelMineForRoom === 'function' && leavingCode) {
+        try { inviteCancelMineForRoom(leavingCode, 'liar'); } catch(e){}
+      }
+      liarMe.myId = null;
+      liarState.code = null;
+      try { huddleClearLastRoom('liar'); } catch(e){}
+      if (_liarChannel) {
+        try { _liarChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(_liarChannel); } catch(e){}
+        _liarChannel = null; _liarChannelCode = null; _liarChannelSessionId = null;
+        liarResetPresenceState();
+      }
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+    // Local-only cleanup (no Supabase write). Used when host closes the room
+    // and when a non-host receives the "closedByHost" broadcast.
+    function liarForceLeaveLocal(){
+      liarClearAllAutoAdvance();
+      liarStopAllSfx();
+      liarMe.myId = null;
+      if (liarState) liarState.code = null;
+      try { huddleClearLastRoom('liar'); } catch(e){}
+      if (_liarChannel) {
+        try { _liarChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(_liarChannel); } catch(e){}
+        _liarChannel = null; _liarChannelCode = null; _liarChannelSessionId = null;
+        liarResetPresenceState();
+      }
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+    // Host taps "Leave" on the game-over screen → close the whole room so
+    // every other player auto-leaves too via Realtime.
+    function liarCloseRoom(){
+      const amHost = liarGetSessionId() === liarState.hostId;
+      if (!amHost) { liarLeaveGameOver(); return; }
+      const closingCode = liarState.code;
+      // Optimistic local change so the UI reflects "closed" immediately.
+      liarState.closedByHost = true;
+      liarState.hostId = null;
+      // Server-validated close (host-only; other claimants reject) — C2 turn 2.
+      if (closingCode) {
+        huddleCallRPC('huddle_close_room', { p_table: 'liar_rooms', p_code: closingCode });
+      }
+      liarForceLeaveLocal();
+    }
+    // No-confirm leave for the game-over screen (mirror of liarLeaveRoom).
+    function liarLeaveGameOver(){
+      liarClearAllAutoAdvance();
+      liarStopAllSfx();
+      const mySid = liarGetSessionId();
+      const myPlayerId = liarMe.myId;
+      const leavingCode = liarState.code;
+      // Optimistic local update before the RPC (mirrors liarLeaveRoom path).
+      if (myPlayerId && liarState.claimedBy && liarState.claimedBy[myPlayerId] === mySid) {
+        delete liarState.claimedBy[myPlayerId];
+      }
+      if (liarState.hostId === mySid) {
+        const remaining = Object.entries(liarState.claimedBy || {})
+          .sort((a, b) => a[0].localeCompare(b[0]));
+        liarState.hostId = remaining.length ? remaining[0][1] : null;
+      }
+      // Server-validated leave (C2 turn 2).
+      if (leavingCode) {
+        huddleCallRPC('huddle_leave_seat', { p_table: 'liar_rooms', p_code: leavingCode });
+      }
+      liarMe.myId = null;
+      liarState.code = null;
+      try { huddleClearLastRoom('liar'); } catch(e){}
+      if (_liarChannel) {
+        try { _liarChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(_liarChannel); } catch(e){}
+        _liarChannel = null; _liarChannelCode = null; _liarChannelSessionId = null;
+        liarResetPresenceState();
+      }
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+    async function liarResetPlayers(){
+      const amHost = liarGetSessionId() === liarState.hostId;
+      if (!amHost) return;
+      const ok = await huddleConfirm({
+        title: t('lobby.resetTitle'),
+        body: t('lobby.resetBody'),
+        confirmLabel: t('lobby.resetConfirm'),
+        danger: true,
+      });
+      if (!ok) return;
+      const mySid = liarGetSessionId();
+      const myPlayerId = liarMe.myId;
+      // Optimistic local update for snappy UI; server returns canonical state.
+      const next = {};
+      if (myPlayerId && mySid) next[myPlayerId] = mySid;
+      liarState.claimedBy = next;
+      liarRenderSeats();
+      // Server-validated host-only reset (C2 turn 3c).
+      huddleCallRPC('huddle_liar_reset_players', { p_code: liarState.code });
+    }
+
+    // Handler for the "Join with code" input — replaces our current room with the friend's.
+    // ---------- Lobby toast (silent-loss notice + similar transient messages) ----------
+    // Shown when a user clicks a game card / refreshes / scans an old QR for a
+    // room that no longer exists in Supabase — openX silently creates a fresh
+    // room, but without this toast the user thinks they're back with their
+    // friends and can't tell why they're suddenly alone.
+    let _lobbyToastTimer = null;
+    let _lobbyToastQueue = [];
+    let _lobbyToastActive = null;
+    let _lobbyToastVisibilityBound = false;
+    // Back arrow on any game lobby. We strip the ?room= URL param before
+    // navigating — otherwise a stale URL would let the user re-enter the game
+    // tile from the games screen and auto-claim a seat WITHOUT an invite (the
+    // urlRoom check in openLobby treats a URL as "intentional join"). The user
+    // still has localStorage if they're a returning seated player, so legit
+    // refresh-to-resume keeps working.
+    function backFromGameLobby(target){
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo(target || 'games');
+    }
+    function showLobbyToast(text, durationMs){
+      if (!text) return;
+      const duration = durationMs || 6000;
+      // If a toast is already on screen, queue this one instead of
+      // clobbering — back-to-back events (e.g. two Liar players quitting
+      // seconds apart) would otherwise lose the first message.
+      // De-dupe identical consecutive messages so a chatty broadcast
+      // doesn't pile up the same line.
+      if (_lobbyToastActive) {
+        const last = _lobbyToastQueue[_lobbyToastQueue.length - 1] || _lobbyToastActive;
+        if (last && last.text === text) return;
+        _lobbyToastQueue.push({ text: text, durationMs: duration });
+        return;
+      }
+      _lobbyToastRender({ text: text, durationMs: duration });
+    }
+    function _lobbyToastRender(entry){
+      let el = document.getElementById('lobby-toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'lobby-toast';
+        el.className = 'lobby-toast';
+        el.setAttribute('role', 'status');
+        el.onclick = function(){ hideLobbyToast(); };
+        document.body.appendChild(el);
+      }
+      el.textContent = entry.text;
+      void el.offsetWidth;
+      el.classList.add('active');
+      _lobbyToastActive = {
+        text: entry.text,
+        durationMs: entry.durationMs,
+        remainingMs: entry.durationMs,
+        startedAt: Date.now()
+      };
+      _lobbyToastStartTimer();
+      _lobbyToastBindVisibility();
+    }
+    function _lobbyToastStartTimer(){
+      if (_lobbyToastTimer) { clearTimeout(_lobbyToastTimer); _lobbyToastTimer = null; }
+      if (!_lobbyToastActive) return;
+      _lobbyToastActive.startedAt = Date.now();
+      _lobbyToastTimer = setTimeout(hideLobbyToast, _lobbyToastActive.remainingMs);
+    }
+    function _lobbyToastPause(){
+      if (!_lobbyToastActive || !_lobbyToastTimer) return;
+      clearTimeout(_lobbyToastTimer);
+      _lobbyToastTimer = null;
+      const elapsed = Date.now() - _lobbyToastActive.startedAt;
+      _lobbyToastActive.remainingMs = Math.max(0, _lobbyToastActive.remainingMs - elapsed);
+    }
+    function _lobbyToastBindVisibility(){
+      if (_lobbyToastVisibilityBound) return;
+      _lobbyToastVisibilityBound = true;
+      document.addEventListener('visibilitychange', function(){
+        if (document.hidden) {
+          _lobbyToastPause();
+        } else if (_lobbyToastActive) {
+          _lobbyToastStartTimer();
+        }
+      });
+    }
+    function hideLobbyToast(){
+      const el = document.getElementById('lobby-toast');
+      if (el) el.classList.remove('active');
+      if (_lobbyToastTimer) { clearTimeout(_lobbyToastTimer); _lobbyToastTimer = null; }
+      _lobbyToastActive = null;
+      // Wait out the 250ms fade-out before showing the next queued toast
+      // so the two don't visually collide / swap mid-animation.
+      if (_lobbyToastQueue.length) {
+        setTimeout(function(){
+          if (_lobbyToastActive) return;
+          const next = _lobbyToastQueue.shift();
+          if (next) _lobbyToastRender(next);
+        }, 300);
+      }
+    }
+
+    // ---------- Global "Join with code" sheet (Games tab) ----------
+    // Opened from the prominent tile at the top of the Games tab. Probes all
+    // three game tables in parallel, finds the match, and routes the user into
+    // the matching lobby — no need for the user to know which game their
+    // friend is playing.
+    function openJoinCodeSheet(){
+      const bd = document.getElementById('join-code-backdrop');
+      if (!bd) return;
+      bd.classList.add('active');
+      setJoinCodeStatus('', '');
+      const input = document.getElementById('join-code-input');
+      if (input) {
+        input.value = '';
+        setTimeout(() => { try { input.focus(); } catch(e){} }, 80);
+      }
+    }
+    function closeJoinCodeSheet(event){
+      if (event && event.currentTarget !== event.target) return;
+      const bd = document.getElementById('join-code-backdrop');
+      if (bd) bd.classList.remove('active');
+    }
+    function setJoinCodeStatus(text, kind){
+      const el = document.getElementById('join-code-status');
+      if (!el) return;
+      el.textContent = text || '';
+      el.className = 'join-code-status' + (kind ? ' ' + kind : '');
+    }
+    async function attemptJoinByCode(){
+      const input = document.getElementById('join-code-input');
+      if (!input) return;
+      const btn = document.querySelector('#join-code-backdrop .btn-primary');
+      let code = (input.value || '').toUpperCase().trim().replace(/[^A-Z0-9-]/g, '');
+      // Auto-insert dash if user typed 8 alphanumerics in a row
+      if (code.length === 8 && !code.includes('-')) {
+        code = code.slice(0, 4) + '-' + code.slice(4);
+      }
+      // Empty-input hint — was silently no-op, which made the Join button
+      // feel broken when tapped without a code. Distinct copy so the user
+      // knows the app is responding.
+      if (!code) {
+        setJoinCodeStatus(t('joinCode.enterCode'), 'error');
+        try { input.focus(); } catch(_){}
+        return;
+      }
+      if (!window.sb) {
+        setJoinCodeStatus(t('joinCode.networkError'), 'error');
+        return;
+      }
+      // Disable the button while the probe runs so tapping it 5 times doesn't
+      // fire 5 parallel queries against Supabase.
+      if (btn) { btn.disabled = true; btn.setAttribute('aria-busy','true'); }
+      setJoinCodeStatus(t('joinCode.checking'), 'searching');
+      // Hard 6s timeout — prevents the sheet getting stuck on "Looking for
+      // the room…" forever when the network is dead. Rejects with a tagged
+      // error so the catch block can show the network-error copy.
+      const timeoutMs = 6000;
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('__timeout__')), timeoutMs));
+      try {
+        // Probe all four game tables in parallel — first match wins.
+        // Mafia was missing before, which silently returned "Not found"
+        // for any Mafia code shared by a friend.
+        const probe = Promise.all([
+          window.sb.from('liar_rooms').select('code').eq('code', code).maybeSingle(),
+          window.sb.from('hotseat_rooms').select('code').eq('code', code).maybeSingle(),
+          window.sb.from('chameleon_rooms').select('code').eq('code', code).maybeSingle(),
+          window.sb.from('mafia_rooms').select('code').eq('code', code).maybeSingle(),
+        ]);
+        const [liar, hot, cham, mafia] = await Promise.race([probe, timeout]);
+        // If any individual probe came back with a server-side error (not a
+        // null row — those are fine), treat as network error rather than
+        // "not found", so the user knows to retry vs re-check the code.
+        const probeErr = (liar && liar.error) || (hot && hot.error)
+          || (cham && cham.error) || (mafia && mafia.error);
+        if (probeErr) {
+          console.warn('[Huddle] join-by-code probe error:', probeErr);
+          setJoinCodeStatus(t('joinCode.networkError'), 'error');
+          return;
+        }
+        let game = null;
+        if (liar.data && liar.data.code === code) game = 'liar';
+        else if (hot.data && hot.data.code === code) game = 'hotseat';
+        else if (cham.data && cham.data.code === code) game = 'chameleon';
+        else if (mafia.data && mafia.data.code === code) game = 'mafia';
+        if (!game) {
+          setJoinCodeStatus(t('joinCode.notFound'), 'error');
+          return;
+        }
+        // Cache the code so the matching lobby's auto-load path picks it up
+        try {
+          if (game === 'liar')          huddlePersistLastRoom('liar',code);
+          else if (game === 'hotseat')  huddlePersistLastRoom('hotseat',code);
+          else if (game === 'chameleon') huddlePersistLastRoom('cham',code);
+          else if (game === 'mafia')    huddlePersistLastRoom('mafia',code);
+        } catch(e){}
+        // Set URL BEFORE opening the lobby so the lobby's URL reader picks up
+        // THIS code (not a stale one from a previous game session). Mirrors
+        // the inviteAccept flow at line 7572.
+        try {
+          const url = '/?room=' + encodeURIComponent(code) + '&game=' + encodeURIComponent(game);
+          history.replaceState(history.state || {}, '', url);
+        } catch(e){}
+        closeJoinCodeSheet();
+        if (game === 'liar')          openLiarLobby();
+        else if (game === 'hotseat')  openLobby();
+        else if (game === 'chameleon') openChamLobby();
+        else if (game === 'mafia')    openMafiaLobby();
+      } catch(e) {
+        // Distinguish "the server hung up / no internet" from "code wasn't
+        // in any table". Same red status row, different copy.
+        const isTimeout = e && e.message === '__timeout__';
+        console.warn('[Huddle] join-by-code probe failed:', e);
+        setJoinCodeStatus(t(isTimeout ? 'joinCode.networkError' : 'joinCode.networkError'), 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); }
+      }
+    }
+
+    function handleLiarQrError(){
+      const img = document.getElementById('liar-room-qr');
+      const fb = document.getElementById('liar-room-qr-fallback');
+      if (img) img.style.display = 'none';
+      if (fb) fb.classList.add('show');
+    }
+
+    // (Old single-device liarRenderPlayers removed — superseded by liarRenderSeats.)
+
+    // ---------- How-to-play (4-slide animated modal, mirrors Hot Seat) ----------
+    const LIAR_HOWTO_KEY = 'huddle.liarhowto.seen';
+    const LIAR_HOWTO_TOTAL = 4;
+    let liarHowtoCurrent = 1;
+    let liarHowtoTimer = null;
+    function liarUpdateHowToTrigger(){
+      try {
+        const seen = !!localStorage.getItem(LIAR_HOWTO_KEY);
+        document.querySelectorAll('#liar-howto-trigger').forEach(el => el.classList.toggle('pulse', !seen));
+      } catch(e){}
+    }
+    function openLiarHowTo(){
+      document.getElementById('liar-howto-modal').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      try { localStorage.setItem(LIAR_HOWTO_KEY, '1'); } catch(e){}
+      document.querySelectorAll('#liar-howto-trigger').forEach(el => el.classList.remove('pulse'));
+      liarGoToSlide(1);
+    }
+    function closeLiarHowTo(){
+      document.getElementById('liar-howto-modal').classList.remove('active');
+      document.body.style.overflow = '';
+      liarStopAuto();
+    }
+    function liarGoToSlide(n){
+      if (n < 1) n = 1;
+      if (n > LIAR_HOWTO_TOTAL) { closeLiarHowTo(); return; }
+      liarHowtoCurrent = n;
+      const root = document.getElementById('liar-howto-modal');
+      root.querySelectorAll('.howto-slide').forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.slide) === n);
+      });
+      root.querySelectorAll('.howto-dot').forEach((d, i) => {
+        d.classList.toggle('active', i + 1 === n);
+      });
+      const btn = document.getElementById('liar-howto-next-btn');
+      if (btn) btn.textContent = (n === LIAR_HOWTO_TOTAL) ? t('howTo.startPlaying') : t('common.next');
+      liarStartAuto();
+    }
+    function liarNextSlide(){ liarGoToSlide(liarHowtoCurrent + 1); }
+    function liarStartAuto(){
+      liarStopAuto();
+      liarHowtoTimer = setTimeout(() => liarGoToSlide(liarHowtoCurrent + 1), HOWTO_DURATION);
+    }
+    function liarStopAuto(){
+      if (liarHowtoTimer) { clearTimeout(liarHowtoTimer); liarHowtoTimer = null; }
+    }
+
+    // ---------- Game flow ----------
+    async function liarStartGame(ev){
+      // Gate: aria-disabled means a Start condition isn't met. Surface the
+      // hint as a toast instead of silently doing nothing.
+      const _gateBtn = document.getElementById('liar-start-btn');
+      if (_gateBtn && _gateBtn.getAttribute('aria-disabled') === 'true') {
+        const _hintEl = document.getElementById('liar-seats-hint');
+        const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
+        if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
+        return;
+      }
+      // Local guard: only host with enough claimants can start.
+      const claimedCount = Object.keys(liarState.claimedBy || {}).length;
+      if (claimedCount < 2 || !liarMe.myId) return;
+      if (liarGetSessionId() !== liarState.hostId) return;
+      // Disable the start button while the RPC is in flight so a frustrated
+      // double-tap doesn't try to start the game twice.
+      const btn = (ev && ev.currentTarget) || document.getElementById('liar-start-btn');
+      if (btn) { btn.disabled = true; btn.setAttribute('aria-busy','true'); }
+      // Server-authoritative: deal hands, pick tableCard, set phase. The
+      // realtime echo will deliver the canonical state to all devices —
+      // including this one — so no optimistic local mutation here. (C2 turn 3)
+      const res = await huddleCallRPC('huddle_liar_start_game', { p_code: liarState.code });
+      // On error, re-enable so retry works. On success, the realtime echo
+      // navigates everyone to the next phase and the button leaves the DOM.
+      if (res && res.error && btn && document.body.contains(btn)) {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+      }
+    }
+
+    function liarRenderTableCardSplash(){
+      const iconEl = document.getElementById('liar-tablecard-icon');
+      const nameEl = document.getElementById('liar-tablecard-name');
+      if (iconEl) iconEl.textContent = liarRankEmoji(liarState.tableCard);
+      if (nameEl) nameEl.textContent = t('liar.rank.' + liarState.tableCard);
+      if (iconEl) parseEmoji(iconEl);
+    }
+
+    function liarRankEmoji(rank){
+      if (rank === 'A') return '🅰️';
+      if (rank === 'K') return '👑';
+      if (rank === 'Q') return '👸';
+      return '🃏';
+    }
+
+    function liarRankLabel(rank){
+      return t('liar.rank.' + rank);
+    }
+
+    // Tap "Deal the cards" on the table-card splash → transitions everyone to play phase
+    function liarStartFirstTurn(){
+      if (liarState.phase !== 'tablecard') return; // prevent double-tap re-firing
+      if (!liarMe.myId) return; // must be a claimant
+      // Server-validated phase transition (C2 turn 3). Echo updates local state.
+      huddleCallRPC('huddle_liar_start_first_turn', { p_code: liarState.code });
+    }
+
+    // Renders the play screen from THIS device's perspective.
+    // Each device sees only its own hand. Action buttons gate on whose turn it is.
+    // Production play screen — Design A "round-table" layout.
+    // All seated players sit evenly spaced around a circular felt; ME at 6
+    // o'clock, opponents fill the rest at 360°/N intervals. Glow ring follows
+    // currentPlayerIdx so whoever's actually-on-turn lights up. Centre shows
+    // the round's rank as a big white button. Multi-device sync is automatic
+    // via the shared liarState (this fn just reads from it).
+    function liarRenderPlayScreen(){
+      const currentPid = liarState.alivePlayers[liarState.currentPlayerIdx];
+      const currentPlayer = liarState.players.find(p => p.id === currentPid);
+      const isMyTurn = currentPid === liarMe.myId;
+
+      ensureClaimantProfiles(Object.values(liarState.claimedBy || {}), liarRenderPlayScreen);
+      const currentDisplay = playerDisplayFor(currentPlayer, liarState.claimedBy);
+
+      // Is the current turn-holder actually online? If they've disconnected, the
+      // sole-survivor polling will end the game in ~8-11 seconds — but in the
+      // meantime show the user a clear "other player left" message instead of
+      // pretending they're about to act.
+      const currentSid = liarState.claimedBy && currentPid ? liarState.claimedBy[currentPid] : null;
+      const currentPresent = !!currentSid && _liarPresentSessions && _liarPresentSessions.has(currentSid);
+      const showOtherLeftUi = !isMyTurn && !!currentSid && !currentPresent;
+
+      // Header
+      const headerEl = document.getElementById('liar-play-header');
+      if (headerEl) {
+        if (isMyTurn) {
+          headerEl.textContent = t('liar.playHeader');
+        } else if (showOtherLeftUi) {
+          headerEl.textContent = t('liar.otherPlayerLeft');
+        } else {
+          headerEl.textContent = t('liar.waitingFor', { name: currentDisplay.name });
+        }
+      }
+
+      // Centre rank button — the localized rank word in uppercase.
+      const rankWordEl = document.getElementById('liar-play-rank-word');
+      if (rankWordEl) rankWordEl.textContent = liarRankLabel(liarState.tableCard);
+
+      liarRenderTable();
+      liarRenderHand();
+      liarUpdateActionStatus();
+    }
+
+    // Plural-aware sentence-case rank word for claim pills like "3 Queens".
+    // English pluralizes; Turkish uses the singular form (Turkish typically
+    // doesn't pluralize a noun after a numeral).
+    function liarRankWord(rank, count){
+      const lang = (typeof getLang === 'function') ? getLang() : 'en';
+      if (lang === 'en') {
+        const singular = { A:'Ace', K:'King', Q:'Queen' };
+        const plural   = { A:'Aces', K:'Kings', Q:'Queens' };
+        return (count === 1 ? singular[rank] : plural[rank]) || rank;
+      }
+      // Fallback: take the localized (uppercase) label and title-case it.
+      const w = liarRankLabel(rank);
+      return w.charAt(0) + w.slice(1).toLowerCase();
+    }
+
+    // Position each seated player around the felt rim. ME locks at 6 o'clock;
+    // opponents fill the rest at 360°/N intervals (perfectly even spacing).
+    // Glow ring (.current) lands on whichever seat matches currentPlayerIdx.
+    function liarRenderTable(){
+      const felt = document.getElementById('liar-play-felt');
+      if (!felt) return;
+
+      const currentPid = liarState.alivePlayers[liarState.currentPlayerIdx];
+      const isMyTurn   = currentPid === liarMe.myId;
+      const recent     = liarState.recentPlays || {};
+      const claimedBy  = liarState.claimedBy || {};
+
+      // Build the seated lists. ME always sits at 6 o'clock; opponents fill
+      // the remaining rim. Keep opponent order stable across renders so
+      // chairs don't jump as state mutates.
+      const seatedPlayers = liarState.players.filter(p => claimedBy[p.id]);
+      const opponents     = seatedPlayers.filter(p => p.id !== liarMe.myId);
+      const totalPlayers  = seatedPlayers.length;
+
+      // Circle math: ME at angle 180°, others at +360/N intervals.
+      const R         = 38; // placement radius (% from felt centre)
+      const meAngle   = 180;
+      const angleStep = totalPlayers > 1 ? 360 / totalPlayers : 0;
+
+      // Reset all 7 opponent slot elements (supports up to 8-player games:
+      // 7 opponents around the rim + me at 6 o'clock).
+      for (let i = 0; i < 7; i++) {
+        const el = document.getElementById('liar-play-slot-' + i);
+        if (!el) continue;
+        el.classList.remove('active', 'current', 'eliminated');
+        el.innerHTML = '';
+        el.style.top = '';
+        el.style.left = '';
+      }
+
+      // Fill each opponent's slot.
+      opponents.forEach((p, idx) => {
+        const el = document.getElementById('liar-play-slot-' + idx);
+        if (!el) return;
+        const angle = (meAngle + (idx + 1) * angleStep) % 360;
+        const rad   = angle * Math.PI / 180;
+        const x     = 50 + R * Math.sin(rad);
+        const y     = 50 - R * Math.cos(rad);
+        el.style.left = x.toFixed(2) + '%';
+        el.style.top  = y.toFixed(2) + '%';
+        el.classList.add('active');
+        const isAlive   = liarState.alivePlayers.includes(p.id);
+        const isCurrent = p.id === currentPid && isAlive;
+        if (isCurrent) el.classList.add('current');
+        if (!isAlive)  el.classList.add('eliminated');
+        el.innerHTML = liarPlaySeatHTML(p, recent, /*isMe*/false, isMyTurn);
+      });
+
+      // ME at 6 o'clock — only render if I'm actually seated.
+      const meEl = document.getElementById('liar-play-me');
+      if (meEl) {
+        const mePlayer = liarMe.myId && liarState.players.find(p => p.id === liarMe.myId);
+        const showMe   = !!(mePlayer && claimedBy[mePlayer.id]);
+        if (showMe) {
+          const isAlive = liarState.alivePlayers.includes(liarMe.myId);
+          meEl.classList.toggle('current', isMyTurn && isAlive);
+          meEl.classList.toggle('eliminated', !isAlive);
+          meEl.innerHTML = liarPlaySeatHTML(mePlayer, recent, /*isMe*/true, isMyTurn);
+          meEl.style.display = '';
+        } else {
+          meEl.style.display = 'none';
+          meEl.innerHTML = '';
+          meEl.classList.remove('current', 'eliminated');
+        }
+      }
+
+      parseEmoji(felt);
+    }
+
+    // Render one seat's contents — avatar + name + (optional) claim pill.
+    // Used for both opponent slots and the ME seat. The claim pill shows:
+    //   - Their actual played count if they've already played this round
+    //   - MY pending count + table-card rank if I have cards selected (me only)
+    //   - Nothing if neither
+    function liarPlaySeatHTML(player, recent, isMe, isMyTurn){
+      const isAlive   = liarState.alivePlayers.includes(player.id);
+      const handCount = isAlive ? (liarState.hands[player.id] || []).length : 0;
+      const display   = playerDisplayFor(player, liarState.claimedBy);
+      // ME uses 44px avatar + own profile name; opponents use 36px + claimant profile.
+      const avSize    = isMe ? 44 : 36;
+      const meName    = (isMe && myProfile && myProfile.username) ? '@' + myProfile.username : null;
+      const name      = meName || display.name || (player ? player.name : '');
+      const avatar    = (isMe && myProfile && myProfile.avatar) ? myProfile.avatar : display.avatar;
+      const avHtml    = avatarHTML(avatar, avSize, { fallback: player.initial });
+
+      let badge = '';
+      if (!isAlive) {
+        badge = `<div class="liar-play-out-tag">${t('liar.statusOut')}</div>`;
+      } else {
+        const played = recent[player.id];
+        if (played && played.count) {
+          // Actual played stack — sits as a white pill under the avatar+name.
+          badge = `<div class="liar-play-claim">${played.count} ${escapeHTML(liarRankWord(played.claimedRank, played.count))}</div>`;
+        } else if (isMe && isMyTurn && liarMe.selectedCardIds && liarMe.selectedCardIds.length > 0) {
+          // Pending claim: show MY selection count + the round's table card.
+          const cnt = liarMe.selectedCardIds.length;
+          badge = `<div class="liar-play-claim">${cnt} ${escapeHTML(liarRankWord(liarState.tableCard, cnt))}</div>`;
+        }
+      }
+
+      return `
+        <div class="liar-play-seat-avatar">
+          ${avHtml}
+        </div>
+        <div class="liar-play-seat-name">${escapeHTML(name)}</div>
+        ${badge}
+      `;
+    }
+
+    // Renders THIS device's hand only — based on liarMe.myId, not the current player.
+    // Other players' hands are never sent to other devices in the tomorrow-Supabase
+    // architecture; today, they're in localStorage but the render layer hides them.
+    function liarRenderHand(){
+      const hand = document.getElementById('liar-hand');
+      if (!hand) return;
+      if (!liarMe.myId || !liarState.alivePlayers.includes(liarMe.myId)) {
+        // I'm not playing this round (eliminated OR no seat claimed). Show empty state.
+        hand.classList.add('empty');
+        hand.innerHTML = `<div>${liarMe.myId ? t('liar.youAreOut') : t('liar.noSeatClaimed')}</div>`;
+        return;
+      }
+      const cards = liarState.hands[liarMe.myId] || [];
+      if (cards.length === 0) {
+        hand.classList.add('empty');
+        hand.innerHTML = `<div>${t('liar.handEmpty')}</div>`;
+        return;
+      }
+      hand.classList.remove('empty');
+      hand.innerHTML = cards.map(card => {
+        const selected = liarMe.selectedCardIds.includes(card.id);
+        return liarCardHTML(card, { selected, faceDown: false, onclick: `liarToggleCard('${card.id}')` });
+      }).join('');
+      parseEmoji(hand);
+    }
+
+    // 3-D flip card used only inside the reveal overlay. Two faces with
+    // backface-visibility:hidden so we get a real card-flip — back (red) showing
+    // first, then the rank reveals as the inner container rotates 180° → 0°.
+    // CSS handles the stagger via the --i custom property.
+    function liarFlipCardHTML(card, opts){
+      opts = opts || {};
+      const i = typeof opts.index === 'number' ? opts.index : 0;
+      const isJoker = card.rank === 'J';
+      const rankText = isJoker ? '🃏' : card.rank;
+      const frontExtra = (opts.revealed === 'truth' ? ' revealed-truth' : '') + (opts.revealed === 'lie' ? ' revealed-lie' : '');
+      const jokerCls = isJoker ? ' joker' : '';
+      const frontInner = isJoker
+        ? '<div class="liar-card-rank">🃏</div>'
+        : '<div class="liar-card-suit">' + rankText + '</div>'
+        + '<div class="liar-card-rank">' + rankText + '</div>'
+        + '<div class="liar-card-suit-br">' + rankText + '</div>';
+      return '<div class="liar-flip-card" style="--i: ' + i + '">'
+        + '<div class="liar-flip-face liar-flip-back"></div>'
+        + '<div class="liar-flip-face liar-flip-front' + frontExtra + jokerCls + '">' + frontInner + '</div>'
+        + '</div>';
+    }
+
+    function liarCardHTML(card, opts){
+      opts = opts || {};
+      if (opts.faceDown) {
+        return `<div class="liar-card face-down"></div>`;
+      }
+      const isJoker = card.rank === 'J';
+      const rankText = isJoker ? '🃏' : card.rank;
+      const onclick = opts.onclick ? ` onclick="${opts.onclick}"` : '';
+      const extra = (opts.selected ? ' selected' : '') + (opts.revealed === 'truth' ? ' revealed-truth' : '') + (opts.revealed === 'lie' ? ' revealed-lie' : '');
+      const jokerCls = isJoker ? ' joker' : '';
+      if (isJoker) {
+        return `<div class="liar-card${jokerCls}${extra}"${onclick}>
+          <div class="liar-card-rank">🃏</div>
+        </div>`;
+      }
+      return `<div class="liar-card${extra}"${onclick}>
+        <div class="liar-card-suit">${rankText}</div>
+        <div class="liar-card-rank">${rankText}</div>
+        <div class="liar-card-suit-br">${rankText}</div>
+      </div>`;
+    }
+
+    function liarToggleCard(cardId){
+      // Only allow card selection on MY turn — others can look but can't tap
+      const currentPid = liarState.alivePlayers[liarState.currentPlayerIdx];
+      if (currentPid !== liarMe.myId) return;
+      const idx = liarMe.selectedCardIds.indexOf(cardId);
+      if (idx >= 0) {
+        liarMe.selectedCardIds.splice(idx, 1);
+      } else {
+        if (liarMe.selectedCardIds.length >= 3) {
+          liarMe.selectedCardIds.shift();
+        }
+        liarMe.selectedCardIds.push(cardId);
+      }
+      // Local-only state change — no persist needed
+      liarRenderHand();
+      liarUpdateActionStatus();
+      // Refresh the me-seat so its brown "pending claim" badge tracks the
+      // selected count in real time as the user taps cards.
+      liarRenderTable();
+    }
+
+    function liarUpdateActionStatus(){
+      const statusEl = document.getElementById('liar-play-status');
+      const playBtn  = document.getElementById('liar-play-btn');
+      const callBtn  = document.getElementById('liar-call-btn');
+      if (!statusEl || !playBtn || !callBtn) return;
+
+      const currentPid    = liarState.alivePlayers[liarState.currentPlayerIdx];
+      const currentPlayer = liarState.players.find(p => p.id === currentPid);
+      const isMyTurn      = currentPid === liarMe.myId;
+      const myCards       = liarState.hands[liarMe.myId] || [];
+      const sel           = liarMe.selectedCardIds.length;
+      const isFirst       = !liarState.lastPlay;
+      const hasCards      = myCards.length > 0;
+      const imAlive       = liarMe.myId && liarState.alivePlayers.includes(liarMe.myId);
+      // Anyone-can-call rule: any alive player except the one who just played
+      // may call LIAR. First valid call wins (server serializes).
+      const accusedId     = liarState.lastPlay && liarState.lastPlay.byPlayerId;
+      const canCallLiar   = !isFirst && imAlive && accusedId !== liarMe.myId;
+
+      // NOT my turn — passive waiting status, BUT Liar button stays available
+      // to any alive non-accused watcher so they can challenge the last play.
+      if (!isMyTurn) {
+        const curSid = liarState.claimedBy && currentPid ? liarState.claimedBy[currentPid] : null;
+        const curPresent = !!curSid && _liarPresentSessions && _liarPresentSessions.has(curSid);
+        if (curSid && !curPresent) {
+          statusEl.innerHTML = t('liar.otherPlayerLeftStatus');
+        } else {
+          const curDisplay = playerDisplayFor(currentPlayer, liarState.claimedBy);
+          statusEl.innerHTML = t('liar.waitingForToAct', {
+            name: '<strong>' + escapeHTML(curDisplay.name) + '</strong>'
+          });
+        }
+        playBtn.disabled = true;
+        callBtn.disabled = !canCallLiar;
+        return;
+      }
+
+      // It IS my turn. Play button is mine; Liar button follows the same
+      // anyone-can-call gate (current player can also call).
+      callBtn.disabled = !canCallLiar;
+      playBtn.disabled = sel < 1 || sel > 3 || !imAlive;
+
+      if (!hasCards) {
+        statusEl.innerHTML = t('liar.statusYouEmpty');
+      } else if (sel === 0) {
+        if (isFirst) {
+          statusEl.innerHTML = t('liar.statusFirstTurn', { tableCard: escapeHTML(liarRankLabel(liarState.tableCard)) });
+        } else {
+          const lastPlayer = liarState.players.find(p => p.id === liarState.lastPlay.byPlayerId);
+          const lastDisp   = playerDisplayFor(lastPlayer, liarState.claimedBy);
+          statusEl.innerHTML = t('liar.statusFollow', {
+            name: escapeHTML(lastPlayer.id === liarMe.myId ? t('picker.you') : lastDisp.name),
+            count: escapeHTML(String(liarState.lastPlay.count)),
+          });
+        }
+      } else {
+        // 1+ cards selected — the pending claim pill under MY avatar shows
+        // the info, so the body status text is redundant. Clear it.
+        statusEl.innerHTML = '';
+      }
+    }
+
+    function liarPlaySelectedCards(){
+      if (liarState.phase !== 'play') return; // ignore if phase moved (rare double-tap)
+      // Local guard: only the current player can play
+      const currentPid = liarState.alivePlayers[liarState.currentPlayerIdx];
+      if (currentPid !== liarMe.myId) return;
+      const cards = liarState.hands[liarMe.myId] || [];
+      const selected = liarMe.selectedCardIds
+        .map(id => cards.find(c => c.id === id))
+        .filter(c => c);
+      if (selected.length < 1 || selected.length > 3) return;
+      const cardIds = selected.map(c => c.id);
+      // Clear local selection immediately so the UI deselects (UX); the
+      // actual hand mutation happens server-side and arrives via echo.
+      liarMe.selectedCardIds = [];
+      // Server-validated play (C2 turn 3) — server confirms caller's identity,
+      // turn order, and CARD OWNERSHIP. A malicious client cannot inject
+      // cards they don't hold, even via direct REST.
+      huddleCallRPC('huddle_liar_play_cards', {
+        p_code: liarState.code,
+        p_card_ids: cardIds,
+      });
+      // Re-render so the deselect lands visually without waiting for echo.
+      liarRerender();
+    }
+
+    function liarAdvanceTurn(){
+      const n = liarState.alivePlayers.length;
+      liarState.currentPlayerIdx = (liarState.currentPlayerIdx + 1) % n;
+    }
+
+    function liarCallLiar(){
+      if (liarState.phase !== 'play') return; // double-tap safety
+      if (!liarState.lastPlay) return;
+      // Local guard (UX only — server enforces the same rules):
+      //   • Caller must be alive in this round
+      //   • Caller must NOT be the player who just played (the accused)
+      // First valid call wins; subsequent calls fail with 'wrong_phase'.
+      if (!liarMe.myId) return;
+      if (!liarState.alivePlayers || !liarState.alivePlayers.includes(liarMe.myId)) return;
+      if (liarState.lastPlay.byPlayerId === liarMe.myId) return;
+      // Server determines pendingLoser & phase='reveal' (C2 turn 3). The
+      // truth-vs-lie computation is done server-side against the canonical
+      // lastPlay so the client cannot lie about the verdict.
+      // Mark the call button as syncing so the press-pulse affordance fires
+      // even though we no longer set phase locally.
+      try { liarMarkPhaseStart(document.getElementById('liar-call-btn')); } catch(e){}
+      huddleCallRPC('huddle_liar_call_liar', { p_code: liarState.code });
+    }
+
+    function liarRenderRevealContent(){
+      const accusedId = liarState.lastPlay.byPlayerId;
+      const accused = liarState.players.find(p => p.id === accusedId);
+      // Under the "anyone can call" rule, the accuser is whoever clicked
+      // "Liar!" — the server records this in pendingAccuserId. Fall back to
+      // the old currentPlayerIdx-derived value only for legacy states
+      // written before the rule change.
+      const accuserId = liarState.pendingAccuserId
+        || liarState.alivePlayers[liarState.currentPlayerIdx];
+      const accuser = liarState.players.find(p => p.id === accuserId);
+      const rankLabel = liarRankLabel(liarState.tableCard);
+      const count = liarState.lastPlay.count;
+      const sCount = count > 1 ? 's' : '';
+
+      ensureClaimantProfiles(Object.values(liarState.claimedBy || {}), liarRenderRevealContent);
+      const accusedDisplay = playerDisplayFor(accused, liarState.claimedBy);
+      const accuserDisplay = playerDisplayFor(accuser, liarState.claimedBy);
+      const accusedName = accused && accused.id === liarMe.myId ? t('picker.you') : accusedDisplay.name;
+      const accuserName = accuser && accuser.id === liarMe.myId ? t('picker.you') : accuserDisplay.name;
+
+      document.getElementById('liar-reveal-label').innerHTML = t('liar.revealLabel', {
+        name: escapeHTML(accusedName),
+        count: escapeHTML(String(count)),
+        tableCard: escapeHTML(rankLabel),
+        s: sCount,
+      });
+      document.getElementById('liar-reveal-title').textContent = t('liar.revealTitle');
+
+      // Render the revealed cards as 3-D flip cards. Each one starts face-down
+      // and animates face-up on a stagger driven by --i (CSS animation-delay).
+      const cardsEl = document.getElementById('liar-reveal-cards');
+      cardsEl.innerHTML = liarState.lastPlay.cards.map((c, i) => {
+        const isValid = c.rank === liarState.tableCard || c.rank === 'J';
+        return liarFlipCardHTML(c, { revealed: isValid ? 'truth' : 'lie', index: i });
+      }).join('');
+      parseEmoji(cardsEl);
+
+      // Verdict — slam-in animation + a big stamp ("BUSTED!" or "WRONG CALL!")
+      // for emotional punch. Animation only fires once per unique reveal
+      // (keyed by accused/cause) so re-renders during the reveal don't restart it.
+      const verdictEl = document.getElementById('liar-verdict');
+      const verdictEmoji = document.getElementById('liar-verdict-emoji');
+      const verdictText = document.getElementById('liar-verdict-text');
+      verdictEl.className = 'liar-verdict ' + liarState.pendingLoserCause;
+      // Compact verdict: only the first sentence (e.g. "Jordan was LYING.")
+      // The full explanation lived on the old separate reveal page; in the
+      // single-page overlay we want a small one-line pill so the BUSTED stamp
+      // and the cards are the focus.
+      const firstSentence = (full) => {
+        // Stop at the first .!? that's followed by whitespace, a tag, or end.
+        // The translations wrap key phrases in <strong> so the period often
+        // sits before a closing tag rather than a space.
+        const m = full.match(/^[\s\S]*?[.!?](?=\s|<|$)/);
+        return m ? m[0] : full;
+      };
+      let stampHtml = '';
+      if (liarState.pendingLoserCause === 'lied') {
+        verdictEmoji.textContent = '🤥';
+        const fullText = t('liar.verdictLied', { name: '<strong>' + escapeHTML(accusedName) + '</strong>', tableCard: rankLabel });
+        verdictText.innerHTML = firstSentence(fullText);
+        stampHtml = '<div class="liar-stamp">' + escapeHTML(t('liar.stampBusted')) + '</div>';
+      } else {
+        verdictEmoji.textContent = '😬';
+        const fullText = t('liar.verdictWrongAccuse', {
+          accuser: '<strong>' + escapeHTML(accuserName) + '</strong>',
+          name: escapeHTML(accusedName),
+        });
+        verdictText.innerHTML = firstSentence(fullText);
+        stampHtml = '<div class="liar-stamp wrong-stamp">' + escapeHTML(t('liar.stampWrongCall')) + '</div>';
+      }
+      parseEmoji(verdictEl);
+
+      const stampHost = document.getElementById('liar-reveal-stamp');
+      const revealKey = (liarState.pendingLoserId || '') + ':' + (liarState.pendingLoserCause || '');
+      const isFreshReveal = __liarLastRevealKey !== revealKey;
+      if (isFreshReveal) {
+        __liarLastRevealKey = revealKey;
+        // Card-flip sounds — staggered to match the new CSS animation-delays
+        // (calc(.3s + var(--i) * .6s) — i.e. card1@300ms, card2@900ms, card3@1500ms).
+        liarState.lastPlay.cards.forEach((_, idx) => {
+          liarSchedule(() => liarSfx.cardFlip(), 300 + idx * 600);
+        });
+        // Mount the stamp + verdict dramatize + stinger + screen flash AFTER all
+        // cards have flipped face-up (~2050ms for 3 cards). Defer to liarSchedule
+        // so the moment lands AFTER the visual flips, not before them.
+        const allCardsLandedMs = 300 + (liarState.lastPlay.cards.length - 1) * 600 + 550; // last delay + flip duration
+        liarSchedule(() => {
+          if (stampHost) stampHost.innerHTML = stampHtml;
+          verdictEl.classList.add('dramatize');
+          const flashKind = liarState.pendingLoserCause === 'lied' ? 'busted' : 'wrong';
+          liarFullScreenFlash(flashKind);
+          if (liarState.pendingLoserCause === 'lied') liarSfx.bustedStinger();
+          else                                       liarSfx.wrongCallStinger();
+        }, allCardsLandedMs);
+      } else if (stampHost) {
+        // Subsequent renders of the same reveal — keep the stamp visible but skip animation
+        stampHost.innerHTML = stampHtml;
+        const stampEl = stampHost.querySelector('.liar-stamp');
+        if (stampEl) stampEl.style.animation = 'none';
+      }
+
+      // Truth page auto-rolls into the cup phase after a 3s dwell so people
+      // read the verdict + see the stamp, then the cup section slides in below
+      // (combined page — no screen swap). The pulsing dwell hint underneath
+      // is everyone's visual cue that we're advancing on our own.
+      //
+      // Every device schedules the auto-advance, but the firing callback gates
+      // on liarShouldITakeAction so only ONE peer actually pushes state — the
+      // loser by default, or (if they've disconnected mid-dwell) the lowest-
+      // seat-connected peer as fallback. The mutator (liarStartSip) re-checks
+      // the same guard so a takeover that races a return-from-grace no-ops.
+      const isLoser = liarState.pendingLoserId === liarMe.myId;
+      liarScheduleRevealAdvance(revealKey, () => {
+        if (liarState.phase !== 'reveal') return;
+        if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+        liarStartSip();
+      }, 4500);
+      // Dwell hint — shown to EVERYONE so they know the cup screen is coming.
+      // Adds a small pulsing dot for liveness; copy varies by perspective so the
+      // loser sees "Heading to the cup…" and watchers see "Maria's heading to the cup…".
+      const waitingNote = document.getElementById('liar-reveal-waiting');
+      if (waitingNote) {
+        waitingNote.style.display = '';
+        const loser = liarState.players.find(p => p.id === liarState.pendingLoserId);
+        const loserDisp = playerDisplayFor(loser, liarState.claimedBy);
+        const hintText = isLoser
+          ? t('liar.autoNextTruthYou')
+          : t('liar.autoNextTruthOther', { name: '<strong>' + escapeHTML(loserDisp.name) + '</strong>' });
+        waitingNote.innerHTML = '<span class="liar-auto-dot"></span> ' + hintText;
+      }
+    }
+
+    // ---------- The Cup ----------
+    // Tap "to the cup" (loser only) → transitions phase. Chamber pattern is generated
+    // ONCE by the loser's tap so all tabs see the same pattern. Sub-actions on the cup
+    // screen (tap-to-drink) are gated to the loser only.
+    function liarStartSip(){
+      if (liarState.phase !== 'reveal') return; // double-tap safety
+      // Only the pending loser can advance to the cup. (Was: also lowest-
+      // connected fallback; that case currently degrades to "game stalls
+      // until loser returns" — to be re-added via presence-aware policy.)
+      if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+      // Server builds the chamber pattern with server-side randomness (C2
+      // turn 3b). A cheating client cannot preview spill positions.
+      huddleCallRPC('huddle_liar_start_sip', { p_code: liarState.code });
+    }
+
+    // Per-device animation ledgers — keyed so we only play each dramatic moment
+    // ONCE per state transition. Re-renders during the animation must not re-fire.
+    let __liarLastAnimatedSipKey = null;
+    let __liarLastRevealKey = null;
+
+    // Auto-advance plumbing. The Truth page and Cup result both transition on a
+    // timer so players don't have to keep tapping. Only the loser's device fires
+    // the state mutation (otherwise multiple devices would race to push the same
+    // transition). Watchers see the resulting state change via Supabase Realtime.
+    // Timers are keyed so re-renders during the dwell don't restart them, and
+    // we clear them when the player leaves or the phase moves on.
+    const __liarAutoAdvance = { revealKey:null, revealTimer:null, cupKey:null, cupTimer:null };
+    function liarScheduleRevealAdvance(key, fn, ms){
+      if (__liarAutoAdvance.revealKey === key) return; // already scheduled for this reveal
+      liarClearRevealAdvance();
+      __liarAutoAdvance.revealKey = key;
+      __liarAutoAdvance.revealTimer = setTimeout(() => {
+        __liarAutoAdvance.revealTimer = null;
+        try { fn(); } catch(e){ console.error('reveal auto-advance failed', e); }
+      }, ms);
+    }
+    function liarClearRevealAdvance(){
+      if (__liarAutoAdvance.revealTimer) {
+        clearTimeout(__liarAutoAdvance.revealTimer);
+        __liarAutoAdvance.revealTimer = null;
+      }
+      __liarAutoAdvance.revealKey = null;
+    }
+    function liarScheduleCupAdvance(key, fn, ms){
+      if (__liarAutoAdvance.cupKey === key) return;
+      liarClearCupAdvance();
+      __liarAutoAdvance.cupKey = key;
+      __liarAutoAdvance.cupTimer = setTimeout(() => {
+        __liarAutoAdvance.cupTimer = null;
+        try { fn(); } catch(e){ console.error('cup auto-advance failed', e); }
+      }, ms);
+    }
+    function liarClearCupAdvance(){
+      if (__liarAutoAdvance.cupTimer) {
+        clearTimeout(__liarAutoAdvance.cupTimer);
+        __liarAutoAdvance.cupTimer = null;
+      }
+      __liarAutoAdvance.cupKey = null;
+    }
+    function liarClearAllAutoAdvance(){
+      liarClearRevealAdvance();
+      liarClearCupAdvance();
+      // liarClearAutoSip is declared further down; guard for hoist order.
+      if (typeof liarClearAutoSip === 'function') liarClearAutoSip();
+      // Cancel any pending SFX timeouts too — they're part of the same
+      // "stop the game's queued work" semantic. (Doesn't close the audio
+      // context — that's reserved for liarStopAllSfx so callers can
+      // distinguish "stop scheduling" from "kill all audio NOW".)
+      if (typeof liarCancelScheduledSfx === 'function') liarCancelScheduledSfx();
+    }
+
+    // Render the inline cup section (now lives inside the reveal screen).
+    // No more "Tap to drink" button — the cup flows automatically. The loser's
+    // device schedules `liarTakeSip` after a ~1.1s brace beat so the player
+    // has a moment to look at their phone and read the chamber count before
+    // the spin starts. All other devices wait for the resulting `sipTaken=true`
+    // state push via Supabase Realtime and animate from there.
+    // THE VERDICT — Wheel-of-fate render. Replaces the old cup/chambers visual.
+    // The state plumbing is untouched: sipChamberIsSpill still says which chambers
+    // are poison, sipChamberIdx still picks the landing chamber, sipOutcome still
+    // resolves safe/spilled. We just render those as a spinning wheel.
+    function liarRenderCupInline(){
+      const spills = liarState.cupSpills || 1;
+      const wheelEl = document.getElementById('liar-wheel');
+      const stage = document.getElementById('liar-cup-stage');
+      const stamp = document.getElementById('liar-wheel-stamp');
+      const spotwedge = document.getElementById('liar-wheel-spotwedge');
+      const resultEl = document.getElementById('liar-cup-result');
+      if (!wheelEl) return;
+
+      // Color the wheel — match wedges to sipChamberIsSpill (so all devices
+      // see the same red/green layout) or fall back to first-N-are-red.
+      const chambers = (liarState.sipChamberIsSpill && liarState.sipChamberIsSpill.length === 6)
+        ? liarState.sipChamberIsSpill
+        : (() => {
+            const arr = new Array(6).fill(false);
+            for (let i = 0; i < Math.min(spills, 6); i++) arr[i] = true;
+            return arr;
+          })();
+      // Polished palette: deep casino-felt red + alternating emerald greens
+      let bg = 'conic-gradient(';
+      for (let i = 0; i < 6; i++) {
+        const start = i * 60, end = (i + 1) * 60;
+        const color = chambers[i] ? '#b91c1c' : (i % 2 === 0 ? '#16a34a' : '#15803d');
+        bg += `${color} ${start}deg ${end}deg${i < 5 ? ',' : ''}`;
+      }
+      bg += ')';
+      // Glossy top highlight + soft bottom vignette over the wedges — turns
+      // the flat-painted look into a polished domed surface.
+      const sheen = 'radial-gradient(circle at 50% 22%, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 42%), radial-gradient(circle at 50% 88%, rgba(0,0,0,.25) 0%, rgba(0,0,0,0) 58%)';
+      wheelEl.style.background = `${sheen}, ${bg}`;
+
+      if (!liarState.sipTaken) {
+        // Pre-spin — wheel rendered colored, not spinning yet. The 1.1s brace
+        // beat lets the loser see how many red wedges they're up against.
+        __liarLastAnimatedSipKey = null;
+        sfxStopSuspense();
+        sfxStopRumble();
+        if (resultEl) resultEl.style.display = 'none';
+        if (stage) stage.className = 'liar-cup-stage liar-wheel-stage';
+        if (stamp) { stamp.className = 'liar-wheel-stamp'; stamp.textContent = ''; }
+        if (spotwedge) spotwedge.className = 'liar-wheel-spotwedge';
+        wheelEl.className = 'liar-wheel';
+        wheelEl.style.removeProperty('--liar-wheel-target');
+        // Auto-fire liarTakeSip after the brace beat; gated by liarShouldITakeAction
+        // so only the loser (or the lowest-seat-connected fallback) writes state.
+        liarScheduleAutoSip();
+      } else {
+        if (resultEl) resultEl.style.display = 'none';
+        const sipKey = String(liarState.sipChamberIdx) + ':' + liarState.sipOutcome;
+        if (__liarLastAnimatedSipKey !== sipKey) {
+          __liarLastAnimatedSipKey = sipKey;
+          liarRunCupAnimation();
+        }
+      }
+    }
+
+    // Auto-fire the sip after a brace beat. Guarded by liarAutoSipTimer +
+    // liarAutoSipKey so multiple rerenders don't schedule duplicates.
+    let __liarAutoSipTimer = null;
+    let __liarAutoSipKey = null;
+    function liarScheduleAutoSip(){
+      // Key by pendingLoserId — one auto-fire per loser, per cup phase entry.
+      const key = String(liarState.pendingLoserId || '') + ':' + (liarState.cupSpills || 0);
+      if (__liarAutoSipKey === key) return; // already scheduled for this sip
+      liarClearAutoSip();
+      __liarAutoSipKey = key;
+      __liarAutoSipTimer = setTimeout(() => {
+        __liarAutoSipTimer = null;
+        try {
+          // Re-check ownership at fire time. liarShouldITakeAction returns
+          // true for the loser when present, OR for the lowest-seat-connected
+          // peer when the loser has disconnected past the grace window.
+          if (liarState.phase !== 'cup' || liarState.sipTaken) return;
+          if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+          // Haptic only on the actual loser's device (not the takeover peer —
+          // they didn't "lose" anything).
+          if (liarState.pendingLoserId === liarMe.myId) {
+            try { if (navigator.vibrate) navigator.vibrate(60); } catch(e){}
+          }
+          liarTakeSip();
+        } catch(e){ console.error('auto-sip failed', e); }
+      }, 1100);
+    }
+    function liarClearAutoSip(){
+      if (__liarAutoSipTimer) {
+        clearTimeout(__liarAutoSipTimer);
+        __liarAutoSipTimer = null;
+      }
+      __liarAutoSipKey = null;
+    }
+
+    // Plays the dramatic drinking sequence end-to-end on the current device.
+    // Same timeline on every device because the state push happens once when
+    // the loser taps; everyone else sees sipTaken=true and runs this same fn.
+    //
+    // Timeline (ms after start, branches at the reveal):
+    //   0–400     lift + heartbeat begins, low rumble swells in
+    //   400–3700  ★ roulette spin — 16 ticks, convex easing (t^1.4),
+    //             gaps grow ~100→340ms (real slot-machine deceleration).
+    //             Heartbeat + rumble underneath. DOM nodes are stable;
+    //             only the `.rolling` class moves between chambers, so the
+    //             .14s CSS transition fires for a smooth baton-pass feel.
+    //   3700      rouletteLand SFX — bigger lower thud as the ball settles;
+    //             final chamber gets the `.settle` pulse class
+    //   3700–4200 ★ HELD PAUSE — the "pause that pays". Rumble + suspense
+    //             stop. Only a single slow heartbeat thud at 3850 (~150ms
+    //             after silence falls). 500ms of dread per slot-UX research.
+    //   4200      sharp whoosh, anticipation class removed
+    //   4400–4900 drink tilt + gulp SFX (cup tips to mouth)
+    //   4900      ★ REVEAL — flash + impact + chamber colour morph
+    //     SAFE:   bright chord + opening ding + confetti + cup bounce
+    //             → safe-celebrate linger at 5800 + safeCheer chord at 5900
+    //             → result card pops in at 6300
+    //             → auto-advance at 8800ms total
+    //     SPILL:  layered impact (anticipation drop + body thud + slam sweep
+    //             + crash + reverb tail), heavy 760ms camera shake
+    //             → secondary aftershock at 5700
+    //             → 2nd droplet wave at 6000
+    //             → spill-aftermath state + drone at 6100
+    //             → result card slams in at 6800
+    //             → auto-advance at 10000ms total
+    // THE VERDICT — wheel-spin animation. Replaces the old cup-tilt + chamber-row
+    // visual with a gilded conic-gradient wheel. State plumbing is preserved:
+    // existing sipChamberIdx / sipOutcome / cupSpills drive what the wheel shows.
+    //
+    // Timeline (ms after start):
+    //   0–400     anticipation: rumble + suspense, wheel pre-render visible
+    //   400–6500  WHEEL SPINS — 6.1s cubic-bezier deceleration ending on the
+    //             chamber matching sipChamberIdx. Slow-mo final 600ms baked in.
+    //   6300      stop suspense/rumble, brief silence
+    //   6500      spotwedge flares on the landed wedge (gold for safe, red for out)
+    //   6800      REVEAL — full-screen flash + SAFE/OUT stamp slams in
+    //             + confetti (safe) or shards/droplets/vignette/shake (spill)
+    //   7600+     aftermath: secondary shake + droplets (spill) or celebration
+    //             linger (safe)
+    //   8300/8800 result card slides in
+    //   10700/11900 auto-advance to next round / winner screen
+    function liarRunCupAnimation(){
+      // Streamlined per user request: keep only spin + spotwedge landing flare
+      // + OUT/SAFE stamp + result card. No sounds, no confetti, no shards, no
+      // droplets, no body shake, no vignette, no fullscreen flash, no
+      // anticipation phase. Total runtime ~7.5s (was ~12s).
+      const stage = document.getElementById('liar-cup-stage');
+      const wheelEl = document.getElementById('liar-wheel');
+      const spotwedge = document.getElementById('liar-wheel-spotwedge');
+      const stamp = document.getElementById('liar-wheel-stamp');
+      const particles = document.getElementById('liar-cup-particles');
+      const resultEl = document.getElementById('liar-cup-result');
+      const outcome = liarState.sipOutcome;
+      const finalIdx = liarState.sipChamberIdx;
+      if (!stage || !wheelEl) return;
+
+      // Reset visuals
+      stage.className = 'liar-cup-stage liar-wheel-stage';
+      if (particles) particles.innerHTML = '';
+      if (resultEl) resultEl.style.display = 'none';
+      if (stamp) { stamp.className = 'liar-wheel-stamp'; stamp.textContent = ''; }
+      if (spotwedge) spotwedge.className = 'liar-wheel-spotwedge';
+
+      // Compute target rotation so the pointer (12 o'clock) lands on
+      // wedge `finalIdx`. R = 330 - 60*finalIdx mod 360, plus 6 full turns
+      // for drama.
+      const wedgeMidAngle = 60 * finalIdx + 30;
+      const baseRotation = ((360 - wedgeMidAngle) % 360 + 360) % 360;
+      const targetRotation = (6 * 360) + baseRotation;
+      wheelEl.classList.remove('spinning');
+      void wheelEl.offsetWidth; // reflow so .spinning restarts the keyframe
+      wheelEl.style.setProperty('--liar-wheel-target', targetRotation + 'deg');
+
+      // Spin begins
+      liarSchedule(() => {
+        wheelEl.classList.add('spinning');
+      }, 100);
+
+      // Stamp slams in 300ms after landing (no spotwedge glow per user request)
+      liarSchedule(() => {
+        if (stamp) {
+          stamp.textContent = outcome === 'spilled' ? 'OUT' : 'SAFE';
+          stamp.className = 'liar-wheel-stamp ' + (outcome === 'spilled' ? 'out' : 'safe') + ' show hold';
+        }
+      }, 6500);
+
+      // Result card slides in
+      liarSchedule(() => {
+        liarShowSipResult();
+        const card = document.getElementById('liar-cup-result');
+        if (card) {
+          card.classList.remove('dramatize');
+          void card.offsetWidth;
+          card.classList.add('dramatize');
+        }
+      }, 7000);
+
+      // Auto-advance to next round
+      const cupKey = String(liarState.sipChamberIdx) + ':' + liarState.sipOutcome + ':post';
+      liarScheduleCupAdvance(cupKey, () => {
+        if (liarState.phase !== 'cup' || !liarState.sipTaken) return;
+        if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+        liarAfterSip();
+      }, 8500);
+    }
+
+    // Roulette spin — cycle the chamber highlight through positions with
+    // decelerating intervals (slot-machine style). The final tick lands on the
+    // actual picked chamber index. Each tick fires a tick SFX in sync.
+    //
+    // Math note: tick i fires at `startDelay + duration * (i / (N-1)) ^ k` with
+    // k > 1, which is a CONVEX position curve over time — meaning the spin
+    // covers less distance per unit time as it progresses → tick GAPS GROW
+    // (decelerating). The previous version used `1 - (1-t)^k` (CONCAVE), which
+    // made gaps SHRINK to ~2ms at the end — a slot machine that accelerated
+    // into a blur. With k=1.4 and N=16 over 3300ms, gaps grow ~100→340ms.
+    // Each tick comfortably above the eye/ear threshold for distinct events.
+    //
+    // The final tick fires `rouletteLand` (bigger thud) instead of the normal
+    // tick, and the chamber gets a `.settle` class so it pulses to mark the
+    // landing point. The 500ms held-pause after the final tick lets that
+    // pulse and silence breathe.
+    //
+    // Under reduced-motion we snap straight to the final position without
+    // any of this, after a short delay.
+    function liarRunChamberSpin(startDelay, endDelay, finalIdx, reducedMotion){
+      if (reducedMotion) {
+        liarSchedule(() => liarRenderCupChambersSpinning(finalIdx, true), startDelay);
+        return;
+      }
+      const totalDuration = endDelay - startDelay;
+      const tickCount = 16;
+      const easingPower = 1.4;
+      // Cursor moves forward through chambers; the final tick lands on finalIdx.
+      // Starting offset is randomised so the spin doesn't always begin at chamber 0.
+      const cursor = Math.floor(Math.random() * 6);
+      for (let i = 0; i < tickCount; i++) {
+        const t = i / (tickCount - 1);
+        const eased = Math.pow(t, easingPower);  // CONVEX → growing gaps → decelerating
+        const at = startDelay + totalDuration * eased;
+        const isLast = i === tickCount - 1;
+        // Avoid the second-to-last index matching finalIdx (would look like
+        // the highlight froze on the last tick). Offset by 1 if it would.
+        let idx;
+        if (isLast) {
+          idx = finalIdx;
+        } else {
+          idx = (cursor + i) % 6;
+          if (i === tickCount - 2 && idx === finalIdx) idx = (finalIdx + 3) % 6;
+        }
+        liarSchedule(() => {
+          liarRenderCupChambersSpinning(idx, isLast);
+          if (isLast) liarSfx.rouletteLand();
+          else        liarSfx.rouletteTick();
+        }, at);
+      }
+    }
+
+    // Render the chambers in "spinning" mode — all show `?`, one optionally
+    // highlighted as the roulette spotlight (no safe/spill colour reveal yet).
+    //
+    // CRITICAL: we TOGGLE classes on existing nodes — NEVER rebuild innerHTML.
+    // The previous implementation replaced wrap.innerHTML on every tick, which
+    // destroyed and recreated each <div>. New elements start at their target
+    // CSS state with no transition — so the highlight just SNAPPED between
+    // chambers, which is what made the spin feel "instant" and glitchy.
+    // With class toggles on stable DOM nodes, the .14s CSS transition on the
+    // .rolling state actually fires, producing smooth baton-pass animation.
+    //
+    // `landed`: if true, the highlighted chamber also gets `.settle` for the
+    // bigger "ball lands in pocket" pulse animation.
+    function liarRenderCupChambersSpinning(highlightIdx, landed){
+      const wrap = document.getElementById('liar-cup-chambers');
+      if (!wrap) return;
+      const pattern = liarState.sipChamberIsSpill || [];
+      if (!pattern.length) return;
+      // Build skeleton once (or rebuild if chamber count changed).
+      let chambers = wrap.querySelectorAll('.liar-cup-chamber');
+      if (chambers.length !== pattern.length) {
+        wrap.innerHTML = pattern.map(() => '<div class="liar-cup-chamber">?</div>').join('');
+        chambers = wrap.querySelectorAll('.liar-cup-chamber');
+      }
+      chambers.forEach((el, i) => {
+        const shouldRoll = i === highlightIdx;
+        if (el.classList.contains('rolling') !== shouldRoll) {
+          el.classList.toggle('rolling', shouldRoll);
+        }
+        // `.settle` only on the final landed chamber. Remove from all others
+        // to avoid stale pulse states if the function is called repeatedly.
+        const shouldSettle = shouldRoll && landed;
+        if (el.classList.contains('settle') !== shouldSettle) {
+          el.classList.toggle('settle', shouldSettle);
+        }
+        // Clear any leftover reveal-state classes from a prior sip — we're
+        // pre-reveal so chambers should all read as `?` with neutral styling.
+        if (el.classList.contains('spill') || el.classList.contains('safe') || el.classList.contains('revealed')) {
+          el.classList.remove('spill','safe','revealed');
+        }
+        if (el.textContent !== '?') el.textContent = '?';
+      });
+    }
+
+    // Inject confetti spans with randomised CSS vars (direction/rotation) for the
+    // safe-drink celebration. The CSS animation reads --fly-x / --fly-y / --fly-rot.
+    function liarSpawnConfetti(host){
+      const colors = ['#3ec56a','#f5c451','#7fb3ff','#ff6b54','#b9b1ff'];
+      const pieces = 14;
+      let html = '';
+      for (let i = 0; i < pieces; i++) {
+        const angle = (i / pieces) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+        const dist  = 70 + Math.random() * 50;
+        const fx = Math.cos(angle) * dist;
+        const fy = Math.sin(angle) * dist - 30; // bias up
+        const rot = 180 + Math.random() * 360;
+        const color = colors[i % colors.length];
+        html += `<span class="liar-confetti-piece" style="--fly-x:${fx.toFixed(0)}px;--fly-y:${fy.toFixed(0)}px;--fly-rot:${rot.toFixed(0)}deg;--confetti-color:${color};animation-delay:${(i * 12)}ms"></span>`;
+      }
+      host.innerHTML = html;
+    }
+    // Droplet spans that fall from the tilted cup on spill.
+    function liarSpawnDroplets(host){
+      const drops = 8;
+      let html = '';
+      for (let i = 0; i < drops; i++) {
+        const dx = -40 + Math.random() * 80;
+        const dy = Math.random() * 30;
+        const rot = (Math.random() - 0.5) * 30;
+        html += `<span class="liar-droplet" style="--drop-x:${dx.toFixed(0)}px;--drop-y:${dy.toFixed(0)}px;--drop-rot:${rot.toFixed(0)}deg;animation-delay:${(i * 25)}ms">💧</span>`;
+      }
+      // Append rather than overwrite — shards may have been spawned first
+      // and we don't want to wipe them.
+      host.insertAdjacentHTML('beforeend', html);
+    }
+    // Glass shards — explode outward from the cup's centre in a starburst.
+    // 12 shards spread evenly around a circle (~120-180px radius) with random
+    // rotation. The `--shard-x/y/rot` CSS vars feed the liarShardFly keyframe.
+    function liarSpawnShards(host){
+      const shards = 12;
+      let html = '';
+      for (let i = 0; i < shards; i++) {
+        const angle = (i / shards) * Math.PI * 2 + (Math.random() - 0.5) * 0.55;
+        const dist  = 95 + Math.random() * 85;
+        const sx = Math.cos(angle) * dist;
+        const sy = Math.sin(angle) * dist - 12; // slight upward bias for a burst feel
+        const rot = (Math.random() - 0.5) * 1440; // up to ±720deg spin
+        const delay = i * 8;
+        html += `<span class="liar-shard" style="--shard-x:${sx.toFixed(0)}px;--shard-y:${sy.toFixed(0)}px;--shard-rot:${rot.toFixed(0)}deg;animation-delay:${delay}ms"></span>`;
+      }
+      host.insertAdjacentHTML('beforeend', html);
+    }
+    // Full-screen vignette — appended to <body> during shatter, removed after
+    // the 2.4s keyframe completes. Kept defensively self-cleaning in case
+    // the user navigates away mid-animation.
+    function liarShowVignette(){
+      const v = document.createElement('div');
+      v.className = 'liar-vignette show';
+      document.body.appendChild(v);
+      setTimeout(() => { try { document.body.removeChild(v); } catch(e){} }, 2500);
+    }
+    function liarFullScreenFlash(kind){
+      const flash = document.createElement('div');
+      flash.className = 'liar-flash ' + kind;
+      document.body.appendChild(flash);
+      // Remove after the animation finishes so nothing sticky lingers
+      setTimeout(() => { try { document.body.removeChild(flash); } catch(e){} }, 600);
+    }
+    function liarBodyShake(intensity){
+      // No-op: the user asked for the wheel/cup to stop shaking. Kept as a
+      // function so the 4 call sites (cup cinematic + wheel-test demo) don't
+      // need to change. Original implementation:
+      //   added `.liar-shake` (+ `heavy`|`soft`) to <body>, removed after
+      //   460–760ms. The CSS keyframes still exist for future use.
+      return;
+    }
+
+    // Render the chambers — pre-reveal (just `?` markers) or post-reveal (real
+    // safe/spill colours). Like liarRenderCupChambersSpinning, this TOGGLES
+    // classes on stable DOM nodes when possible so the transition from
+    // "spinning highlight" → "revealed colours" animates smoothly via the
+    // chamber's .16s base transition. If chamber count changed, falls back
+    // to a one-time innerHTML rebuild.
+    function liarRenderCupChambers(showResult){
+      const wrap = document.getElementById('liar-cup-chambers');
+      if (!wrap) return;
+      const pattern = liarState.sipChamberIsSpill || [];
+      if (!pattern.length) return;
+      let chambers = wrap.querySelectorAll('.liar-cup-chamber');
+      if (chambers.length !== pattern.length) {
+        wrap.innerHTML = pattern.map(() => '<div class="liar-cup-chamber">?</div>').join('');
+        chambers = wrap.querySelectorAll('.liar-cup-chamber');
+      }
+      pattern.forEach((isSpill, i) => {
+        const el = chambers[i];
+        if (!el) return;
+        const isPicked = i === liarState.sipChamberIdx;
+        // Strip transient classes from the spin phase so the chamber settles
+        // into its real post-reveal state cleanly. CSS transitions on
+        // background/border carry the colour morph (gold → red/green).
+        el.classList.remove('rolling','settle');
+        const wantSpill    = showResult && isSpill;
+        const wantSafe     = showResult && !isSpill;
+        const wantRevealed = isPicked && (showResult || true);
+        if (el.classList.contains('spill') !== wantSpill) el.classList.toggle('spill', wantSpill);
+        if (el.classList.contains('safe')  !== wantSafe)  el.classList.toggle('safe',  wantSafe);
+        if (el.classList.contains('revealed') !== wantRevealed) el.classList.toggle('revealed', wantRevealed);
+        const text = showResult ? (isSpill ? '💧' : '·') : '?';
+        if (el.textContent !== text) el.textContent = text;
+      });
+      parseEmoji(wrap);
+    }
+
+    function liarTakeSip(){
+      if (liarState.phase !== 'cup' || liarState.sipTaken) return; // double-fire safety
+      // Only the loser's device fires this. (See note in liarStartSip about
+      // the removed lowest-connected fallback.)
+      if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+      liarClearAutoSip();
+      // Server picks the chamber + resolves outcome (C2 turn 3b). A cheating
+      // client cannot rig their own cup outcome.
+      huddleCallRPC('huddle_liar_take_sip', { p_code: liarState.code });
+    }
+
+    // Pure content render — called by the cup animation after sipTaken=true
+    // to slide in the result panel. No button-state side effects.
+    function liarShowSipResult(){
+      const loser = liarState.players.find(p => p.id === liarState.pendingLoserId);
+      const loserDisp = playerDisplayFor(loser, liarState.claimedBy);
+      const resultEl = document.getElementById('liar-cup-result');
+      const resultEmoji = document.getElementById('liar-cup-result-emoji');
+      const resultTitle = document.getElementById('liar-cup-result-title');
+      const resultText = document.getElementById('liar-cup-result-text');
+      if (!resultEl) return;
+
+      // Decide the auto-advance hint copy. If the spill eliminates the loser AND
+      // only one player remains, the next step is the WINNER screen, not another
+      // round — so the hint should say "Crowning the winner…" instead.
+      let nextHintKey = 'liar.autoNextRound';
+      if (liarState.sipOutcome === 'spilled') {
+        const survivorsAfter = liarState.alivePlayers.filter(id => id !== liarState.pendingLoserId);
+        if (survivorsAfter.length <= 1) nextHintKey = 'liar.autoNextWinner';
+      }
+      const hint = '<div class="liar-cup-autohint"><span class="liar-auto-dot"></span> ' + escapeHTML(t(nextHintKey)) + '</div>';
+
+      if (liarState.sipOutcome === 'safe') {
+        resultEl.className = 'liar-cup-result safe';
+        if (resultEmoji) { resultEmoji.style.display = ''; resultEmoji.textContent = '😅'; }
+        if (resultTitle) resultTitle.textContent = t('liar.cupSafeTitle');
+        if (resultText) resultText.innerHTML = t('liar.cupSafeText', { nextSpills: Math.min(6, liarState.cupSpills + 1) }) + hint;
+      } else {
+        // SPILL: hide the small 💧 emoji and replace it with the big OUT
+        // stamp. The loser's name in the body text gets a draw-on strikethrough
+        // to drive home "you're eliminated".
+        resultEl.className = 'liar-cup-result spilled';
+        if (resultEmoji) { resultEmoji.style.display = 'none'; resultEmoji.textContent = ''; }
+        if (resultTitle) {
+          // Prepend the OUT stamp — wrap title to render the stamp above the
+          // "You SPILLED!" text. Set via innerHTML so the keyframe-driven span
+          // animates on insert.
+          resultTitle.innerHTML = '<div class="liar-out-stamp">OUT</div>'
+            + escapeHTML(t('liar.cupSpilledTitle'));
+        }
+        if (resultText) {
+          const struckName = '<strong><span class="liar-name-strike">'
+            + escapeHTML(loserDisp.name)
+            + '</span></strong>';
+          resultText.innerHTML = t('liar.cupSpilledText', { name: struckName }) + hint;
+        }
+      }
+      parseEmoji(resultEl);
+      resultEl.style.display = '';
+    }
+
+    function liarAfterSip(){
+      if (liarState.phase !== 'cup' || !liarState.sipTaken) return; // double-tap safety
+      // Only the loser's device fires this. (See note in liarStartSip about
+      // the removed lowest-connected fallback.)
+      if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+      // Server handles: elimination/survival, win detection, next-round deal
+      // (winner-of-call leads), or game-end if 1 survivor remains (C2 turn 3b).
+      // All the round-starter rule logic and the cascade into the next round
+      // are folded into the single huddle_liar_after_sip RPC.
+      huddleCallRPC('huddle_liar_after_sip', { p_code: liarState.code });
+    }
+
+    // ---------- Result ----------
+    function liarRenderResultContent(){
+      const winnerId = liarState.winnerId;
+      const winner = winnerId ? liarState.players.find(p => p.id === winnerId) : null;
+      ensureClaimantProfiles(Object.values(liarState.claimedBy || {}), liarRenderResultContent);
+      const winnerDisplay = winner ? playerDisplayFor(winner, liarState.claimedBy) : null;
+      const winnerName = winner && winner.id === liarMe.myId ? t('picker.you') : (winnerDisplay ? winnerDisplay.name : '');
+      const winTitleEl = document.getElementById('liar-win-title');
+      if (winTitleEl) winTitleEl.textContent = winner
+        ? t('liar.winTitle', { name: winnerName })
+        : t('liar.resultHeader');
+
+      const lb = document.getElementById('liar-leaderboard');
+      if (!lb) return;
+      // Only show CLAIMED seats — empty seats shouldn't appear on the leaderboard.
+      const claimedSet = new Set(Object.keys(liarState.claimedBy || {}));
+      const sorted = liarState.players.filter(p => claimedSet.has(p.id)).sort((a, b) => {
+        const wa = liarState.wins[a.id] || 0;
+        const wb = liarState.wins[b.id] || 0;
+        if (wb !== wa) return wb - wa;
+        return a.name.localeCompare(b.name);
+      });
+      lb.innerHTML = sorted.map((p, i) => {
+        const wins = liarState.wins[p.id] || 0;
+        const isWinner = p.id === winnerId;
+        const isMe = p.id === liarMe.myId;
+        const winsKey = wins === 1 ? 'cham.scoreWinsOne' : 'cham.scoreWins';
+        const rowDisplay = playerDisplayFor(p, liarState.claimedBy);
+        return `
+          <div class="lb-row ${isWinner ? 'winner' : ''}">
+            <div class="lb-rank">${i+1}</div>
+            ${avatarHTML(rowDisplay.avatar, 44, { fallback: p.initial })}
+            <div class="lb-name">${isMe ? t('picker.you') : escapeHTML(rowDisplay.name)}</div>
+            <div class="lb-score">${t(winsKey, { n: wins })}</div>
+          </div>
+        `;
+      }).join('');
+      parseEmoji(lb);
+
+      // Configure the Play again / Leave buttons by role:
+      //   • Host  → "Play again" (primary, enabled) + "Leave" (outline, closes room for everyone)
+      //   • Other → "Waiting for host to start new game…" (primary, disabled) + "Leave" (outline, just me)
+      const amHostResult = liarGetSessionId() === liarState.hostId;
+      const playAgainBtn = document.getElementById('liar-result-playagain-btn');
+      const leaveResultBtn = document.getElementById('liar-result-leave-btn');
+      if (playAgainBtn) {
+        if (amHostResult) {
+          playAgainBtn.textContent = t('liar.playAgain');
+          playAgainBtn.onclick = liarPlayAgain;
+          playAgainBtn.disabled = false;
+        } else {
+          playAgainBtn.textContent = t('result.waitingForHostNewGame');
+          playAgainBtn.onclick = null;
+          playAgainBtn.disabled = true;
+        }
+      }
+      if (leaveResultBtn) {
+        leaveResultBtn.textContent = t('result.leaveGame');
+        leaveResultBtn.onclick = amHostResult ? liarCloseRoom : liarLeaveGameOver;
+      }
+    }
+
+    function liarPlayAgain(){
+      if (liarState.phase !== 'result') return; // double-tap safety
+      // Host-only — non-host sees "Waiting for host…" on the disabled button.
+      const amHost = liarGetSessionId() === liarState.hostId;
+      if (!amHost) return;
+      // Server-validated reset (C2 turn 3). Server returns to phase='lobby'
+      // with wins preserved; the realtime echo updates this device.
+      huddleCallRPC('huddle_liar_play_again', { p_code: liarState.code });
+    }
+
+    // Sync the pre-paint screen override (set by the bootstrap script in
+    // <head>) into the .active-class system, then clear the override so
+    // JS-driven goTo() works normally from here on. Without this, removing
+    // the attribute would un-hide login (since login still has .active in
+    // the source HTML).
+    (function syncBootScreen(){
+      var bootScreen = document.documentElement.getAttribute('data-boot-screen');
+      if (bootScreen) {
+        document.documentElement.removeAttribute('data-boot-screen');
+        // Route through goTo() so bottom-nav visibility, active-tab highlight,
+        // and screen render fns (friendsLoad / renderProfileScreen / etc.) all
+        // fire correctly. Suppress history push so we don't add a duplicate
+        // entry for the initial paint.
+        try {
+          _huddleSuppressHistory = true;
+          goTo(bootScreen);
+        } catch(e) {
+          // Fallback: at minimum, toggle the .active class so something shows
+          document.querySelectorAll('.screen').forEach(function(el){
+            el.classList.toggle('active', el.id === 'screen-' + bootScreen);
+          });
+        } finally {
+          _huddleSuppressHistory = false;
+        }
+      }
+    })();
+
+    // Initialize on load (label + active state). The data-theme attribute itself
+    // was already set pre-paint by the bootstrap script in <head>.
+    applyTheme(getThemePref());
+
+    // First render so screens are ready before the user visits them.
+    renderProfileScreen();
+    friendsLoad();
+    renderGamesStep();
+
+    // Translate everything to the saved language. Runs after renders so it
+    // also catches text that render fns just inserted (those use t() but we
+    // still call applyLang to refresh active states on theme/lang options).
+    applyLang();
+
+    // Auth bootstrap — Google-only.
+    // Prior versions of this app auto-signed-in every visitor anonymously AND
+    // seeded a "Jordan Lee" profile row into Supabase. The result was that any
+    // visitor — including a friend opening the site on a different device — got
+    // auto-"logged in" as Jordan Lee on refresh. The fix here:
+    //   1. Only restore a session if it's a real (non-anonymous) Google user.
+    //   2. If a stale anonymous session is found, sign it out so the user lands
+    //      on the login screen instead of being silently identified as someone.
+    //   3. Do NOT pre-warm anonymous auth on page boot. Anon sign-in still
+    //      happens lazily when a multiplayer lobby is actually opened (lobby
+    //      bootstrap calls it), but a visitor sitting on the login page no
+    //      longer becomes a real Supabase user just by loading the page.
+    if (window.sb) {
+      (async () => {
+        // If the user arrived via a shared lobby URL (?room=ABCD), the lobby
+        // bootstrap will need their existing anon Supabase session to keep
+        // their seat claim consistent across refreshes. Skip the anon signOut
+        // in that flow.
+        let inLobbyFlow = false;
+        try {
+          inLobbyFlow = !!new URLSearchParams(window.location.search).get('room');
+        } catch(e){}
+
+        try {
+          const { data: { session } } = await window.sb.auth.getSession();
+          const user = session && session.user;
+          if (user && !user.is_anonymous) {
+            await huddleAfterSignIn(user);
+            return;
+          }
+          // Defense-in-depth: an anonymous session left over from prior buggy
+          // builds is what powered the "logged in as Jordan Lee" effect on
+          // refresh. Sign it out unless the user is mid-lobby-flow.
+          if (user && user.is_anonymous && !inLobbyFlow) {
+            try { await window.sb.auth.signOut(); } catch(e){}
+          }
+        } catch(e) { /* fall through — treat as signed-out */ }
+
+        // No real Google session. Clear any leftover profile cached by older
+        // builds so the Profile screen doesn't render a stale identity, and
+        // route the visitor back to the login screen if the saved-lastScreen
+        // logic dropped them inside an authed area (Games / Profile / Friends /
+        // Edit Profile / Feedback). Lobby-link flows (?room=) are left alone so
+        // a shared invite still opens the lobby and lobby code can prompt for
+        // sign-in if it needs to.
+        // Localhost preview is exempt — Google OAuth can't reach localhost so
+        // there will NEVER be a real session, and wiping would nuke the dev
+        // profile seeded by the localhost sign-in bypass on every reload.
+        const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname);
+        if (!isLocalHost) {
+          try { localStorage.removeItem(PROFILE_KEY); } catch(e){}
+          myProfile = null;
+          if (typeof renderProfileScreen === 'function') renderProfileScreen();
+        }
+        // Same localhost exemption — on dev preview, don't kick the user back
+        // to login just because Google OAuth never happened. The dev profile
+        // (seeded by the sign-in bypass) is "good enough" for previewing.
+        if (!isLocalHost) {
+          try {
+            const authedScreens = { 'games':1, 'profile':1, 'friends':1, 'edit-profile':1, 'feedback-board':1 };
+            const current = document.querySelector('.screen.active');
+            const id = current && current.id ? current.id.replace(/^screen-/, '') : '';
+            if (authedScreens[id]) {
+              // Also drop the stale last-screen marker so a subsequent refresh
+              // doesn't yank them back into an authed area.
+              try { sessionStorage.removeItem('huddle.lastScreen'); } catch(e){}
+              if (typeof goTo === 'function') goTo('login');
+            }
+          } catch(e){}
+        }
+      })();
+
+      // Auth state changes:
+      //  - PASSWORD_RECOVERY: user clicked the email-reset link → "set new password" form
+      //  - SIGNED_IN: Google OAuth bounced back (or email login on another tab)
+      //    Only handle non-anonymous sign-ins here — the anon path is wired
+      //    elsewhere and we don't want to redirect on every guest pre-warm.
+      window.sb.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          huddleSetAuthMode('reset');
+          goTo('login');
+          return;
+        }
+        if (event === 'SIGNED_IN' && session && session.user && !session.user.is_anonymous) {
+          huddleAfterSignIn(session.user);
+        }
+        // Real sign-out — tear down auth-aware UI (admin row, email row).
+        // renderProfileScreen no longer does this on a getUser() blip, so
+        // SIGNED_OUT is the single source of truth for "tear down".
+        if (event === 'SIGNED_OUT') {
+          try { setHuddleAdmin(false); } catch(e){}
+          const authRow = document.getElementById('profile-auth-row');
+          const authEmail = document.getElementById('profile-auth-email');
+          if (authRow) authRow.hidden = true;
+          if (authEmail) authEmail.textContent = '';
+        }
+      });
+    }
+
+    // If the URL contains ?room=CODE — typically because the user scanned a friend's
+    // QR or opened a shared link — skip the login screen and jump directly into the
+    // Liar's Cup lobby for that specific room.
+    (function autoOpenFromRoomUrl(){
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('room');
+        const game = params.get('game');
+        if (code) {
+          setTimeout(() => {
+            if (game === 'hotseat')        openLobby();
+            else if (game === 'chameleon') openChamLobby();
+            else if (game === 'mafia')     openMafiaLobby();
+            else                           openLiarLobby(); // backwards compat: missing/liar game param
+          }, 0);
+        }
+      } catch(e){}
+    })();
+
+    // Twemoji is loaded with `defer` so it executes AFTER this inline script.
+    // Re-parse the whole document once DOMContentLoaded fires to convert any
+    // initially-rendered native emoji glyphs into centered SVG twemoji.
+    document.addEventListener('DOMContentLoaded', () => {
+      parseEmoji(document.body);
+    });
+
+    // Backstop refresh — when the tab regains focus after being hidden, re-pull
+    // friend + invite data. Realtime channels handle live updates while the tab
+    // is open; this catches anything missed while the device was asleep or the
+    // tab was backgrounded (mobile browsers throttle/disconnect sockets).
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        if (typeof friendsState !== 'undefined' && friendsState.me &&
+            typeof friendsLoad === 'function') friendsLoad();
+      } catch(e){}
+      try {
+        if (typeof invitesState !== 'undefined' && invitesState.me &&
+            typeof invitesLoad === 'function') invitesLoad();
+      } catch(e){}
+    });
+
+    // -------------------------------------------------------------------
+    // BFCache rehydration — per web.dev/bfcache. When the page is restored
+    // from the back/forward cache, JS state IS preserved but realtime
+    // WebSocket connections were closed when the page went into the frozen
+    // state. Without this handler, a user who hits browser-back to leave
+    // Huddle, then forward to return, sees the UI in its prior frame but
+    // their game-room state is stale (no live updates) until they refresh.
+    //
+    // event.persisted === true means BFCache restore. On that path we
+    // re-pull friends + invites + active game-room state. Realtime channels
+    // typically reconnect on their own — we just kick-start the data so the
+    // first repaint is correct, not after a 2-3s reconnect delay.
+    // -------------------------------------------------------------------
+    window.addEventListener('pageshow', (event) => {
+      if (!event.persisted) return; // normal fresh load — boot already handled it
+      try { if (typeof friendsState !== 'undefined' && friendsState.me && typeof friendsLoad === 'function') friendsLoad(); } catch(e){}
+      try { if (typeof invitesState !== 'undefined' && invitesState.me && typeof invitesLoad === 'function') invitesLoad(); } catch(e){}
+      // Refresh active game-room state for whichever game is on-screen
+      try {
+        const active = document.querySelector('.screen.active');
+        const id = active ? active.id : '';
+        if (id === 'screen-lobby' || id === 'screen-splash' || id === 'screen-play' || id === 'screen-result') {
+          if (typeof hotLoadRoom === 'function' && typeof state !== 'undefined' && state && state.code) hotLoadRoom(state.code);
+        } else if (id.startsWith('screen-cham')) {
+          if (typeof chamLoadRoom === 'function' && typeof chamState !== 'undefined' && chamState && chamState.code) chamLoadRoom(chamState.code);
+        } else if (id.startsWith('screen-liar')) {
+          if (typeof liarLoadRoom === 'function' && typeof liarState !== 'undefined' && liarState && liarState.code) liarLoadRoom(liarState.code);
+        } else if (id.startsWith('screen-mafia')) {
+          if (typeof mafiaLoadRoom === 'function' && typeof mafiaState !== 'undefined' && mafiaState && mafiaState.code) mafiaLoadRoom(mafiaState.code);
+        }
+      } catch(e){}
+    });
+
+    // -------------------------------------------------------------------
+    // Online / Offline UX — per MDN + Slack/Discord patterns
+    //   offline → show subtle "Reconnecting…" banner
+    //   online  → hide banner, fire brief "Back online" toast, re-pull
+    //             friends/invites + any active room state so the UI is fresh
+    //
+    // navigator.onLine === true is "best effort" (could mean local network
+    // but no internet) — we trust it as a hint, not the truth. The real
+    // proof is the next successful Supabase RPC, which is auto-retried by
+    // huddleCallRPC.
+    // -------------------------------------------------------------------
+    function huddleSetOfflineBanner(visible){
+      const el = document.getElementById('huddle-offline-banner');
+      if (!el) return;
+      el.hidden = !visible;
+    }
+    // Initial sync — if the page boots while already offline, show the
+    // banner immediately. (Otherwise users on plane wifi etc. see nothing
+    // until they try to act.)
+    try { if (typeof navigator !== 'undefined' && navigator.onLine === false) huddleSetOfflineBanner(true); } catch(e){}
+    window.addEventListener('offline', () => {
+      huddleSetOfflineBanner(true);
+    });
+    window.addEventListener('online', () => {
+      huddleSetOfflineBanner(false);
+      try {
+        if (typeof showLobbyToast === 'function') showLobbyToast(t('net.backOnline'), 2200);
+      } catch(e){}
+      // Recovery refresh — same backstop the visibilitychange handler runs
+      // for the same reason: realtime sockets may have died while offline.
+      try { if (typeof friendsState !== 'undefined' && friendsState.me && typeof friendsLoad === 'function') friendsLoad(); } catch(e){}
+      try { if (typeof invitesState !== 'undefined' && invitesState.me && typeof invitesLoad === 'function') invitesLoad(); } catch(e){}
+      // Refresh active room state for whichever game is currently on-screen.
+      try {
+        const active = document.querySelector('.screen.active');
+        const id = active ? active.id : '';
+        if (id === 'screen-lobby' || id === 'screen-splash' || id === 'screen-play' || id === 'screen-result') {
+          if (typeof hotLoadRoom === 'function' && typeof state !== 'undefined' && state && state.code) hotLoadRoom(state.code);
+        } else if (id.startsWith('screen-cham')) {
+          if (typeof chamLoadRoom === 'function' && typeof chamState !== 'undefined' && chamState && chamState.code) chamLoadRoom(chamState.code);
+        } else if (id.startsWith('screen-liar')) {
+          if (typeof liarLoadRoom === 'function' && typeof liarState !== 'undefined' && liarState && liarState.code) liarLoadRoom(liarState.code);
+        } else if (id.startsWith('screen-mafia')) {
+          if (typeof mafiaLoadRoom === 'function' && typeof mafiaState !== 'undefined' && mafiaState && mafiaState.code) mafiaLoadRoom(mafiaState.code);
+        }
+      } catch(e){}
+    });
+
+    /* ===== WHEEL TEST DEMO — Lab-only =====
+       Drives the wheel animation with mock parameters. Reuses the LIVE wheel
+       CSS (.liar-wheel-*) so what you see here is what the real game plays.
+       Schedules its own timeline mirroring liarRunCupAnimation. */
+
+    const WHEEL_TEST_SCENARIOS = {
+      'lied-safe' : { lied:true,  outcome:'safe'    },
+      'lied-out'  : { lied:true,  outcome:'spilled' },
+      'wrong-safe': { lied:false, outcome:'safe'    },
+      'wrong-out' : { lied:false, outcome:'spilled' },
+    };
+    let wheelTestScenario = 'lied-safe';
+    let wheelTestSpills   = 1;
+    let wheelTestRunning  = false;
+    let wheelTestTimers   = [];
+
+    function wheelTestClearTimers(){
+      wheelTestTimers.forEach(t => clearTimeout(t));
+      wheelTestTimers = [];
+    }
+    function wheelTestAfter(ms, fn){
+      const id = setTimeout(()=>{
+        wheelTestTimers = wheelTestTimers.filter(t => t !== id);
+        fn();
+      }, ms);
+      wheelTestTimers.push(id);
+    }
+
+    function openWheelTestPicker(){
+      document.getElementById('wheel-test-picker-backdrop').classList.add('active');
+    }
+    function closeWheelTestPicker(){
+      document.getElementById('wheel-test-picker-backdrop').classList.remove('active');
+    }
+    function openWheelTest(){
+      closeWheelTestPicker();
+      goTo('wheel-test');
+      wheelTestReset();
+    }
+    function closeWheelTest(){
+      wheelTestClearTimers();
+      goTo('profile');
+    }
+
+    function wheelTestSetScenario(scn){
+      wheelTestScenario = scn;
+      document.querySelectorAll('#wheel-test-toggle .wheel-test-chip').forEach(c => {
+        const active = c.dataset.scenario === scn;
+        c.classList.toggle('active', active);
+        c.style.background = active ? 'var(--text)' : 'transparent';
+        c.style.color = active ? 'var(--bg)' : 'var(--text-secondary)';
+        c.style.fontWeight = active ? '700' : '600';
+      });
+      wheelTestReset();
+    }
+    function wheelTestSetSpills(n){
+      wheelTestSpills = n;
+      document.querySelectorAll('.wheel-test-spill-btn').forEach((b, i) => {
+        const active = (i + 1) === n;
+        b.style.background = active ? 'var(--text)' : 'transparent';
+        b.style.color = active ? 'var(--bg)' : 'var(--text)';
+      });
+      wheelTestReset();
+    }
+
+    function wheelTestPaintWheel(spills, chamberIdx){
+      const wheel = document.getElementById('wheel-test-wheel');
+      if (!wheel) return;
+      // Build spill chamber pattern with the chamberIdx slot reflecting outcome.
+      // For predictability: red wedges = first N (matches the simple fallback).
+      const chambers = new Array(6).fill(false);
+      for (let i = 0; i < Math.min(spills, 6); i++) chambers[i] = true;
+      // Polished palette + sheen overlay (matches live liarRenderCupInline)
+      let bg = 'conic-gradient(';
+      for (let i = 0; i < 6; i++) {
+        const start = i * 60, end = (i + 1) * 60;
+        const color = chambers[i] ? '#b91c1c' : (i % 2 === 0 ? '#16a34a' : '#15803d');
+        bg += `${color} ${start}deg ${end}deg${i < 5 ? ',' : ''}`;
+      }
+      bg += ')';
+      const sheen = 'radial-gradient(circle at 50% 22%, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 42%), radial-gradient(circle at 50% 88%, rgba(0,0,0,.25) 0%, rgba(0,0,0,0) 58%)';
+      wheel.style.background = `${sheen}, ${bg}`;
+      return chambers;
+    }
+
+    function wheelTestReset(){
+      wheelTestClearTimers();
+      wheelTestRunning = false;
+      const btn = document.getElementById('wheel-test-run-btn');
+      if (btn) btn.disabled = false;
+      const wheel = document.getElementById('wheel-test-wheel');
+      const stage = document.getElementById('wheel-test-stage');
+      const stamp = document.getElementById('wheel-test-stamp');
+      const spotwedge = document.getElementById('wheel-test-spotwedge');
+      const result = document.getElementById('wheel-test-result');
+      const particles = document.getElementById('wheel-test-particles');
+      if (wheel) {
+        wheel.className = 'liar-wheel';
+        wheel.style.removeProperty('--liar-wheel-target');
+      }
+      if (stage) stage.className = 'liar-cup-stage liar-wheel-stage';
+      if (stamp) { stamp.className = 'liar-wheel-stamp'; stamp.textContent = ''; }
+      if (spotwedge) spotwedge.className = 'liar-wheel-spotwedge';
+      if (result) result.style.display = 'none';
+      if (particles) particles.innerHTML = '';
+      wheelTestPaintWheel(wheelTestSpills, 0);
+    }
+
+    function wheelTestRun(){
+      if (wheelTestRunning) return;
+      wheelTestRunning = true;
+      const btn = document.getElementById('wheel-test-run-btn');
+      if (btn) btn.disabled = true;
+      wheelTestClearTimers();
+      wheelTestReset();
+
+      const scn = WHEEL_TEST_SCENARIOS[wheelTestScenario];
+      const spills = wheelTestSpills;
+      // Pick a chamber matching the outcome
+      const safeIdx = Math.min(5, Math.max(spills, 1));     // first green wedge
+      const spillIdx = Math.min(spills - 1, 5);             // last red wedge
+      const finalIdx = scn.outcome === 'safe' ? safeIdx : spillIdx;
+      wheelTestPaintWheel(spills, finalIdx);
+
+      // Compute target rotation (same math as live game)
+      const wedgeMidAngle = 60 * finalIdx + 30;
+      const baseRotation = ((360 - wedgeMidAngle) % 360 + 360) % 360;
+      const targetRotation = (6 * 360) + baseRotation;
+
+      const wheel = document.getElementById('wheel-test-wheel');
+      const stage = document.getElementById('wheel-test-stage');
+      const stamp = document.getElementById('wheel-test-stamp');
+      const spotwedge = document.getElementById('wheel-test-spotwedge');
+      const particles = document.getElementById('wheel-test-particles');
+      const result = document.getElementById('wheel-test-result');
+
+      wheel.classList.remove('spinning');
+      void wheel.offsetWidth;
+      wheel.style.setProperty('--liar-wheel-target', targetRotation + 'deg');
+
+      // Streamlined: spin + stamp + result. No sounds, no particles, no
+      // spotwedge glow, no body shake, no vignette, no fullscreen flash.
+      // Matches the streamlined live liarRunCupAnimation.
+      wheelTestAfter(100, () => { wheel.classList.add('spinning'); });
+
+      // Stamp slams in shortly after the wheel lands
+      wheelTestAfter(6500, () => {
+        if (stamp) {
+          stamp.textContent = scn.outcome === 'spilled' ? 'OUT' : 'SAFE';
+          stamp.className = 'liar-wheel-stamp ' + (scn.outcome === 'spilled' ? 'out' : 'safe') + ' show hold';
+        }
+      });
+
+      // Result card removed per user request — just keep it hidden and
+      // reset the run state after the stamp settles.
+      if (result) result.style.display = 'none';
+      wheelTestAfter(7500, () => {
+        wheelTestRunning = false;
+        if (btn) btn.disabled = false;
+      });
+    }
+
+    /* ===== END WHEEL TEST DEMO ===== */
+
