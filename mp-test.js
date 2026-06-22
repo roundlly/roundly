@@ -132,6 +132,27 @@ async function testHotSeatLeave(browser, base, results) {
   await A.ctx.close(); await B.ctx.close();
 }
 
+// Chameleon needs 3+ players to start, so we verify the explicit-Leave NOTICE
+// in the lobby (the reported bug): two players in a lobby, one leaves, the
+// other must be told "{name} left the game" and see the seat free up.
+async function testChamLeaveNotice(browser, base, results) {
+  const A = await newSession(browser, base);
+  const a = await A.page.evaluate(async () => { await openChamLobby(); return { code: chamState.code }; });
+  await sleep(2000);
+  const B = await newSession(browser, base);
+  await B.page.evaluate(async (c) => { history.replaceState({}, '', '/?room=' + c + '&game=chameleon'); await openChamLobby(); }, a.code);
+  await sleep(3000);
+  await B.page.evaluate(async () => { try { await window.sb.rpc('huddle_leave_seat', { p_table: 'chameleon_rooms', p_code: chamState.code }); } catch (e) {} });
+  const out = await until(A.page, () => {
+    const tEl = document.querySelector('[class*=toast]');
+    return { seats: Object.keys(chamState.claimedBy || {}).length, toast: (tEl && tEl.textContent || '').trim() };
+  }, null, (v) => v && /left the game/i.test(v.toast || ''), 16000, 1000);
+  const v = out.value || {};
+  results.push({ name: '[chameleon] remaining player sees "left" notice on Leave', ok: /left the game/i.test(v.toast || '') && v.seats < 2, detail: `toast="${v.toast}", seats=${v.seats}` });
+  try { await A.page.evaluate(async (c) => { try { await window.sb.from('chameleon_rooms').delete().eq('code', c); } catch (e) {} }, a.code); } catch (e) {}
+  await A.ctx.close(); await B.ctx.close();
+}
+
 async function run() {
   const results = [];
   const server = await startServer();
@@ -151,6 +172,7 @@ async function run() {
 
     for (const g of GAMES) await testGame(browser, base, g, results);
     await testHotSeatLeave(browser, base, results);
+    await testChamLeaveNotice(browser, base, results);
   } catch (e) {
     if (skipped) console.log(`\n  SKIPPED: ${e.message}`);
     else results.push({ name: 'harness ran without crashing', ok: false, detail: String(e.message || e) });

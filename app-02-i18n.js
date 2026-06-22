@@ -473,6 +473,7 @@
         'cham.scoreWins': '{n} wins',
         'cham.scoreWinsOne': '1 win',
         'cham.toastPlayerLeft': '{name} left the game.',
+        'cham.otherPlayerLeft': 'Other player left — back to the lobby.',
         'hot.toastPlayerLeft': '{name} left the game.',
         'hot.otherPlayerLeft': 'Other player left — back to the lobby.',
         // Liar's Cup
@@ -1522,6 +1523,7 @@
         'cham.scoreWins': '{n} galibiyet',
         'cham.scoreWinsOne': '1 galibiyet',
         'cham.toastPlayerLeft': '{name} oyundan ayrıldı.',
+        'cham.otherPlayerLeft': 'Diğer oyuncu ayrıldı — lobiye dönülüyor.',
         'hot.toastPlayerLeft': '{name} oyundan ayrıldı.',
         'hot.otherPlayerLeft': 'Diğer oyuncu ayrıldı — lobiye dönülüyor.',
         // Yalancı Bardağı (Liar's Cup)

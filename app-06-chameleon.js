@@ -294,18 +294,9 @@
       chamHandleConfirmedDisconnect(goneSeatId);
     }
     function chamHandleConfirmedDisconnect(goneSeatId){
-      try {
-        const goneName = (() => {
-          const p = (chamState.players || []).find(x => x.id === goneSeatId);
-          if (!p) return goneSeatId;
-          const disp = playerDisplayFor(p, chamState.claimedBy);
-          return disp.name || p.name;
-        })();
-        if (typeof showLobbyToast === 'function' &&
-            chamState.phase && chamState.phase !== 'lobby' && chamState.phase !== 'result') {
-          showLobbyToast(t('cham.toastPlayerLeft', { name: goneName }), 3500);
-        }
-      } catch(e){}
+      // Note: the "{name} left" toast is now emitted by the realtime sync handler
+      // (seat-vanish detection), which fires for BOTH explicit Leave and
+      // disconnect — so it's intentionally NOT shown here (would double-toast).
 
       const goneSessionId = chamState.claimedBy && chamState.claimedBy[goneSeatId];
       if (!goneSessionId) {
@@ -357,12 +348,38 @@
         }
         // Preserve myVote — it's per-device only (not shared)
         const localMyVote = chamState.myVote;
+        // Capture seating BEFORE applying — detect a player leaving (explicit
+        // Leave OR disconnect both surface here as a vanished seat) for the
+        // "{name} left" notice + graceful end. Parity with Hot Seat.
+        const _prevClaimedBy = Object.assign({}, chamState.claimedBy || {});
+        const _prevPhase = chamState.phase;
+        const _mySidNow = chamGetSessionId();
         Object.keys(chamState).forEach(k => { delete chamState[k]; });
         Object.assign(chamState, newState);
         // Restore meId from claim so existing code reading state.meId still works
         const sid = chamGetSessionId();
         const claimed = Object.entries(chamState.claimedBy || {}).find(([pid, s]) => s === sid);
         if (claimed) { chamMe.myId = claimed[0]; state.meId = claimed[0]; }
+        // ----- Player-left notice + graceful end (parity with Hot Seat) -----
+        try {
+          if (chamMe.myId) {
+            const _newClaimedBy = chamState.claimedBy || {};
+            const _goneSeats = Object.keys(_prevClaimedBy).filter(pid =>
+              _prevClaimedBy[pid] && !_newClaimedBy[pid] && _prevClaimedBy[pid] !== _mySidNow);
+            if (_goneSeats.length && typeof showLobbyToast === 'function') {
+              const p = (chamState.players || []).find(x => x.id === _goneSeats[0]);
+              let nm; try { nm = (p && typeof playerDisplayFor === 'function') ? playerDisplayFor(p, _prevClaimedBy).name : (p && p.name); } catch(e){}
+              showLobbyToast(t('cham.toastPlayerLeft', { name: nm || (p && p.name) || '?' }), 3500);
+            }
+            const _wasMid = _prevPhase && _prevPhase !== 'lobby' && _prevPhase !== 'result';
+            const _stillMid = chamState.phase && chamState.phase !== 'lobby' && chamState.phase !== 'result';
+            if (_wasMid && _stillMid && Object.keys(_newClaimedBy).length < 2 && chamIsHost()) {
+              try { if (typeof showLobbyToast === 'function') showLobbyToast(t('cham.otherPlayerLeft'), 3500); } catch(e){}
+              chamState.phase = 'lobby';
+              chamPersist();
+            }
+          }
+        } catch(e){}
         // Restore myVote if we've already voted in this round
         if (chamMe.myId && chamState.voteResults) {
           const myVotedFor = Object.keys(chamState.voteResults).find(target =>
