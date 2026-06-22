@@ -108,6 +108,30 @@ async function testGame(browser, base, g, results) {
   await A.ctx.close(); await B.ctx.close();
 }
 
+// Regression guard for the "player left mid-game" notice + graceful end added
+// to Hot Seat (parity with Chameleon/Liar). Two players start a game, one
+// leaves, and we assert the other is notified and returned to the lobby.
+async function testHotSeatLeave(browser, base, results) {
+  const A = await newSession(browser, base);
+  const a = await A.page.evaluate(async () => { await openLobby('classic'); return { code: state.code }; });
+  await sleep(2000);
+  const B = await newSession(browser, base);
+  await B.page.evaluate(async (c) => { history.replaceState({}, '', '/?room=' + c + '&game=hotseat'); await openLobby('classic'); }, a.code);
+  await sleep(3000);
+  await A.page.evaluate(() => { try { startGame(); } catch (e) {} });
+  await sleep(3000);
+  await B.page.evaluate(async () => { try { await window.sb.rpc('huddle_leave_seat', { p_table: 'hotseat_rooms', p_code: state.code }); } catch (e) {} });
+  const out = await until(A.page, () => {
+    const tEl = document.querySelector('[class*=toast]');
+    return { phase: state.phase, seats: Object.keys(state.claimedBy || {}).length, toast: (tEl && tEl.textContent || '').trim() };
+  }, null, (v) => v && v.phase === 'lobby', 16000, 1000);
+  const v = out.value || {};
+  results.push({ name: '[hotseat] mid-game leave returns other player to lobby', ok: v.phase === 'lobby' && v.seats < 2, detail: `phase=${v.phase}, seats=${v.seats}` });
+  results.push({ name: '[hotseat] remaining player sees "left" notice', ok: /left the game|back to the lobby/i.test(v.toast || ''), detail: `toast="${v.toast}"` });
+  try { await A.page.evaluate(async (c) => { try { await window.sb.from('hotseat_rooms').delete().eq('code', c); } catch (e) {} }, a.code); } catch (e) {}
+  await A.ctx.close(); await B.ctx.close();
+}
+
 async function run() {
   const results = [];
   const server = await startServer();
@@ -126,6 +150,7 @@ async function run() {
     if (!auth.ok) { skipped = true; throw new Error(`no Supabase session (anonymous sign-in: ${auth.err || 'unavailable'}). Enable anon sign-ins or provide a real login; until then verify multiplayer manually on two devices.`); }
 
     for (const g of GAMES) await testGame(browser, base, g, results);
+    await testHotSeatLeave(browser, base, results);
   } catch (e) {
     if (skipped) console.log(`\n  SKIPPED: ${e.message}`);
     else results.push({ name: 'harness ran without crashing', ok: false, detail: String(e.message || e) });

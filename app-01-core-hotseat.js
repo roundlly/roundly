@@ -406,12 +406,43 @@
           return;
         }
         if (!Array.isArray(newState.playersUsedThisRound)) newState.playersUsedThisRound = [];
+        // Capture who was seated BEFORE applying the update so we can detect a
+        // player leaving — explicit Leave AND disconnect both surface here as a
+        // seat that vanished from claimedBy. Gives Hot Seat the "{name} left"
+        // notice that Chameleon/Liar already have.
+        const _prevClaimedBy = Object.assign({}, state.claimedBy || {});
+        const _prevPhase = state.phase;
+        const _mySidNow = hotGetSessionId();
         Object.keys(state).forEach(k => { delete state[k]; });
         Object.assign(state, newState);
         // Restore meId from claim so getMyRole works locally
         const sid = hotGetSessionId();
         const claimed = Object.entries(state.claimedBy || {}).find(([pid, s]) => s === sid);
         if (claimed) { hotMe.myId = claimed[0]; state.meId = claimed[0]; }
+        // ----- Player-left notice + graceful end (parity with Chameleon/Liar) -----
+        try {
+          if (hotMe.myId) {  // only notify players still seated in this room
+            const _newClaimedBy = state.claimedBy || {};
+            const _goneSeats = Object.keys(_prevClaimedBy).filter(pid =>
+              _prevClaimedBy[pid] && !_newClaimedBy[pid] && _prevClaimedBy[pid] !== _mySidNow);
+            if (_goneSeats.length && typeof showLobbyToast === 'function') {
+              const p = (state.players || []).find(x => x.id === _goneSeats[0]);
+              let nm; try { nm = (p && typeof playerDisplayFor === 'function') ? playerDisplayFor(p, _prevClaimedBy).name : (p && p.name); } catch(e){}
+              showLobbyToast(t('hot.toastPlayerLeft', { name: nm || (p && p.name) || '?' }), 3500);
+            }
+            // A game in progress that drops below 2 players ends gracefully back
+            // to the lobby. The remaining player became host via the leave RPC,
+            // so only they write the reset (revision bump prevents re-trigger).
+            const _wasMid = _prevPhase && _prevPhase !== 'lobby' && _prevPhase !== 'result';
+            const _stillMid = state.phase && state.phase !== 'lobby' && state.phase !== 'result';
+            if (_wasMid && _stillMid && Object.keys(_newClaimedBy).length < 2 && hotIsHost()) {
+              try { if (typeof showLobbyToast === 'function') showLobbyToast(t('hot.otherPlayerLeft'), 3500); } catch(e){}
+              state.phase = 'lobby';
+              state.playersUsedThisRound = [];
+              hotPersist();
+            }
+          }
+        } catch(e){}
         const activeId = document.querySelector('.screen.active');
         const currentId = activeId ? activeId.id.replace('screen-', '') : null;
         const hotScreens = ['lobby','splash','play','result'];
