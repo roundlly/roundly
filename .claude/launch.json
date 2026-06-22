@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "huddle",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", "-c-1"],
+      "port": 5173,
+      "autoPort": true
+    }
+  ]
+}

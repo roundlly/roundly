@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hot Seat — Chair Options</title>
+<style>
+  :root{
+    --bg:#fff; --bg-subtle:#f7f7f7; --surface:#fff;
+    --border:#ebebeb; --border-strong:#ddd;
+    --text:#222; --text-secondary:#717171; --text-tertiary:#b0b0b0;
+    --radius-md:14px; --radius-lg:16px; --radius-pill:999px;
+    --shadow-md:0 2px 8px rgba(0,0,0,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg-subtle);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .frame{max-width:480px;margin:0 auto;padding:20px 16px 60px;background:var(--bg);min-height:100vh}
+  h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:8px 0 2px}
+  .sub{color:var(--text-secondary);font-size:13px;margin-bottom:18px}
+
+  /* Real card replica (matches index.html exactly) */
+  .hotseat-card{
+    display:flex;gap:14px;padding:14px;border:1px solid var(--border);border-radius:var(--radius-lg);
+    background:var(--bg);margin-bottom:8px;align-items:center;
+  }
+  .hotseat-thumb{
+    width:72px;height:72px;border-radius:var(--radius-md);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;color:#fff;position:relative;overflow:hidden;
+    background:linear-gradient(135deg,#2c2c2c 0%,#444 100%);
+  }
+  .hotseat-thumb svg{width:40px;height:40px;color:#fff;opacity:.95}
+  .hotseat-info{flex:1;min-width:0}
+  .hotseat-title-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .hotseat-title{font-weight:700;font-size:16px;letter-spacing:-.01em}
+  .badge{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--radius-pill);
+    font-size:11px;font-weight:600;background:var(--bg-subtle);color:var(--text-secondary)}
+  .hotseat-desc{font-size:13px;color:var(--text-secondary);margin-bottom:4px}
+  .hotseat-meta{font-size:12px;color:var(--text-tertiary)}
+
+  .option{margin-bottom:20px}
+  .opt-label{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .opt-num{background:#222;color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+  .opt-name{font-weight:700;font-size:14px}
+  .opt-rationale{color:var(--text-secondary);font-size:12px;margin:0 0 8px 30px;line-height:1.45}
+
+  /* Big preview row — see the icon at 2× size, alone, to judge silhouette */
+  .big-row{display:flex;gap:14px;align-items:center;margin-bottom:8px;background:var(--bg-subtle);border-radius:12px;padding:12px}
+  .big-thumb{
+    width:120px;height:120px;border-radius:18px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;color:#fff;
+    background:linear-gradient(135deg,#2c2c2c 0%,#444 100%);
+  }
+  .big-thumb svg{width:64px;height:64px;color:#fff;opacity:.95}
+  .big-meta{flex:1;font-size:12px;color:var(--text-secondary);line-height:1.5}
+  .big-meta b{color:var(--text);font-size:13px;display:block;margin-bottom:4px}
+
+  .legend{background:#fff8e6;border:1px solid #f0e1b0;border-radius:12px;padding:10px 12px;font-size:12px;color:#7a5a10;margin-bottom:20px;line-height:1.4}
+  .footer{margin-top:24px;padding:14px;background:#eef7ff;border:1px solid #cfe3f5;border-radius:12px;font-size:13px;color:#114b7a;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <h1>Pick your chair</h1>
+  <div class="sub">All side-view (most recognizable shape for a chair at icon size). Each one shown big (120px) and in real card context (72px).</div>
+
+  <div class="legend">
+    <strong>Side view chosen</strong> because at 40px a front-view chair flattens into a frame/box shape (which is what made the first attempt read as a bench). Side view gives the chair an instantly readable silhouette — same reason 🪑 emoji, Phosphor "Chair" icon, and IKEA's app all draw chairs sideways.
+  </div>
+
+  <!-- OPTION 1 — DINING CHAIR -->
+  <div class="option">
+    <div class="opt-label"><span class="opt-num">1</span><span class="opt-name">Dining chair</span></div>
+    <p class="opt-rationale">Tall straight backrest, flat seat, four legs (two visible from the side). The most universal "chair" shape — what most people draw if you ask them to draw a chair.</p>
+    <div class="big-row">
+      <div class="big-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <!-- backrest top rail -->
+          <path d="M6 4 H10"/>
+          <!-- backrest upright -->
+          <path d="M8 4 V13"/>
+          <!-- backrest mid slat -->
+          <path d="M7 8 H10"/>
+          <!-- seat surface -->
+          <path d="M6 13 H18"/>
+          <!-- back leg -->
+          <path d="M7 13 V20"/>
+          <!-- front leg -->
+          <path d="M17 13 V20"/>
+        </svg>
+      </div>
+      <div class="big-meta"><b>How it reads</b>Straight, traditional, "dining-room chair". Like the chair emoji.</div>
+    </div>
+    <div class="hotseat-card">
+      <div class="hotseat-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 4 H10"/>
+          <path d="M8 4 V13"/>
+          <path d="M7 8 H10"/>
+          <path d="M6 13 H18"/>
+          <path d="M7 13 V20"/>
+          <path d="M17 13 V20"/>
+        </svg>
+      </div>
+      <div class="hotseat-info">
+        <div class="hotseat-title-row">
+          <div class="hotseat-title">Classic</div>
+          <span class="badge">Fastest wins</span>
+        </div>
+        <div class="hotseat-desc">One guesses, others give clues. Fastest correct guess wins.</div>
+        <div class="hotseat-meta">3–8 players · No timer</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION 2 — ARMCHAIR / LOUNGE -->
+  <div class="option">
+    <div class="opt-label"><span class="opt-num">2</span><span class="opt-name">Armchair (lounge)</span></div>
+    <p class="opt-rationale">Rounded back, thicker seat cushion, armrest curl. Friendlier and more "sit here, take your time" — which fits the no-timer pitch perfectly.</p>
+    <div class="big-row">
+      <div class="big-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <!-- rounded backrest -->
+          <path d="M6 5 Q6 3 8 3 H10 Q12 3 12 5 V13"/>
+          <!-- seat top -->
+          <path d="M6 13 H19"/>
+          <!-- seat front edge (cushion thickness) -->
+          <path d="M19 13 Q19 16 18 16 H7"/>
+          <!-- armrest curl -->
+          <path d="M19 13 V11"/>
+          <!-- back leg -->
+          <path d="M7 16 V20"/>
+          <!-- front leg -->
+          <path d="M18 16 V20"/>
+        </svg>
+      </div>
+      <div class="big-meta"><b>How it reads</b>Plush, cozy, "the comfy chair" — softer brand vibe.</div>
+    </div>
+    <div class="hotseat-card">
+      <div class="hotseat-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 5 Q6 3 8 3 H10 Q12 3 12 5 V13"/>
+          <path d="M6 13 H19"/>
+          <path d="M19 13 Q19 16 18 16 H7"/>
+          <path d="M19 13 V11"/>
+          <path d="M7 16 V20"/>
+          <path d="M18 16 V20"/>
+        </svg>
+      </div>
+      <div class="hotseat-info">
+        <div class="hotseat-title-row">
+          <div class="hotseat-title">Classic</div>
+          <span class="badge">Fastest wins</span>
+        </div>
+        <div class="hotseat-desc">One guesses, others give clues. Fastest correct guess wins.</div>
+        <div class="hotseat-meta">3–8 players · No timer</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION 3 — DIRECTOR'S CHAIR -->
+  <div class="option">
+    <div class="opt-label"><span class="opt-num">3</span><span class="opt-name">Director's chair (X-frame)</span></div>
+    <p class="opt-rationale">Folding chair with crossed legs and a low backrest tab. Visually playful, with motion in the X-frame — and "director's chair" hints at "you're on stage / being directed at."</p>
+    <div class="big-row">
+      <div class="big-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <!-- back tab (canvas backrest) -->
+          <path d="M7 5 H17"/>
+          <path d="M7 5 V8"/>
+          <path d="M17 5 V8"/>
+          <!-- back uprights down to seat -->
+          <path d="M7 8 V13"/>
+          <path d="M17 8 V13"/>
+          <!-- seat -->
+          <path d="M5 13 H19"/>
+          <!-- crossed legs (X) -->
+          <path d="M7 13 L17 20"/>
+          <path d="M17 13 L7 20"/>
+        </svg>
+      </div>
+      <div class="big-meta"><b>How it reads</b>Casual, theatrical, "step up and take a seat".</div>
+    </div>
+    <div class="hotseat-card">
+      <div class="hotseat-thumb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 5 H17"/>
+          <path d="M7 5 V8"/>
+          <path d="M17 5 V8"/>
+          <path d="M7 8 V13"/>
+          <path d="M17 8 V13"/>
+          <path d="M5 13 H19"/>
+          <path d="M7 13 L17 20"/>
+          <path d="M17 13 L7 20"/>
+        </svg>
+      </div>
+      <div class="hotseat-info">
+        <div class="hotseat-title-row">
+          <div class="hotseat-title">Classic</div>
+          <span class="badge">Fastest wins</span>
+        </div>
+        <div class="hotseat-desc">One guesses, others give clues. Fastest correct guess wins.</div>
+        <div class="hotseat-meta">3–8 players · No timer</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <strong>How to pick:</strong> look at the big 120px version first (silhouette test), then the 72px in-card version (real-world test). Tell me 1, 2, or 3.
+  </div>
+
+</div>
+</body>
+</html>

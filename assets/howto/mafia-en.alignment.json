@@ -1,0 +1,38 @@
+{
+  "voice": "George",
+  "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+  "total_chars": 955,
+  "total_duration_sec": 58.7,
+  "sceneCues": [
+    {
+      "scene": 1,
+      "startSec": 0,
+      "text": "Mafia is a hidden-roles party game. Get five friends together, pick one person to be the narrator — they run the game but don't play."
+    },
+    {
+      "scene": 2,
+      "startSec": 8.858,
+      "text": "The app secretly gives each player a role. Most are Villagers. A few are Mafia — they kill in secret. There's a Doctor who saves lives, and a Detective who investigates."
+    },
+    {
+      "scene": 3,
+      "startSec": 20.48,
+      "text": "At night, everyone closes their eyes. The narrator calls each role awake one at a time. Mafia silently choose who to kill. Doctor chooses who to save. Detective points at someone — and the narrator gives a quiet thumbs-up if they're Mafia."
+    },
+    {
+      "scene": 4,
+      "startSec": 37.036,
+      "text": "In the morning, the narrator announces who died. The town talks. Try to spot the lie."
+    },
+    {
+      "scene": 5,
+      "startSec": 43.34,
+      "text": "Then everyone votes. The most-voted player is eliminated. If they were Mafia, the town gets closer to winning."
+    },
+    {
+      "scene": 6,
+      "startSec": 50.771,
+      "text": "Town wins if every Mafia is caught. Mafia win if they outnumber the town. Trust no one. Bluff well. Have fun."
+    }
+  ]
+}
