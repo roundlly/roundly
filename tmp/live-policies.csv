@@ -1,0 +1,33 @@
+tablename,policyname,cmd,qual,with_check
+chameleon_rooms,Claimant can insert,INSERT,null,"((auth.uid() IS NOT NULL) AND huddle_is_claimant((state -> 'claimedBy'::text), (auth.uid())::text))"
+chameleon_rooms,Anyone can read,SELECT,true,null
+feedback_posts,feedback_posts_admin_delete,DELETE,is_admin(),null
+feedback_posts,feedback_posts_delete_own,DELETE,(user_id = auth.uid()),null
+feedback_posts,feedback_posts_insert_own,INSERT,null,(user_id = auth.uid())
+feedback_posts,feedback_posts_select_all,SELECT,true,null
+feedback_posts,feedback_posts_update_own,UPDATE,(user_id = auth.uid()),(user_id = auth.uid())
+feedback_posts,feedback_posts_admin_update,UPDATE,is_admin(),is_admin()
+feedback_votes,feedback_votes_delete_own,DELETE,(user_id = auth.uid()),null
+feedback_votes,feedback_votes_insert_own,INSERT,null,(user_id = auth.uid())
+feedback_votes,feedback_votes_select_all,SELECT,true,null
+friendships,friendships_delete_own,DELETE,((auth.uid() = requester_id) OR (auth.uid() = addressee_id)),null
+friendships,friendships_insert_as_requester,INSERT,null,((auth.uid() = requester_id) AND (status = 'pending'::text))
+friendships,friendships_read_own,SELECT,((auth.uid() = requester_id) OR (auth.uid() = addressee_id)),null
+friendships,friendships_update_as_addressee,UPDATE,((auth.uid() = addressee_id) AND (status = 'pending'::text)),((auth.uid() = addressee_id) AND (status = 'accepted'::text))
+hotseat_rooms,Claimant can insert,INSERT,null,"((auth.uid() IS NOT NULL) AND huddle_is_claimant((state -> 'claimedBy'::text), (auth.uid())::text))"
+hotseat_rooms,Anyone can read,SELECT,true,null
+hotseat_rooms,Claimant can update,UPDATE,"((auth.uid() IS NOT NULL) AND huddle_is_claimant((state -> 'claimedBy'::text), (auth.uid())::text))",null
+liar_rooms,Anyone can read,SELECT,true,null
+mafia_rooms,Claimant can insert,INSERT,null,"((auth.uid() IS NOT NULL) AND huddle_is_claimant((state -> 'claimedBy'::text), (auth.uid())::text))"
+mafia_rooms,Anyone can read,SELECT,true,null
+profiles,profiles_insert_own,INSERT,null,(auth.uid() = user_id)
+profiles,User can insert own profile,INSERT,null,(auth.uid() = user_id)
+profiles,Anyone can read profiles,SELECT,true,null
+profiles,profiles_read_all,SELECT,true,null
+profiles,User can update own profile,UPDATE,(auth.uid() = user_id),null
+profiles,profiles_update_own,UPDATE,(auth.uid() = user_id),null
+room_invites,room_invites_delete_own,DELETE,((auth.uid() = from_user_id) OR (auth.uid() = to_user_id)),null
+room_invites,room_invites_insert_as_from,INSERT,null,((auth.uid() = from_user_id) AND (status = 'pending'::text))
+room_invites,room_invites_read_own,SELECT,((auth.uid() = from_user_id) OR (auth.uid() = to_user_id)),null
+room_invites,room_invites_update_as_to,UPDATE,((auth.uid() = to_user_id) AND (status = 'pending'::text)),"((auth.uid() = to_user_id) AND (status = ANY (ARRAY['accepted'::text, 'declined'::text])))"
+room_invites,room_invites_update_as_from,UPDATE,((auth.uid() = from_user_id) AND (status = 'pending'::text)),((auth.uid() = from_user_id) AND (status = 'cancelled'::text))
