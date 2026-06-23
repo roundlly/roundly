@@ -37,6 +37,7 @@
       myId: null,
       myRole: null,
       myTeammates: [],
+      bootstrapped: false,   // Phase 2: now uses the shared huddleBootstrap guard
     };
 
     // ----- Mafia Cards variant flag (Phase 2 stub) -----
@@ -70,28 +71,8 @@
     // Anonymous Supabase auth gives us a stable uuid across reloads so the
     // user's seat survives refresh. If Supabase fails to load (offline / CDN
     // blocked), fall back to a per-tab random id — local-only mode.
-    function mafiaGetSessionId(){ return mafiaMe.sessionId; }
-
-    async function mafiaBootstrap(){
-      if (mafiaMe.sessionId) return; // already bootstrapped
-      if (window.sb && window.sb.auth) {
-        try {
-          const { data: userData } = await window.sb.auth.getUser();
-          if (userData && userData.user && userData.user.id) {
-            mafiaMe.sessionId = userData.user.id;
-            return;
-          }
-          const { data: signInData, error } = await window.sb.auth.signInAnonymously();
-          if (!error && signInData && signInData.user && signInData.user.id) {
-            mafiaMe.sessionId = signInData.user.id;
-            return;
-          }
-          console.warn('[Mafia] anon sign-in failed:', error && error.message);
-        } catch(e){ console.warn('[Mafia] bootstrap error:', e); }
-      }
-      // Fallback: per-tab random id (local-only mode).
-      mafiaMe.sessionId = 'tab_' + Math.random().toString(36).slice(2, 10);
-    }
+    function mafiaGetSessionId(){ return huddleGetSessionId(mafiaMe); }
+    async function mafiaBootstrap(){ return huddleBootstrap(mafiaMe, 'Mafia'); }
 
     // ----- Transport: load room state by code -----
     // Timestamp of the most recent successful mafiaLoadRoom. Used by the

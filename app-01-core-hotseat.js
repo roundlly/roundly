@@ -146,22 +146,47 @@
     // lifetime "wins" stat. Format: room-code:round:currentPlayerIdx.
     let _hotWinsBumpedKey = null;
 
-    async function hotBootstrap(){
-      if (hotMe.bootstrapped) return;
-      hotMe.bootstrapped = true;
-      if (!window.sb) { hotMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10); return; }
+    // ---------- Shared per-device identity (Phase 2: GetSessionId/Bootstrap merge) ----------
+    // ONE implementation for all 4 games (Hot Seat, Chameleon, Liar, Mafia). Each game
+    // passes its own `me` object ({ sessionId, bootstrapped, ... }); we pass the object
+    // rather than share it because each game keeps extra per-game fields on it
+    // (liarMe.selectedCardIds, mafiaMe.myRole/myTeammates, …).
+    //
+    // Behavior is the historic hot/cham/liar behavior, preserved intentionally:
+    //   - bootstrap: reuse an existing auth user, else sign in anonymously.
+    //   - on no-Supabase OR sign-in failure (offline / CDN-blocked / 429 anon
+    //     rate-limit) → fall back to a random per-tab id so the game still works
+    //     locally. This fallback is a deliberate safety net, NOT dead code.
+    //   - getSessionId: lazily mint a tab_ id if bootstrap hasn't completed yet.
+    function huddleNewTabId(){ return 'tab_' + Math.random().toString(36).slice(2, 10); }
+
+    async function huddleBootstrap(me, logLabel){
+      if (me.bootstrapped) return;
+      me.bootstrapped = true;
+      if (!(window.sb && window.sb.auth)) {
+        me.sessionId = huddleNewTabId();
+        if (logLabel) console.warn('[Huddle] Supabase unavailable — ' + logLabel + ' will not sync across devices.');
+        return;
+      }
       try {
         const { data: { user } } = await window.sb.auth.getUser();
-        if (user && user.id) { hotMe.sessionId = user.id; return; }
+        if (user && user.id) { me.sessionId = user.id; return; }
         const { data, error } = await window.sb.auth.signInAnonymously();
         if (error) throw error;
-        hotMe.sessionId = data.user.id;
-      } catch(e) { hotMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10); }
+        me.sessionId = data.user.id;
+      } catch(e) {
+        if (logLabel) console.warn('[Huddle] Anonymous sign-in failed — using random session id.', e);
+        me.sessionId = huddleNewTabId();
+      }
     }
-    function hotGetSessionId(){
-      if (!hotMe.sessionId) hotMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10);
-      return hotMe.sessionId;
+
+    function huddleGetSessionId(me){
+      if (!me.sessionId) me.sessionId = huddleNewTabId();
+      return me.sessionId;
     }
+
+    async function hotBootstrap(){ return huddleBootstrap(hotMe); }
+    function hotGetSessionId(){ return huddleGetSessionId(hotMe); }
     function hotIsHost(){ return hotGetSessionId() === state.hostId; }
     function hotUsedHas(idx){ return (state.playersUsedThisRound || []).indexOf(idx) !== -1; }
     function hotUsedAdd(idx){

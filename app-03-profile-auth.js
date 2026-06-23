@@ -877,6 +877,11 @@
       if (typeof chamMe !== 'undefined') { chamMe.sessionId = user.id; chamMe.bootstrapped = true; }
       liarMe.sessionId = user.id;
       liarMe.bootstrapped = true;
+      // Mafia was previously MISSING here — its session id was never rebound to the
+      // new Google/password user, so after an anon→account sign-in mid-lobby the
+      // client kept the old anon id while the seat migrated to user.id server-side,
+      // producing the exact "claimed seat mismatch" the comment above warns about.
+      if (typeof mafiaMe !== 'undefined') { mafiaMe.sessionId = user.id; mafiaMe.bootstrapped = true; }
       // Migrate any seat claims still tied to the old anon session over to the
       // new Google user, so the lobby shows them as seated instead of unseated.
       // Lobby-phase only, server-side, atomic. Quiet failure (no toast) — this
@@ -1177,6 +1182,7 @@
           mafiaMe.myId = null;
           mafiaMe.myRole = null;
           mafiaMe.myTeammates = [];
+          mafiaMe.bootstrapped = false;   // lockstep with hot/cham/liar so next sign-in re-bootstraps
         }
       } catch(e){}
       try {

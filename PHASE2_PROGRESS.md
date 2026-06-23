@@ -9,7 +9,7 @@ plumbing — **17 "families" × 4 games = ~68 near-duplicate functions**. Phase 
 each set of 4 copies with **one shared `huddle*` helper**, killing the duplication that
 causes "fix one bug, the others stay broken."
 
-## ✅ Done — 6 of 17 families merged (all verified)
+## ✅ Done — 8 of 17 families merged (all verified)
 Shared helpers all live in `app-01-core-hotseat.js` near the top:
 
 | # | Family | Shared helper | Verified by |
@@ -20,6 +20,15 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 | 4 | SyncUrlToRoom | `huddleSyncUrlToRoom(code, gameToken)` | smoke + functional |
 | 5 | ResetPresenceState | `huddleResetPresenceState(timers, sessions)` | smoke + functional |
 | 6 | LoadRoom (3 of 4) | `huddleFetchRoomState(table, code)` — Mafia stays separate | smoke + mp |
+| 7 | GetSessionId | `huddleGetSessionId(me)` — all 4 games | smoke + mp (28/28) + manual phones |
+| 8 | Bootstrap | `huddleBootstrap(me, logLabel)` — all 4 games | smoke + mp (28/28) + manual phones |
+
+**GetSessionId/Bootstrap merge notes (2026-06-23):**
+- All 4 `<game>Bootstrap`/`<game>GetSessionId` now delegate to the shared pair. Each game passes its own `me` object (kept separate because each holds extra per-game fields). The `tab_` fallback was **KEPT** (deliberate safety net for offline / 429 anon rate-limit — it is NOT dead code).
+- **Mafia normalized**: added a `bootstrapped` flag to `mafiaMe` (it previously guarded on `sessionId` and could return `null`); now identical behavior to the other 3.
+- **Latent bug fixed**: `huddleAfterSignIn` (app-03) rebound hot/cham/liar to the new auth id after Google/password sign-in but **never `mafiaMe`** → "claimed seat mismatch" for Mafia on anon→account sign-in mid-lobby. Now rebinds all 4 in lockstep; sign-out resets `mafiaMe.bootstrapped` too. Confirmed on real phones.
+- Regression tool added: `tmp/check-sessionid.js` (proves all 4 resolve to a real UUID, ~1 anon sign-in).
+- Identity-convergence verified: every game's mp `distinct identities` line shows real auth UUIDs, no `tab_`.
 
 **Plus (not part of the 17, but related fixes this effort produced):**
 - Player-left **notice parity** across all 4 games (realtime seat-vanish detection → "{name} left the game."). Hot Seat + Chameleon also return host to lobby if a mid-game room drops <2.
@@ -27,13 +36,10 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 
 **Skip (already delegate to a shared helper — barely duplicated):** `JoinUrl`, `FindRecentRoomCode`.
 
-## ⏳ Remaining ~9 families — TWO buckets
+## ⏳ Remaining ~7 families — TWO buckets
 
 ### Bucket A — need a BEHAVIOR DECISION (no multiplayer test needed)
-- **GetSessionId / Bootstrap** — how each game IDs a player on a device.
-  - Hot Seat/Chameleon historically used a random `tab_xxxx` id; Liar/Mafia used the real Supabase auth user id.
-  - **BUT anonymous sign-ins are now ENABLED** (owner did this 2026-06-22), so all 4 games now get a real auth id in practice — the random fallback is effectively dead code.
-  - **NEXT TASK (owner wants this):** verify all 4 games now resolve to a real auth UUID (a quick headless check: open each lobby, read `<game>GetSessionId()`, confirm it's a UUID not `tab_…`). If yes → unify to `huddleGetSessionId()` / `huddleBootstrap()` and delete the dead fallback. Verify with `npm run mp`.
+- ~~**GetSessionId / Bootstrap**~~ — ✅ **DONE 2026-06-23** (see the Done table above). Unified to `huddleGetSessionId(me)`/`huddleBootstrap(me)`; `tab_` fallback kept as safety net; Mafia normalized + rebind bug fixed.
 - **StateReset / ResetPlayers** — each game's default state shape differs → genuinely not a mechanical merge; needs a decision on a shared shape (likely NOT worth it).
 - **Rerender** — Hot/Cham/Liar already delegate to shared `huddleSyncGateRerender`; Mafia's is bespoke → little left to merge.
 

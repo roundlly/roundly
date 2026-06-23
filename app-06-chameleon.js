@@ -171,22 +171,8 @@
     // Local per-device identity for Chameleon (mirrors hotMe)
     const chamMe = { sessionId: null, myId: null, bootstrapped: false };
 
-    async function chamBootstrap(){
-      if (chamMe.bootstrapped) return;
-      chamMe.bootstrapped = true;
-      if (!window.sb) { chamMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10); return; }
-      try {
-        const { data: { user } } = await window.sb.auth.getUser();
-        if (user && user.id) { chamMe.sessionId = user.id; return; }
-        const { data, error } = await window.sb.auth.signInAnonymously();
-        if (error) throw error;
-        chamMe.sessionId = data.user.id;
-      } catch(e) { chamMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10); }
-    }
-    function chamGetSessionId(){
-      if (!chamMe.sessionId) chamMe.sessionId = 'tab_' + Math.random().toString(36).slice(2,10);
-      return chamMe.sessionId;
-    }
+    async function chamBootstrap(){ return huddleBootstrap(chamMe); }
+    function chamGetSessionId(){ return huddleGetSessionId(chamMe); }
     function chamIsHost(){ return chamGetSessionId() === chamState.hostId; }
     function chamClaimedCount(){ return Object.keys(chamState.claimedBy || {}).length; }
 

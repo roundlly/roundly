@@ -101,39 +101,8 @@
     // First load: signs in anonymously, gets a uuid that persists in localStorage.
     // Subsequent loads on same device: restores the same uuid.
     // Failure: falls back to a random per-tab id (game still works, just less stable).
-    async function liarBootstrap(){
-      if (liarMe.bootstrapped) return;
-      liarMe.bootstrapped = true;
-      if (!window.sb) {
-        // Supabase didn't load (CDN blocked / offline)
-        liarMe.sessionId = 'tab_' + Math.random().toString(36).slice(2, 10);
-        console.warn('[Huddle] Supabase unavailable — Liar\'s Cup will not sync across devices.');
-        return;
-      }
-      try {
-        const { data: { user } } = await window.sb.auth.getUser();
-        if (user && user.id) {
-          liarMe.sessionId = user.id;
-          return;
-        }
-        const { data, error } = await window.sb.auth.signInAnonymously();
-        if (error) throw error;
-        liarMe.sessionId = data.user.id;
-      } catch (e) {
-        console.warn('[Huddle] Anonymous sign-in failed — using random session id.', e);
-        liarMe.sessionId = 'tab_' + Math.random().toString(36).slice(2, 10);
-      }
-    }
-
-    function liarGetSessionId(){
-      // After liarBootstrap completes, this returns the Supabase user ID.
-      // Before bootstrap, this returns a temporary random id (should not happen
-      // because openLiarLobby awaits bootstrap before any seat-claim).
-      if (!liarMe.sessionId) {
-        liarMe.sessionId = 'tab_' + Math.random().toString(36).slice(2, 10);
-      }
-      return liarMe.sessionId;
-    }
+    async function liarBootstrap(){ return huddleBootstrap(liarMe, "Liar's Cup"); }
+    function liarGetSessionId(){ return huddleGetSessionId(liarMe); }
 
     // ---------- Sync transport (Supabase Realtime + Postgres) ----------
     // Each game room is one row in the `liar_rooms` table with a JSONB `state` column.
