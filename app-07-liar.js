@@ -194,47 +194,10 @@
     // updates their _liarPresentSessions set, but only one peer writes to
     // Supabase so we avoid a thundering-herd on liarPersist().
     function liarConfirmUserGone(sessionId){
-      _liarPresentSessions.delete(sessionId);
-      _liarLeaveGraceTimers.delete(sessionId);
-      // Find the seat (playerId) this session had claimed, if any.
-      let goneSeatId = null;
-      Object.keys(liarState.claimedBy || {}).forEach(pid => {
-        if (liarState.claimedBy[pid] === sessionId) goneSeatId = pid;
-      });
-      if (!goneSeatId) {
-        // Sessionless visitor — nothing to clean up.
-        if (typeof liarRerender === 'function') liarRerender();
-        return;
-      }
-      // Only the lowest-connected peer fires the mutation. Others just refresh UI.
-      const isMyJobToWrite = liarLowestSeatConnectedPlayer() === liarMe.myId;
-      if (!isMyJobToWrite) {
-        if (typeof liarRerender === 'function') liarRerender();
-        return;
-      }
-      liarHandleConfirmedDisconnect(goneSeatId);
-    }
-    // Phase-aware cleanup when a seated player is confirmed gone. Only the
-    // lowest-connected peer (the writer) reaches this fn — see liarConfirmUserGone.
-    // C2 turn 3c: server now handles all the phase-aware cleanup logic (seat
-    // removal, host transfer, alive filter, currentPlayerIdx normalization,
-    // forced-spill on disconnected loser, sole-survivor auto-win). Client
-    // resolves the gone session id from local claimedBy and fires the RPC;
-    // the realtime echo delivers canonical state.
-    function liarHandleConfirmedDisconnect(goneSeatId){
-      // Note: the "{name} left" toast is now emitted by the realtime sync handler
-      // (seat-vanish detection), covering BOTH explicit Leave and disconnect — so
-      // it's intentionally NOT shown here (would double-toast).
-
-      // Resolve session id from current local state BEFORE the echo arrives.
-      const goneSessionId = liarState.claimedBy && liarState.claimedBy[goneSeatId];
-      if (!goneSessionId) {
-        if (typeof liarRerender === 'function') liarRerender();
-        return;
-      }
-      huddleCallRPC('huddle_liar_handle_disconnect', {
-        p_code: liarState.code,
-        p_gone_session_id: goneSessionId,
+      return huddleConfirmUserGone(sessionId, {
+        presentSessions: _liarPresentSessions, graceTimers: _liarLeaveGraceTimers,
+        gameState: liarState, rerender: liarRerender, lowestConnected: liarLowestSeatConnectedPlayer,
+        meObj: liarMe, rpcName: 'huddle_liar_handle_disconnect',
       });
     }
     function liarStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_liarLeaveGraceTimers, sessionId, LIAR_LEAVE_GRACE_MS, liarConfirmUserGone); }

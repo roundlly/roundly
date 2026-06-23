@@ -240,37 +240,10 @@
       return null;
     }
     function chamConfirmUserGone(sessionId){
-      _chamPresentSessions.delete(sessionId);
-      _chamLeaveGraceTimers.delete(sessionId);
-      let goneSeatId = null;
-      Object.keys(chamState.claimedBy || {}).forEach(pid => {
-        if (chamState.claimedBy[pid] === sessionId) goneSeatId = pid;
-      });
-      if (!goneSeatId) {
-        if (typeof chamRerender === 'function') chamRerender();
-        return;
-      }
-      // Only the lowest-connected peer fires the server cleanup — others just refresh UI.
-      const isMyJobToWrite = chamLowestSeatConnectedPlayer() === chamMe.myId;
-      if (!isMyJobToWrite) {
-        if (typeof chamRerender === 'function') chamRerender();
-        return;
-      }
-      chamHandleConfirmedDisconnect(goneSeatId);
-    }
-    function chamHandleConfirmedDisconnect(goneSeatId){
-      // Note: the "{name} left" toast is now emitted by the realtime sync handler
-      // (seat-vanish detection), which fires for BOTH explicit Leave and
-      // disconnect — so it's intentionally NOT shown here (would double-toast).
-
-      const goneSessionId = chamState.claimedBy && chamState.claimedBy[goneSeatId];
-      if (!goneSessionId) {
-        if (typeof chamRerender === 'function') chamRerender();
-        return;
-      }
-      huddleCallRPC('huddle_cham_handle_disconnect', {
-        p_code: chamState.code,
-        p_gone_session_id: goneSessionId,
+      return huddleConfirmUserGone(sessionId, {
+        presentSessions: _chamPresentSessions, graceTimers: _chamLeaveGraceTimers,
+        gameState: chamState, rerender: chamRerender, lowestConnected: chamLowestSeatConnectedPlayer,
+        meObj: chamMe, rpcName: 'huddle_cham_handle_disconnect',
       });
     }
     function chamStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_chamLeaveGraceTimers, sessionId, CHAM_LEAVE_GRACE_MS, chamConfirmUserGone); }

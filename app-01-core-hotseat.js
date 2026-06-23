@@ -380,32 +380,39 @@
       }
       return null;
     }
-    function hotConfirmUserGone(sessionId){
-      _hotPresentSessions.delete(sessionId);
-      _hotLeaveGraceTimers.delete(sessionId);
+    // ---------- Shared "confirmed user gone" disconnect handler (Phase 2, 3 of 4) ----------
+    // When a player's leave-grace expires: drop them from presence, find the seat
+    // they held, and — if WE are the deterministically-elected writer (lowest
+    // connected peer) — fire the server's disconnect-cleanup RPC. Hot/Cham/Liar
+    // share this exactly; only the presence set, grace map, state, rerender,
+    // election fn, me object, and RPC name differ. Mafia is NOT included (narrator-
+    // based election + it passes a seat id, not a session id — see
+    // mafiaConfirmUserGone). The "{name} left" toast is emitted by the realtime
+    // sync handler (seat-vanish detection, covers Leave + disconnect), so it is
+    // intentionally NOT shown here (would double-toast). Fire-and-forget: the
+    // server's postgres_changes echo reconciles every client's view (~300ms).
+    function huddleConfirmUserGone(sessionId, opts){
+      opts.presentSessions.delete(sessionId);
+      opts.graceTimers.delete(sessionId);
+      const gs = opts.gameState;
+      const rerender = () => { if (typeof opts.rerender === 'function') opts.rerender(); };
       let goneSeatId = null;
-      Object.keys(state.claimedBy || {}).forEach(pid => {
-        if (state.claimedBy[pid] === sessionId) goneSeatId = pid;
+      Object.keys(gs.claimedBy || {}).forEach(pid => {
+        if (gs.claimedBy[pid] === sessionId) goneSeatId = pid;
       });
-      if (!goneSeatId) {
-        if (typeof hotRerender === 'function') hotRerender();
-        return;
-      }
-      // Only the lowest-connected peer fires server cleanup. Deterministic
-      // election prevents N clients all racing to free the same seat.
-      const isMyJobToWrite = hotLowestSeatConnectedPlayer() === hotMe.myId;
-      if (!isMyJobToWrite) {
-        if (typeof hotRerender === 'function') hotRerender();
-        return;
-      }
-      // Fire-and-forget — server's postgres_changes echo reconciles every
-      // client's view within ~300ms. New function installed in Phase 2b
-      // accepts the gone session's UUID (not seat id) and handles host
-      // transfer + revision bump internally.
-      Promise.resolve(huddleCallRPC('huddle_hot_handle_disconnect', {
-        p_code: state.code,
+      if (!goneSeatId) { rerender(); return; }
+      if (opts.lowestConnected() !== opts.meObj.myId) { rerender(); return; }
+      Promise.resolve(huddleCallRPC(opts.rpcName, {
+        p_code: gs.code,
         p_gone_session_id: sessionId,
-      })).catch(e => console.warn('[Hot] handle_disconnect failed:', e && e.message));
+      })).catch(e => console.warn('[Huddle] handle_disconnect failed:', e && e.message));
+    }
+    function hotConfirmUserGone(sessionId){
+      return huddleConfirmUserGone(sessionId, {
+        presentSessions: _hotPresentSessions, graceTimers: _hotLeaveGraceTimers,
+        gameState: state, rerender: hotRerender, lowestConnected: hotLowestSeatConnectedPlayer,
+        meObj: hotMe, rpcName: 'huddle_hot_handle_disconnect',
+      });
     }
     function hotStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_hotLeaveGraceTimers, sessionId, HOT_LEAVE_GRACE_MS, hotConfirmUserGone); }
     // Shared leave-grace cancel — logic is identical across all 4 games; only
