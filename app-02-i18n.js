@@ -927,7 +927,6 @@
         'lobby.seatsHintWaitingHost': 'Waiting for host to start…',
         'lobby.leaveRoom': 'Leave room',
         'lobby.leaveShort': 'Leave',
-        'lobby.resetShort': 'Reset',
         'lobby.previousRoomGone': 'Your previous room ended — you\'re in a new one now.',
         'lobby.joinFailed': 'Couldn\'t join that room. The invite may have expired, the host left, or the room isn\'t syncing yet.',
         'lobby.hostClosedRoom': 'Host left the game',
@@ -937,10 +936,6 @@
         'common.leaveGame': 'Leave game',
         'common.leaveMidRoundTitle': 'Leave this round?',
         'common.leaveMidRoundBody': 'The round will continue without you, and your scores so far are saved. You can rejoin later if the host re-invites you.',
-        'lobby.resetPlayers': 'Reset players',
-        'lobby.resetTitle': 'Reset all other players?',
-        'lobby.resetBody': 'This frees up every seat except yours. Useful if old players from previous games are still in the list.',
-        'lobby.resetConfirm': 'Reset',
 
         // Categories
         'cat.mixed': 'Mixed',
@@ -1973,7 +1968,6 @@
         'lobby.seatsHintWaitingHost': 'Host başlatmasını bekliyor…',
         'lobby.leaveRoom': 'Odadan ayrıl',
         'lobby.leaveShort': 'Ayrıl',
-        'lobby.resetShort': 'Sıfırla',
         'lobby.previousRoomGone': 'Önceki oda sona erdi — şimdi yeni bir odadasın.',
         'lobby.joinFailed': 'Odaya katılınamadı. Davet süresi dolmuş, ev sahibi ayrılmış ya da oda henüz eşitlenmemiş olabilir.',
         'lobby.hostClosedRoom': 'Sunucu oyundan ayrıldı',
@@ -1983,10 +1977,6 @@
         'common.leaveGame': 'Oyundan ayrıl',
         'common.leaveMidRoundTitle': 'Bu turu bırakılsın mı?',
         'common.leaveMidRoundBody': 'El sensiz devam edecek ve şu ana kadarki skorların kaydedildi. Host seni tekrar davet ederse dönebilirsin.',
-        'lobby.resetPlayers': 'Oyuncuları sıfırla',
-        'lobby.resetTitle': 'Diğer oyuncular sıfırlansın mı?',
-        'lobby.resetBody': 'Senin dışındaki tüm yerleri boşaltır. Eski oyuncular hâlâ listede ise işe yarar.',
-        'lobby.resetConfirm': 'Sıfırla',
 
         // Categories
         'cat.mixed': 'Karışık',

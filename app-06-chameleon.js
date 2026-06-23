@@ -729,10 +729,8 @@
         else          startBtn.setAttribute('aria-disabled', 'true');
       }
       const leaveBtn = document.getElementById('cham-leave-btn');
-      const resetBtn = document.getElementById('cham-reset-btn');
       const hasSeat = !!chamMe.myId;
       if (leaveBtn) leaveBtn.hidden = !hasSeat;
-      if (resetBtn) resetBtn.hidden = !(hasSeat && amHost && claimedCount > 1);
       if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen('chameleon');
     }
     // Back-compat alias — older callers (e.g. applyLang) still reach for chamRenderPlayers
@@ -837,9 +835,6 @@
       }
       try { history.replaceState(history.state, '', '/'); } catch(e){}
       goTo('games');
-    }
-    async function chamResetPlayers(){
-      return huddleResetPlayers(chamIsHost, chamState, chamGetSessionId, chamMe, renderChamLobbyPlayers, 'huddle_cham_reset_players');
     }
 
     // ---------- Topic picker sheet ----------

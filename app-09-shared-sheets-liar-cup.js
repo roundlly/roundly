@@ -294,12 +294,6 @@
       try { history.replaceState(history.state, '', '/'); } catch(e){}
       goTo('games');
     }
-    async function liarResetPlayers(){
-      return huddleResetPlayers(
-        () => liarGetSessionId() === liarState.hostId,
-        liarState, liarGetSessionId, liarMe, liarRenderSeats, 'huddle_liar_reset_players'
-      );
-    }
 
     // Handler for the "Join with code" input — replaces our current room with the friend's.
     // ---------- Lobby toast (silent-loss notice + similar transient messages) ----------

@@ -1611,10 +1611,8 @@
       }
       // Leave / Reset moved to top-right of the Players header (no more bottom actions)
       const leaveBtn = document.getElementById('hot-leave-btn');
-      const resetBtn = document.getElementById('hot-reset-btn');
       const hasSeat = !!hotMe.myId;
       if (leaveBtn) leaveBtn.hidden = !hasSeat;
-      if (resetBtn) resetBtn.hidden = !(hasSeat && amHost && claimedCount > 1);
       // Refresh shared invite sheet if it's open for hotseat
       if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen('hotseat');
     }
@@ -1738,9 +1736,6 @@
       }
       try { history.replaceState(history.state, '', '/'); } catch(e){}
       goTo('games');
-    }
-    async function hotResetPlayers(){
-      return huddleResetPlayers(hotIsHost, state, hotGetSessionId, hotMe, renderLobbyPlayers, 'huddle_hot_reset_players');
     }
 
     // ---------- Custom confirm dialog (replaces native confirm) ----------

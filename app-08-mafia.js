@@ -1323,9 +1323,7 @@
       const sid = mafiaGetSessionId();
       const isHost = mafiaState.hostId === sid;
       const meIsInRoom = !!mafiaMe.myId || mafiaState.narratorUid === sid;
-      const resetBtn = document.getElementById('mafia-reset-btn');
       const leaveBtn = document.getElementById('mafia-leave-btn');
-      if (resetBtn) resetBtn.hidden = !isHost;
       if (leaveBtn) leaveBtn.hidden = !meIsInRoom;
     }
 
@@ -1411,12 +1409,6 @@
           p_code: codeAtLeave,
         })).catch(e => console.warn('[Mafia] leave failed:', e && e.message));
       }
-    }
-    async function mafiaResetPlayers(){
-      // For Mafia (lobby-only in this phase), "reset" just regenerates the
-      // room code, which orphans the old room (cleanup TBD) and gives us a
-      // clean slate. Simpler than a dedicated reset RPC for now.
-      await regenerateMafiaRoom();
     }
     async function regenerateMafiaRoom(){
       if (!mafiaState.code) return;
@@ -2073,11 +2065,8 @@
       }
       // Leave / Reset visibility — now in the top-right of the Players header
       const leaveBtn = document.getElementById('liar-leave-btn');
-      const resetBtn = document.getElementById('liar-reset-btn');
       const hasSeat = !!liarMe.myId;
-      const amHost = liarGetSessionId() === liarState.hostId;
       if (leaveBtn) leaveBtn.hidden = !hasSeat;
-      if (resetBtn) resetBtn.hidden = !(hasSeat && amHost && claimedCount > 1);
       // Keep the invite sheet content fresh if it's open (e.g. a friend just
       // joined / accepted / cancelled). Cheap if sheet is closed.
       if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen('liar');

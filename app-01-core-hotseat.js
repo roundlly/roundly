@@ -185,32 +185,6 @@
       return me.sessionId;
     }
 
-    // ---------- Shared lobby "Reset players" (Phase 2: ResetPlayers merge) ----------
-    // Host-only lobby action: clear every claimed seat except the host's own, then
-    // fire the game's server-side reset RPC. Hot/Cham/Liar were identical apart from
-    // their state object, host check, render fn, and RPC name. Mafia is NOT included
-    // (its "reset" regenerates the room code instead — see mafiaResetPlayers). Pass
-    // the per-game pieces in; sidFn is called after the confirm (mirrors originals).
-    async function huddleResetPlayers(isHost, gameState, sidFn, meObj, render, rpcName){
-      if (!isHost()) return;
-      const ok = await huddleConfirm({
-        title: t('lobby.resetTitle'),
-        body: t('lobby.resetBody'),
-        confirmLabel: t('lobby.resetConfirm'),
-        danger: true,
-      });
-      if (!ok) return;
-      const sid = sidFn();
-      const myId = meObj && meObj.myId;
-      // Optimistic local update for snappy UI; server returns canonical state.
-      const next = {};
-      if (myId && sid) next[myId] = sid;
-      gameState.claimedBy = next;
-      if (typeof render === 'function') render();
-      // Server-validated host-only reset.
-      huddleCallRPC(rpcName, { p_code: gameState.code });
-    }
-
     async function hotBootstrap(){ return huddleBootstrap(hotMe); }
     function hotGetSessionId(){ return huddleGetSessionId(hotMe); }
     function hotIsHost(){ return hotGetSessionId() === state.hostId; }

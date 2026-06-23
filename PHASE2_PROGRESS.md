@@ -9,7 +9,7 @@ plumbing — **17 "families" × 4 games = ~68 near-duplicate functions**. Phase 
 each set of 4 copies with **one shared `huddle*` helper**, killing the duplication that
 causes "fix one bug, the others stay broken."
 
-## ✅ Done — 9 of 17 families merged (all verified)
+## ✅ Done — 8 of 17 families merged (all verified)
 Shared helpers all live in `app-01-core-hotseat.js` near the top:
 
 | # | Family | Shared helper | Verified by |
@@ -22,7 +22,6 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 | 6 | LoadRoom (3 of 4) | `huddleFetchRoomState(table, code)` — Mafia stays separate | smoke + mp |
 | 7 | GetSessionId | `huddleGetSessionId(me)` — all 4 games | smoke + mp (28/28) + manual phones |
 | 8 | Bootstrap | `huddleBootstrap(me, logLabel)` — all 4 games | smoke + mp (28/28) + manual phones |
-| 9 | ResetPlayers (3 of 4) | `huddleResetPlayers(isHost, gameState, sidFn, meObj, render, rpcName)` — Mafia stays separate (regenerates room code) | smoke 9/9 (lobby-only host action; not in mp) |
 
 **GetSessionId/Bootstrap merge notes (2026-06-23):**
 - All 4 `<game>Bootstrap`/`<game>GetSessionId` now delegate to the shared pair. Each game passes its own `me` object (kept separate because each holds extra per-game fields). The `tab_` fallback was **KEPT** (deliberate safety net for offline / 429 anon rate-limit — it is NOT dead code).
@@ -43,7 +42,7 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 
 ### Bucket A — need a BEHAVIOR DECISION (no multiplayer test needed)
 - ~~**GetSessionId / Bootstrap**~~ — ✅ **DONE 2026-06-23** (see the Done table above). Unified to `huddleGetSessionId(me)`/`huddleBootstrap(me)`; `tab_` fallback kept as safety net; Mafia normalized + rebind bug fixed.
-- ~~**ResetPlayers**~~ — ✅ **DONE 2026-06-23** (table row 9). Hot/Cham/Liar were in fact nearly identical → merged to `huddleResetPlayers(...)`; Mafia stays separate (its reset regenerates the room code). The earlier "not worth it" call was too pessimistic — the actual code was a clean mechanical merge.
+- ~~**ResetPlayers**~~ — 🗑️ **REMOVED ENTIRELY 2026-06-23** (owner decision). Briefly merged to `huddleResetPlayers(...)`, then the whole feature was deleted: Reset buttons (all 4 lobbies in index.html), the 5 reset functions, `huddleResetPlayers`, and the `lobby.reset*` i18n strings (EN+TR). Rationale: low value for an in-person game, blunt (kicks everyone), ambiguous label, and broken on Mafia (its `huddle_mafia_regenerate_room` RPC errors — likely DB drift). **Kept** `regenerateMafiaRoom` because the separate Mafia "Refresh code" button still uses it. ⚠️ NOTE: that Refresh-code button shares the same broken RPC, so it's probably also broken — separate DB-drift issue, not yet addressed.
 - **StateReset** (default-state init per game) — genuinely differs (each game's default state shape is different) → leave as-is, NOT worth merging.
 - ~~**Rerender**~~ — ✅ **RESOLVED 2026-06-23**: Hot/Cham/Liar already delegate to shared `huddleSyncGateRerender`; only the legitimately game-specific inner renderers remain; Mafia's is bespoke. Nothing left to merge — closed.
 
