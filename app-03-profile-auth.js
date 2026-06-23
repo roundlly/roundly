@@ -1149,6 +1149,40 @@
 
     // Sign out — clears Supabase session, drops local profile cache, returns to login.
     async function huddleSignOut(){
+      // Release any claimed seats SERVER-SIDE before we tear down local state and
+      // sign out, so other players see us leave IMMEDIATELY (the "{name} left"
+      // notice fires off the seat-vanish diff) instead of a ghost seat that
+      // lingers until the 60s presence grace expires. This makes sign-out behave
+      // like an explicit Leave.
+      //
+      // The room code is read from the durable per-game lastRoom store, NOT live
+      // game state: the Sign Out button lives on the Profile screen, so by the
+      // time this runs the live <game>State.code is usually already cleared —
+      // that's why an earlier live-state-only version silently released nothing.
+      // (live state is still tried first for the case where you sign out while
+      // sitting in the lobby.)
+      //
+      // Must run (a) while still authenticated — before auth.signOut() below — so
+      // huddle_leave_seat's auth.uid() check passes, and (b) BEFORE the local
+      // force-leave helpers / huddleClearLastRoom calls wipe the saved codes.
+      // Best-effort + quiet: a failure here must never block sign-out.
+      try {
+        const _releaseSeat = async (table, liveSt, lastKey) => {
+          let code = (liveSt && liveSt.code) ? liveSt.code : null;
+          if (!code) {
+            try { code = (typeof huddleReadLastRoom === 'function') ? huddleReadLastRoom(lastKey) : null; } catch(e){}
+          }
+          if (!(window.sb && code)) return;
+          try { await window.sb.rpc('huddle_leave_seat', { p_table: table, p_code: code }); }
+          catch(e){ /* quiet — best-effort */ }
+        };
+        await Promise.all([
+          _releaseSeat('hotseat_rooms',   (typeof state      !== 'undefined') ? state      : null, 'hotseat'),
+          _releaseSeat('chameleon_rooms', (typeof chamState  !== 'undefined') ? chamState  : null, 'cham'),
+          _releaseSeat('liar_rooms',      (typeof liarState  !== 'undefined') ? liarState  : null, 'liar'),
+          _releaseSeat('mafia_rooms',     (typeof mafiaState !== 'undefined') ? mafiaState : null, 'mafia'),
+        ]);
+      } catch(e){ /* quiet — best-effort */ }
       // Tear down any game-room Realtime channels BEFORE auth cleanup so the
       // old user's channels don't bleed into the next signed-in user's session
       // and write their state into the wrong account. Each helper handles its

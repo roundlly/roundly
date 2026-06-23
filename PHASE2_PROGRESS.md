@@ -33,6 +33,8 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 **Plus (not part of the 17, but related fixes this effort produced):**
 - Player-left **notice parity** across all 4 games (realtime seat-vanish detection → "{name} left the game."). Hot Seat + Chameleon also return host to lobby if a mid-game room drops <2.
 - Fixed 2 real production bugs: missing DB function `huddle_hot_play_again` (Hot Seat couldn't start); the leave-notification gap.
+- **Sign-out ghost-seat fix (2026-06-23):** `huddleSignOut` only did a LOCAL teardown and never released the seat server-side → other players saw a ghost seat until the 60s presence grace. Now sign-out fires `huddle_leave_seat` per game FIRST (like Leave), reading the code from the durable `huddleReadLastRoom` store (live state is cleared by the time you reach the Profile-screen Sign Out button). Verified on 2 phones.
+- **Login confirmed Google-only by design (2026-06-23):** simplified `login-clean-cta`; old email/password/guest form logic in app-03 is dead code (targets removed HTML elements). Phase 4 cleanup candidate.
 
 **Skip (already delegate to a shared helper — barely duplicated):** `JoinUrl`, `FindRecentRoomCode`.
 
