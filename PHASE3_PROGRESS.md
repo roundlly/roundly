@@ -90,13 +90,31 @@ next to the pre-existing `data-go` nav delegation):
 script per future screen — it's the only automated catch for wiring (smoke never clicks buttons).
 ⚠️ `goTo('admin')` is **access-gated** → admin screens only open for an owner/admin account.
 
+## ✅ DONE — DOM delegation step 2: HOT SEAT LOBBY (commit `refactor(dom): convert Hot Seat lobby…`)
+Converted screen-lobby (back/refresh/how-to/settings-toggle/leave/start), the app-01 settings render
+(showInfo/setRounds/setOrder/applyRecommended/openModeSheet/openCategorySheet), and the app-03
+empty-seat **invite tile**. **Gotchas found (apply to the other lobbies):**
+- The invite tile is rendered from a THIRD file (app-03 `renderLobbyPlayers`), not the lobby markup —
+  the verify script's leftover-scan caught it. Each game renders its own: hot=app-03:1557,
+  cham=app-06:558, mafia=app-08:1111, liar=app-08:2009. The claimed-seat tile is display-only + escaped.
+- `setRounds` needed `r = Number(r)` — `data-arg` is a string but the fn sets `state.rounds` + sends it
+  to the RPC where the number type matters. Watch for other number/typed args per lobby.
+- The QR `onerror="handleQrError()"` is left inline (load error, not a click — delegation N/A).
+- **DEFERRED:** the shared Mode/Category sheets (`pickMode`/`pickCategory`) still use inline onclick
+  (work via coexistence). Convert in a later sheets pass.
+- Verify tool renamed `verify-admin-delegation.js` → **`tmp/verify-delegation.js`** (one section per
+  screen; now 15 checks). Run it after each conversion.
+
 ## ⏳ REMAINING
-- **onclick → delegation, ONE screen per PR**, remaining order (smallest blast radius first):
-  `screen-wheel-test` (12, lab) + liar-lab chips (6) → the 4 game lobbies (5–6 each) →
-  sheet/modal backdrops elsewhere → **friends/invite rows LAST** (args carry escaped user ids;
-  intersects XSS). Use the `data-action`/`data-action-self` pattern above; strip that screen's inline
-  handlers only. **Each converted screen MUST be hand-clicked on two phones — smoke can't catch wiring.**
-  (~248 inline handlers remain across the app after admin.)
+- **onclick → delegation, ONE screen per PR.** Hot Seat lobby done; **next: Chameleon → Liar → Mafia
+  lobbies.** ⚠️ These three differ from Hot Seat: they have **tap-to-claim seat buttons** (carry a
+  seat-id arg) — the most critical multiplayer buttons, highest care, must hand-test the claim flow on
+  two phones. Then: `screen-wheel-test` (lab) + liar-lab chips → the deferred Mode/Category + other
+  sheets → **friends/invite rows LAST** (args carry escaped user ids; intersects XSS).
+  Use the `data-action`/`data-action-self` pattern; extend `tmp/verify-delegation.js` per screen.
+  **Each converted screen MUST be hand-clicked on two phones — smoke/mp never click buttons.**
+- **CADENCE (owner choice 2026-06-24):** verify Hot Seat lobby + admin on real devices BEFORE
+  converting the 3 seat-claim lobbies.
 - **state containment (riskiest, least urgent — owner decision whether to do this cycle):** keep the
   global-lexical binding + field names verbatim (pinned by mp-test), funnel writes through explicit
   `set(patch)` fns, optional dev-only `Proxy` to assert. Order: `liarState` → `chamState` →
