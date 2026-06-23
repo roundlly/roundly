@@ -17,10 +17,10 @@
     };
     let friendsSearchTimer = null;
 
+    // Thin alias for the canonical huddleEscape (app-01). Kept so the ~40 existing
+    // friendsEscape() call sites stay untouched (low blast radius) — single implementation now.
     function friendsEscape(s){
-      return String(s == null ? '' : s)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      return huddleEscape(s);
     }
 
     function friendsDisplayName(p){

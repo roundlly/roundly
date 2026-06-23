@@ -634,8 +634,10 @@
     function fbEmoji(cat){
       return cat === 'bug' ? '🐛' : cat === 'idea' ? '💡' : cat === 'word' ? '🗣️' : '📝';
     }
+    // Thin alias for the canonical huddleEscape (app-01). Kept so the ~60 existing
+    // escapeHTML() call sites stay untouched (low blast radius) — single implementation now.
     function escapeHTML(s){
-      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      return huddleEscape(s);
     }
     function formatRelativeTime(ms){
       const diff = Date.now() - ms;
