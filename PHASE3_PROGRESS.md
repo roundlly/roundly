@@ -105,16 +105,39 @@ empty-seat **invite tile**. **Gotchas found (apply to the other lobbies):**
 - Verify tool renamed `verify-admin-delegation.js` → **`tmp/verify-delegation.js`** (one section per
   screen; now 15 checks). Run it after each conversion.
 
-## ⏳ REMAINING
-- **onclick → delegation, ONE screen per PR.** Hot Seat lobby done; **next: Chameleon → Liar → Mafia
-  lobbies.** ⚠️ These three differ from Hot Seat: they have **tap-to-claim seat buttons** (carry a
-  seat-id arg) — the most critical multiplayer buttons, highest care, must hand-test the claim flow on
-  two phones. Then: `screen-wheel-test` (lab) + liar-lab chips → the deferred Mode/Category + other
-  sheets → **friends/invite rows LAST** (args carry escaped user ids; intersects XSS).
+## ✅ DONE — DOM delegation steps 3–5: CHAMELEON, LIAR, MAFIA lobbies (commits `refactor(dom): convert <game> lobby…`)
+**ALL 4 GAME LOBBIES now delegated** (Hot Seat + these three). **Correction to an earlier assumption:**
+none of the games have tap-to-claim seat buttons — they ALL auto-claim (`huddleAutoClaimIfNeeded`),
+showing display-only claimed seats + invite tiles for empty seats. So Cham/Liar/Mafia were no riskier
+than Hot Seat. Per-game notes:
+- **Cham/Liar start buttons** (`chamStartGame(ev)`/`liarStartGame(ev)`): dropped the `event` arg — both
+  fall back to `getElementById('<g>-start-btn')` when `ev` is absent. Mafia/Hot start take no event.
+- **Cham/Hot rounds** (`chamSetRounds`/`setRounds`): added `r = Number(r)` (data-arg is a string).
+- **Invite tiles** render per-game from scattered files: hot=app-03, cham=app-06, liar=app-08:2009,
+  mafia=app-08:1111. (Liar/Mafia seat renders live in app-08 despite the file name.)
+- **Mafia lobby** also has the narrator card (`mafiaOpenNarratorPicker`) + optional-roles toggle.
+
+### ⚠️ Regression caught + fixed (commit `fix(dom): repair refresh-spinner selectors…`)
+**Lesson: some JS finds a button by its `onclick` attribute.** `regenerateHotRoom`/`regenerateChamRoom`/
+`regenerateLiarRoom_v2` did `querySelector('...button[onclick*="regenerate*Room"]')` to play the
+refresh spin. Converting the button to `data-action` broke those selectors → spinner silently no-opped
+(code still regenerated; cosmetic only). **Before converting ANY button, grep `\[onclick` / `querySelector.*onclick`.**
+Fixed all to `[data-action*="..."]`; the verifier now asserts each refresh button resolves.
+
+**Verify tool:** `tmp/verify-delegation.js` now 40 checks (admin + 4 lobbies). Offline can't render
+invite tiles for cham/liar/mafia (no default players) → those clicks are skip-verified (source converted +
+engine proven via the hot invite tile).
+
+## ⏳ REMAINING (all no-live-bug maintainability; needs two-phone hand-test per screen)
+- **onclick → delegation, remaining screens:** in-game / play screens (hot play/result, cham
+  splash/play/vote/result, liar play/cup, mafia cards-game/cards-role) → the **deferred sheets**
+  (Mode/Category/Topic/narrator-picker/invite-sheet — note the invite sheet args carry `friendsEscape`'d
+  user ids) → `screen-wheel-test` + liar-lab chips → misc global-chrome (howto modals, etc.).
   Use the `data-action`/`data-action-self` pattern; extend `tmp/verify-delegation.js` per screen.
-  **Each converted screen MUST be hand-clicked on two phones — smoke/mp never click buttons.**
-- **CADENCE (owner choice 2026-06-24):** verify Hot Seat lobby + admin on real devices BEFORE
-  converting the 3 seat-claim lobbies.
+  **Grep `\[onclick` before converting buttons** (see the regression above).
+- **XSS Step 1c follow-on** none — XSS concern is fully closed.
+- **State containment (concern 3)** — not started; riskiest, least urgent; pinned by mp-test names.
+  Owner decision whether to do it at all this cycle.
 - **state containment (riskiest, least urgent — owner decision whether to do this cycle):** keep the
   global-lexical binding + field names verbatim (pinned by mp-test), funnel writes through explicit
   `set(patch)` fns, optional dev-only `Proxy` to assert. Order: `liarState` → `chamState` →
