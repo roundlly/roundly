@@ -182,53 +182,22 @@
     }
 
     async function liarLeaveRoom(context){
-      if (!liarMe.myId) return;
-      const midRound = context === 'midround';
-      const ok = await huddleConfirm({
-        title: t(midRound ? 'common.leaveMidRoundTitle' : 'lobby.leaveTitle'),
-        body:  t(midRound ? 'common.leaveMidRoundBody'  : 'lobby.leaveBody'),
-        confirmLabel: t('lobby.leaveConfirm'),
-        danger: true,
+      return huddleLeaveRoom({
+        meObj: liarMe, gameState: liarState, sidFn: liarGetSessionId,
+        table: 'liar_rooms', gameToken: 'liar', lastRoomKey: 'liar', context,
+        // Cancel pending auto-advance timers + kill queued/in-flight SFX so
+        // leaving mid-animation doesn't push state into a room we left or leave
+        // the cup ticking/draining in the background.
+        preLeave: () => { liarClearAllAutoAdvance(); liarStopAllSfx(); },
+        teardown: () => {
+          if (_liarChannel) {
+            try { _liarChannel.untrack(); } catch(e){}
+            try { window.sb.removeChannel(_liarChannel); } catch(e){}
+            _liarChannel = null; _liarChannelCode = null; _liarChannelSessionId = null;
+            liarResetPresenceState();
+          }
+        },
       });
-      if (!ok) return;
-      // Cancel any pending auto-advance timers — we're leaving the room, so
-      // firing them later would push state into a room we're no longer in.
-      liarClearAllAutoAdvance();
-      // Kill any queued SFX + in-flight audio so leaving mid-animation
-      // doesn't leave the cup ticking/draining in the background.
-      liarStopAllSfx();
-      const mySid = liarGetSessionId();
-      const myPlayerId = liarMe.myId;
-      const leavingCode = liarState.code;
-      // Optimistic local update so the UI reflects "I left" instantly. The
-      // server-validated leave (C2 turn 2) happens via RPC; on success its
-      // canonical state echoes back. On failure the next echo restores the
-      // server's truth — but we still navigate away locally.
-      if (liarState.claimedBy && liarState.claimedBy[myPlayerId] === mySid) {
-        delete liarState.claimedBy[myPlayerId];
-      }
-      if (liarState.hostId === mySid) {
-        const remaining = Object.entries(liarState.claimedBy || {})
-          .sort((a, b) => a[0].localeCompare(b[0]));
-        liarState.hostId = remaining.length ? remaining[0][1] : null;
-      }
-      if (leavingCode) {
-        huddleCallRPC('huddle_leave_seat', { p_table: 'liar_rooms', p_code: leavingCode });
-      }
-      if (typeof inviteCancelMineForRoom === 'function' && leavingCode) {
-        try { inviteCancelMineForRoom(leavingCode, 'liar'); } catch(e){}
-      }
-      liarMe.myId = null;
-      liarState.code = null;
-      try { huddleClearLastRoom('liar'); } catch(e){}
-      if (_liarChannel) {
-        try { _liarChannel.untrack(); } catch(e){}
-        try { window.sb.removeChannel(_liarChannel); } catch(e){}
-        _liarChannel = null; _liarChannelCode = null; _liarChannelSessionId = null;
-        liarResetPresenceState();
-      }
-      try { history.replaceState(history.state, '', '/'); } catch(e){}
-      goTo('games');
     }
     // Local-only cleanup (no Supabase write). Used when host closes the room
     // and when a non-host receives the "closedByHost" broadcast.

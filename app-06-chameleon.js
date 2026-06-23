@@ -737,43 +737,18 @@
     function chamRenderPlayers(){ renderChamLobbyPlayers(); }
 
     async function chamLeaveRoom(context){
-      if (!chamMe.myId) return;
-      const midRound = context === 'midround';
-      const ok = await huddleConfirm({
-        title: t(midRound ? 'common.leaveMidRoundTitle' : 'lobby.leaveTitle'),
-        body:  t(midRound ? 'common.leaveMidRoundBody'  : 'lobby.leaveBody'),
-        confirmLabel: t('lobby.leaveConfirm'),
-        danger: true,
+      return huddleLeaveRoom({
+        meObj: chamMe, gameState: chamState, sidFn: chamGetSessionId,
+        table: 'chameleon_rooms', gameToken: 'chameleon', lastRoomKey: 'cham', context,
+        teardown: () => {
+          // Chameleon intentionally does NOT untrack before removeChannel.
+          if (_chamChannel) {
+            try { window.sb.removeChannel(_chamChannel); } catch(e){}
+            _chamChannel = null; _chamChannelCode = null; _chamChannelSessionId = null;
+            chamResetPresenceState();
+          }
+        },
       });
-      if (!ok) return;
-      const mySid = chamGetSessionId();
-      const myPlayerId = chamMe.myId;
-      const leavingCode = chamState.code;
-      // Optimistic local update; server-validated via universal RPC (C2 turn 5).
-      if (chamState.claimedBy && chamState.claimedBy[myPlayerId] === mySid) {
-        delete chamState.claimedBy[myPlayerId];
-      }
-      if (chamState.hostId === mySid) {
-        const remaining = Object.entries(chamState.claimedBy || {})
-          .sort((a, b) => a[0].localeCompare(b[0]));
-        chamState.hostId = remaining.length ? remaining[0][1] : null;
-      }
-      if (leavingCode) {
-        huddleCallRPC('huddle_leave_seat', { p_table: 'chameleon_rooms', p_code: leavingCode });
-      }
-      if (typeof inviteCancelMineForRoom === 'function' && leavingCode) {
-        try { inviteCancelMineForRoom(leavingCode, 'chameleon'); } catch(e){}
-      }
-      chamMe.myId = null;
-      chamState.code = null;
-      try { huddleClearLastRoom('cham'); } catch(e){}
-      if (_chamChannel) {
-        try { window.sb.removeChannel(_chamChannel); } catch(e){}
-        _chamChannel = null; _chamChannelCode = null; _chamChannelSessionId = null;
-        chamResetPresenceState();
-      }
-      try { history.replaceState(history.state, '', '/'); } catch(e){}
-      goTo('games');
     }
     // Local-only cleanup (no Supabase write). Used when host closes the room
     // and when a non-host receives the "closedByHost" broadcast.

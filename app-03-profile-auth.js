@@ -1619,48 +1619,19 @@
 
     // ---------- Hot Seat: leave room / reset other players ----------
     async function hotLeaveRoom(){
-      if (!hotMe.myId) return;
-      const ok = await huddleConfirm({
-        title: t('lobby.leaveTitle'),
-        body: t('lobby.leaveBody'),
-        confirmLabel: t('lobby.leaveConfirm'),
-        danger: true,
+      return huddleLeaveRoom({
+        meObj: hotMe, gameState: state, sidFn: hotGetSessionId,
+        table: 'hotseat_rooms', gameToken: 'hotseat', lastRoomKey: 'hotseat',
+        teardown: () => {
+          state.meId = null;
+          if (_hotChannel) {
+            try { _hotChannel.untrack(); } catch(e){}
+            try { window.sb.removeChannel(_hotChannel); } catch(e){}
+            _hotChannel = null; _hotChannelCode = null; _hotChannelSessionId = null;
+            hotResetPresenceState();
+          }
+        },
       });
-      if (!ok) return;
-      const mySid = hotGetSessionId();
-      const myPlayerId = hotMe.myId;
-      const leavingCode = state.code;
-      // Optimistic local update (C2 turn 4a) — server-validated via RPC below.
-      if (state.claimedBy && state.claimedBy[myPlayerId] === mySid) {
-        delete state.claimedBy[myPlayerId];
-      }
-      if (state.hostId === mySid) {
-        const remaining = Object.entries(state.claimedBy || {})
-          .sort((a, b) => a[0].localeCompare(b[0]));
-        state.hostId = remaining.length ? remaining[0][1] : null;
-      }
-      // Server-validated leave (universal RPC handles host transfer too).
-      if (leavingCode) {
-        huddleCallRPC('huddle_leave_seat', { p_table: 'hotseat_rooms', p_code: leavingCode });
-      }
-      // Cancel any pending invites I sent for this room — a friend tapping
-      // Join after I've left would otherwise land in a room without me.
-      if (typeof inviteCancelMineForRoom === 'function' && leavingCode) {
-        try { inviteCancelMineForRoom(leavingCode, 'hotseat'); } catch(e){}
-      }
-      // Local cleanup
-      hotMe.myId = null;
-      state.meId = null;
-      state.code = null;
-      try { huddleClearLastRoom('hotseat'); } catch(e){}
-      if (_hotChannel) {
-        try { _hotChannel.untrack(); } catch(e){}
-        try { window.sb.removeChannel(_hotChannel); } catch(e){}
-        _hotChannel = null; _hotChannelCode = null; _hotChannelSessionId = null;
-        hotResetPresenceState();
-      }
-      try { history.replaceState(history.state, '', '/'); } catch(e){}
-      goTo('games');
     }
     // Local-only cleanup — used when (a) host closes the room and we need to
     // bail without writing more state to Supabase, and (b) a non-host receives

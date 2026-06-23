@@ -185,6 +185,56 @@
       return me.sessionId;
     }
 
+    // ---------- Shared "Leave room" (Phase 2: LeaveRoom merge, 3 of 4) ----------
+    // Hot/Cham/Liar share this skeleton: confirm → optimistic seat removal →
+    // host transfer → server-validated leave RPC → cancel my pending invites →
+    // clear local state + lastRoom → tear down the channel → navigate home.
+    // Mafia is NOT included (narrator model: no confirm / no host transfer /
+    // fire-and-forget — see mafiaLeaveRoom). Per-game differences are passed in:
+    //   context   : 'midround' swaps the confirm copy (Cham/Liar); omit for Hot.
+    //   preLeave  : optional pre-leave cleanup (Liar stops timers/SFX).
+    //   teardown  : per-game channel teardown (Cham intentionally skips untrack;
+    //               Hot also nulls state.meId) — keeps each game's exact behavior.
+    async function huddleLeaveRoom(opts){
+      const me = opts.meObj, gs = opts.gameState;
+      if (!me.myId) return;
+      const midRound = opts.context === 'midround';
+      const ok = await huddleConfirm({
+        title: t(midRound ? 'common.leaveMidRoundTitle' : 'lobby.leaveTitle'),
+        body:  t(midRound ? 'common.leaveMidRoundBody'  : 'lobby.leaveBody'),
+        confirmLabel: t('lobby.leaveConfirm'),
+        danger: true,
+      });
+      if (!ok) return;
+      if (typeof opts.preLeave === 'function') opts.preLeave();
+      const mySid = opts.sidFn();
+      const myPlayerId = me.myId;
+      const leavingCode = gs.code;
+      // Optimistic local update; server-validated via the universal RPC below.
+      if (gs.claimedBy && gs.claimedBy[myPlayerId] === mySid) {
+        delete gs.claimedBy[myPlayerId];
+      }
+      if (gs.hostId === mySid) {
+        const remaining = Object.entries(gs.claimedBy || {}).sort((a, b) => a[0].localeCompare(b[0]));
+        gs.hostId = remaining.length ? remaining[0][1] : null;
+      }
+      // Server-validated leave (universal RPC handles host transfer too).
+      if (leavingCode) {
+        huddleCallRPC('huddle_leave_seat', { p_table: opts.table, p_code: leavingCode });
+      }
+      // Cancel any pending invites I sent for this room — a friend tapping Join
+      // after I've left would otherwise land in a room without me.
+      if (typeof inviteCancelMineForRoom === 'function' && leavingCode) {
+        try { inviteCancelMineForRoom(leavingCode, opts.gameToken); } catch(e){}
+      }
+      me.myId = null;
+      gs.code = null;
+      try { huddleClearLastRoom(opts.lastRoomKey); } catch(e){}
+      if (typeof opts.teardown === 'function') opts.teardown();
+      try { history.replaceState(history.state, '', '/'); } catch(e){}
+      goTo('games');
+    }
+
     async function hotBootstrap(){ return huddleBootstrap(hotMe); }
     function hotGetSessionId(){ return huddleGetSessionId(hotMe); }
     function hotIsHost(){ return hotGetSessionId() === state.hostId; }
