@@ -1108,7 +1108,7 @@
           // their seat instead of doing anything useful. Now it opens the
           // shared lobby invite sheet so the seat gets filled by a real friend.
           html.push(
-            `<button class="mafia-seat mafia-seat-invite" type="button" onclick="openLobbyInviteSheet('mafia')" data-empty="1">
+            `<button class="mafia-seat mafia-seat-invite" type="button" data-action="openLobbyInviteSheet" data-arg="mafia" data-empty="1">
                <div class="mafia-seat-invite-icon">+</div>
                <div class="mafia-seat-info">
                  <div class="mafia-seat-name">${t('mafia.inviteFriend')}</div>
@@ -1288,7 +1288,7 @@
       const visibleRoles = MAFIA_OPTIONAL_ROLES.filter(r => !r.cardsOnly || mafiaCardsMode);
       rows.innerHTML = visibleRoles.map(r => {
         const on = !!state[r.id];
-        return `<button type="button" class="mafia-optional-row" aria-pressed="${on}" onclick="mafiaToggleOptionalRole('${r.id}')">`
+        return `<button type="button" class="mafia-optional-row" aria-pressed="${on}" data-action="mafiaToggleOptionalRole" data-arg="${r.id}">`
           + `<span class="mafia-optional-row-emoji">${r.emoji}</span>`
           + `<span class="mafia-optional-row-text">`
           +   `<span class="mafia-optional-row-name">${t(r.nameKey)}</span>`

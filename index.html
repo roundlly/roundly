@@ -1668,7 +1668,7 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
          this device has claimed something. -->
     <section class="screen" id="screen-mafia-lobby">
       <header class="header">
-        <button class="icon-btn" onclick="backFromGameLobby('games')" aria-label="Back" data-i18n-aria="common.back">
+        <button class="icon-btn" data-action="backFromGameLobby" data-arg="games" aria-label="Back" data-i18n-aria="common.back">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
         </button>
         <div class="header-title center" data-i18n="games.mafia">Mafia</div>
@@ -1687,13 +1687,13 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
           </div>
           <div class="room-qr-caption" data-i18n="lobby.scanToJoin">Scan to join</div>
           <div class="room-code-action">
-            <button aria-label="Refresh code" data-i18n-aria="lobby.refreshCode" onclick="regenerateMafiaRoom()">
+            <button aria-label="Refresh code" data-i18n-aria="lobby.refreshCode" data-action="regenerateMafiaRoom">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
             </button>
           </div>
         </div>
 
-        <button class="howto-trigger pulse" id="mafia-howto-trigger" onclick="openMafiaHowTo()">
+        <button class="howto-trigger pulse" id="mafia-howto-trigger" data-action="openMafiaHowTo">
           <div class="howto-trigger-icon">
             <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
           </div>
@@ -1710,7 +1710,7 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
 
         <!-- Narrator slot — separate from regular seats. Host taps to open picker. -->
         <div class="section-title" data-i18n="mafia.narratorLabel">Narrator</div>
-        <button class="mafia-narrator-card" id="mafia-narrator-card" type="button" onclick="mafiaOpenNarratorPicker()">
+        <button class="mafia-narrator-card" id="mafia-narrator-card" type="button" data-action="mafiaOpenNarratorPicker">
           <div class="mafia-narrator-icon">🎙️</div>
           <div class="mafia-narrator-content">
             <div class="mafia-narrator-title" id="mafia-narrator-title" data-i18n="mafia.narratorNotSet">Tap to pick a narrator</div>
@@ -1737,14 +1737,14 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
         <div class="liar-seats-header">
           <div class="section-title" data-i18n="mafia.players">Players</div>
           <div class="liar-seats-header-actions">
-            <button class="liar-leave" id="mafia-leave-btn" type="button" hidden onclick="mafiaLeaveRoom()" data-i18n="lobby.leaveShort">Leave</button>
+            <button class="liar-leave" id="mafia-leave-btn" type="button" hidden data-action="mafiaLeaveRoom" data-i18n="lobby.leaveShort">Leave</button>
           </div>
         </div>
         <div class="mafia-seats" id="mafia-seats"></div>
         <div class="mafia-seats-hint" id="mafia-seats-hint"></div>
 
         <div class="sticky-bottom">
-          <button class="btn btn-primary btn-lg" id="mafia-start-btn" onclick="mafiaStartGame()" data-i18n="lobby.startGame" aria-disabled="true">Start game</button>
+          <button class="btn btn-primary btn-lg" id="mafia-start-btn" data-action="mafiaStartGame" data-i18n="lobby.startGame" aria-disabled="true">Start game</button>
         </div>
       </main>
     </section>

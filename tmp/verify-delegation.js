@@ -197,6 +197,28 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   if (LINV.ok) results.push(['[liar-lobby] invite tile → openLobbyInviteSheet("liar")', true, JSON.stringify(LINV)]);
   else results.push(['[liar-lobby] invite tile (skipped offline — source converted; engine proven via hot)', true, JSON.stringify(LINV)]);
 
+  // ======================== MAFIA LOBBY ========================
+  const M = await page.evaluate(() => {
+    goTo('mafia-lobby');
+    const screen = document.getElementById('screen-mafia-lobby');
+    const names = ['mafiaStartGame','mafiaLeaveRoom','regenerateMafiaRoom','backFromGameLobby','openMafiaHowTo','mafiaOpenNarratorPicker'];
+    const orig = {}, calls = {};
+    names.forEach(n => { orig[n] = window[n]; window[n] = function(){ calls[n] = Array.from(arguments); }; });
+    const present = {};
+    names.forEach(n => { const el = screen.querySelector('[data-action="' + n + '"]'); present[n] = !!el; if (el) el.click(); });
+    names.forEach(n => { window[n] = orig[n]; });
+    let leftover = [];
+    screen.querySelectorAll('*').forEach(el => { for (const at of el.attributes) if (/^on/.test(at.name) && at.name !== 'onerror') leftover.push(el.tagName + '.' + at.name); });
+    return { calls, present, leftover };
+  });
+  results.push(['[mafia-lobby] Start → mafiaStartGame()', M.present.mafiaStartGame && !!M.calls.mafiaStartGame, JSON.stringify(M.present.mafiaStartGame)]);
+  results.push(['[mafia-lobby] Leave → mafiaLeaveRoom()', M.present.mafiaLeaveRoom && !!M.calls.mafiaLeaveRoom, JSON.stringify(M.present.mafiaLeaveRoom)]);
+  results.push(['[mafia-lobby] Refresh → regenerateMafiaRoom()', M.present.regenerateMafiaRoom && !!M.calls.regenerateMafiaRoom, JSON.stringify(M.present.regenerateMafiaRoom)]);
+  results.push(['[mafia-lobby] Back → backFromGameLobby("games")', !!M.calls.backFromGameLobby && M.calls.backFromGameLobby[0] === 'games', JSON.stringify(M.calls.backFromGameLobby)]);
+  results.push(['[mafia-lobby] How-to → openMafiaHowTo()', M.present.openMafiaHowTo && !!M.calls.openMafiaHowTo, JSON.stringify(M.present.openMafiaHowTo)]);
+  results.push(['[mafia-lobby] Narrator card → mafiaOpenNarratorPicker()', M.present.mafiaOpenNarratorPicker && !!M.calls.mafiaOpenNarratorPicker, JSON.stringify(M.present.mafiaOpenNarratorPicker)]);
+  results.push(['[mafia-lobby] no inline on* left in lobby DOM (QR onerror allowed)', M.leftover.length === 0, JSON.stringify(M.leftover)]);
+
   results.push(['no fatal JS errors', errs.length === 0, errs.join(' | ') || 'clean']);
 
   await browser.close(); srv.close();
