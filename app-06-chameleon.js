@@ -496,11 +496,11 @@
       const list = document.getElementById('cham-settings-list');
       if (!list) return;
       const roundsSeg = [1,3,5].map(r =>
-        `<button onclick="chamSetRounds(${r})" class="${chamState.rounds===r?'active':''}">${r}</button>`
+        `<button data-action="chamSetRounds" data-arg="${r}" class="${chamState.rounds===r?'active':''}">${r}</button>`
       ).join('');
       const topicLabel = chamState.topic === 'mixed' ? t('cham.topic.mixed') : t('cham.topic.' + chamState.topic);
       list.innerHTML = `
-        <div class="setting-row" onclick="openChamTopicSheet()" style="cursor:pointer">
+        <div class="setting-row" data-action="openChamTopicSheet" style="cursor:pointer">
           <div class="setting-row-label">${t('cham.topicLabel')}</div>
           <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
             <span>${topicLabel}</span>
@@ -515,6 +515,7 @@
     }
 
     function chamSetRounds(r){
+      r = Number(r);
       if (!chamIsHost()) return;
       chamState.rounds = r;
       huddleCallRPC('huddle_cham_set_setting', { p_code: chamState.code, p_field: 'rounds', p_value: r });
@@ -555,7 +556,7 @@
         // Empty seat → invite tile (shared lobby invite sheet).
         if (!claimedSession) {
           return `
-            <div class="player-tile hot-seat-tile invite-tile" onclick="openLobbyInviteSheet('chameleon')">
+            <div class="player-tile hot-seat-tile invite-tile" data-action="openLobbyInviteSheet" data-arg="chameleon">
               <span class="invite-plus" aria-hidden="true">+</span>
               <div class="player-tile-name" data-i18n="liar.seatInviteTap">Invite friend</div>
               <div class="player-tile-status" data-i18n="liar.seatEmpty">Empty seat</div>

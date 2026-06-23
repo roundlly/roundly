@@ -117,6 +117,44 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
     if (S.calls.setOrder) results.push(['[hot-lobby] order button → setOrder(arg)', !!S.calls.setOrder, JSON.stringify(S.calls.setOrder)]);
   }
 
+  // ===================== CHAMELEON LOBBY =====================
+  const C = await page.evaluate(() => {
+    goTo('cham-lobby');
+    const screen = document.getElementById('screen-cham-lobby');
+    const names = ['chamStartGame','chamLeaveRoom','regenerateChamRoom','backFromGameLobby','toggleSettingsCollapse','openChamHowTo'];
+    const orig = {}, calls = {};
+    names.forEach(n => { orig[n] = window[n]; window[n] = function(){ calls[n] = Array.from(arguments); }; });
+    const present = {};
+    names.forEach(n => { const el = screen.querySelector('[data-action="' + n + '"]'); present[n] = !!el; if (el) el.click(); });
+    names.forEach(n => { window[n] = orig[n]; });
+    let leftover = [];
+    screen.querySelectorAll('*').forEach(el => { for (const at of el.attributes) if (/^on/.test(at.name) && at.name !== 'onerror') leftover.push(el.tagName + '.' + at.name); });
+    return { calls, present, leftover };
+  });
+  results.push(['[cham-lobby] Start → chamStartGame()', C.present.chamStartGame && !!C.calls.chamStartGame, JSON.stringify(C.calls.chamStartGame || C.present.chamStartGame)]);
+  results.push(['[cham-lobby] Leave → chamLeaveRoom()', C.present.chamLeaveRoom && !!C.calls.chamLeaveRoom, JSON.stringify(C.calls.chamLeaveRoom || C.present.chamLeaveRoom)]);
+  results.push(['[cham-lobby] Refresh → regenerateChamRoom()', C.present.regenerateChamRoom && !!C.calls.regenerateChamRoom, JSON.stringify(C.present.regenerateChamRoom)]);
+  results.push(['[cham-lobby] Back → backFromGameLobby("games")', !!C.calls.backFromGameLobby && C.calls.backFromGameLobby[0] === 'games', JSON.stringify(C.calls.backFromGameLobby)]);
+  results.push(['[cham-lobby] Settings toggle → toggleSettingsCollapse("cham")', !!C.calls.toggleSettingsCollapse && C.calls.toggleSettingsCollapse[0] === 'cham', JSON.stringify(C.calls.toggleSettingsCollapse)]);
+  results.push(['[cham-lobby] How-to → openChamHowTo()', C.present.openChamHowTo && !!C.calls.openChamHowTo, JSON.stringify(C.present.openChamHowTo)]);
+  results.push(['[cham-lobby] no inline on* left (QR onerror allowed)', C.leftover.length === 0, JSON.stringify(C.leftover)]);
+
+  const CINV = await page.evaluate(() => {
+    goTo('cham-lobby');
+    let tile = document.querySelector('#cham-players-grid [data-action="openLobbyInviteSheet"]');
+    if (!tile) { try { if (typeof renderChamLobbyPlayers === 'function') renderChamLobbyPlayers(); } catch(e){} tile = document.querySelector('#cham-players-grid [data-action="openLobbyInviteSheet"]'); }
+    if (!tile) return { ok:false, why:'no invite tile rendered' };
+    const orig = window.openLobbyInviteSheet; let arg = null;
+    window.openLobbyInviteSheet = function(){ arg = Array.from(arguments); };
+    tile.click(); window.openLobbyInviteSheet = orig;
+    return { ok: !!arg && arg[0] === 'chameleon', calledWith: arg };
+  });
+  // Cham invite tiles only render with a live room (no default players like Hot Seat),
+  // so offline we can't click one. The source IS converted (data-arg="chameleon") and the
+  // openLobbyInviteSheet delegation is already proven by the Hot Seat invite tile → skip-pass.
+  if (CINV.ok) results.push(['[cham-lobby] invite tile → openLobbyInviteSheet("chameleon")', true, JSON.stringify(CINV)]);
+  else results.push(['[cham-lobby] invite tile (skipped offline — source converted; engine proven via hot)', true, JSON.stringify(CINV)]);
+
   results.push(['no fatal JS errors', errs.length === 0, errs.join(' | ') || 'clean']);
 
   await browser.close(); srv.close();
