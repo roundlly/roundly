@@ -1182,6 +1182,12 @@
       renderAdminFeedback();
     }
 
+    // Phase 3: zero-arg wrappers so the header/retry "refresh" buttons can use
+    // data-action delegation (which passes no runtime args). They preserve the
+    // exact original calls: adminFeedbackLoad(true) and adminStatsLoad(period, true).
+    function adminFeedbackRefresh(){ adminFeedbackLoad(true); }
+    function adminStatsRefresh(){ adminStatsLoad(adminStatsState.period, true); }
+
     // ---------- Realtime — any change to feedback_posts reloads truth ----------
     function adminFbUnwireSync(){
       try { if (_adminFbChannel && window.sb) window.sb.removeChannel(_adminFbChannel); } catch(e){}
@@ -1220,7 +1226,7 @@
         { key:'done', label:t('adminFb.filterDone'), count:c.done },
       ];
       chipsEl.innerHTML = filters.map(f => `
-        <button class="admin-fb-chip${filter === f.key ? ' active' : ''}" onclick="adminFbSetFilter('${f.key}')">
+        <button class="admin-fb-chip${filter === f.key ? ' active' : ''}" data-action="adminFbSetFilter" data-arg="${f.key}">
           <span>${escapeHTML(f.label)}</span>
           ${f.count > 0 ? `<span class="count">${f.count}</span>` : ''}
         </button>
@@ -1239,7 +1245,7 @@
             <div class="admin-fb-empty-emoji">⚠️</div>
             <div class="admin-fb-empty-title">${t('feedback.board.errorTitle')}</div>
             <div style="font-size:13px;margin-bottom:14px">${escapeHTML(adminFeedbackState.error)}</div>
-            <button class="btn btn-outline btn-sm" onclick="adminFeedbackLoad(true)">${t('feedback.board.retry')}</button>
+            <button class="btn btn-outline btn-sm" data-action="adminFeedbackRefresh">${t('feedback.board.retry')}</button>
           </div>`;
         return;
       }
@@ -1306,7 +1312,7 @@
                 <span class="dot"></span>
                 <span class="admin-fb-status admin-fb-status-${status}">${t('adminFb.status_' + status)}</span>
               </div>
-              <button class="admin-fb-overflow" onclick="openAdminFbMenu('${p.id}')" aria-label="${t('feedback.board.moreAria')}">${FB_DOTS_ICON}</button>
+              <button class="admin-fb-overflow" data-action="openAdminFbMenu" data-arg="${p.id}" aria-label="${t('feedback.board.moreAria')}">${FB_DOTS_ICON}</button>
             </div>
           </div>
         `;
@@ -1454,7 +1460,7 @@
             <div style="font-weight:700;margin-bottom:6px">${escapeHTML(t('adminStats.errorTitle'))}</div>
             <div>${escapeHTML(adminStatsState.error)}</div>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="adminStatsLoad(adminStatsState.period, true)">${escapeHTML(t('feedback.board.retry'))}</button>
+          <button class="btn btn-outline btn-sm" data-action="adminStatsRefresh">${escapeHTML(t('feedback.board.retry'))}</button>
         `;
         gridEl.innerHTML = '';
         bdEl.innerHTML = '';
@@ -1489,7 +1495,7 @@
       gridEl.innerHTML = cards.map(c => {
         const dlt = adminStatsDelta(c.data.current, c.data.previous);
         return `
-          <div class="admin-stats-card" role="button" tabindex="0" onclick="openAdminStatsDetail('${c.key}')">
+          <div class="admin-stats-card" role="button" tabindex="0" data-action="openAdminStatsDetail" data-arg="${c.key}">
             <div class="admin-stats-card-body">
               <div class="admin-stats-card-top">${c.icon}<span>${escapeHTML(c.label)}</span></div>
               <div class="admin-stats-card-value">${c.data.current}</div>

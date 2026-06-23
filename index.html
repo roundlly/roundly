@@ -469,7 +469,7 @@
     <!-- ============ ADMIN PANEL ============ -->
     <section class="screen" id="screen-admin">
       <header class="header">
-        <button class="icon-btn" onclick="goTo('profile')" aria-label="Back" data-i18n-aria="common.back">
+        <button class="icon-btn" data-action="goTo" data-arg="profile" aria-label="Back" data-i18n-aria="common.back">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
         </button>
         <div class="header-title center" data-i18n="admin.title">Admin</div>
@@ -487,7 +487,7 @@
 
         <div class="admin-grid">
           <!-- 1 Feedback (LIVE) -->
-          <button type="button" class="admin-tile is-live" onclick="goTo('admin-feedback')">
+          <button type="button" class="admin-tile is-live" data-action="goTo" data-arg="admin-feedback">
             <div class="admin-tile-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h7M7 17h5"/></svg>
             </div>
@@ -500,7 +500,7 @@
           </button>
 
           <!-- 2 Stats (LIVE) -->
-          <button type="button" class="admin-tile is-live" onclick="goTo('admin-stats')">
+          <button type="button" class="admin-tile is-live" data-action="goTo" data-arg="admin-stats">
             <div class="admin-tile-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></svg>
             </div>
@@ -567,18 +567,18 @@
     <!-- ============ ADMIN: FEEDBACK MODERATION ============ -->
     <section class="screen" id="screen-admin-feedback">
       <header class="header">
-        <button class="icon-btn" onclick="goTo('admin')" aria-label="Back" data-i18n-aria="common.back">
+        <button class="icon-btn" data-action="goTo" data-arg="admin" aria-label="Back" data-i18n-aria="common.back">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
         </button>
         <div class="header-title center" data-i18n="adminFb.title">Feedback</div>
-        <button class="icon-btn" onclick="adminFeedbackLoad(true)" aria-label="Refresh" data-i18n-aria="common.refresh" id="admin-fb-refresh-btn">
+        <button class="icon-btn" data-action="adminFeedbackRefresh" aria-label="Refresh" data-i18n-aria="common.refresh" id="admin-fb-refresh-btn">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
       </header>
       <main class="page no-nav admin-fb-page">
         <div class="admin-fb-toolbar">
           <div class="admin-fb-chips" id="admin-fb-chips"><!-- filled by render --></div>
-          <button class="admin-fb-sort-btn" onclick="adminFbToggleSort()" id="admin-fb-sort-btn" aria-label="Sort">
+          <button class="admin-fb-sort-btn" data-action="adminFbToggleSort" id="admin-fb-sort-btn" aria-label="Sort">
             <span id="admin-fb-sort-label" data-i18n="adminFb.sortNewest">Newest first</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </button>
@@ -590,21 +590,21 @@
     <!-- ============ ADMIN: STATS DASHBOARD ============ -->
     <section class="screen" id="screen-admin-stats">
       <header class="header">
-        <button class="icon-btn" onclick="goTo('admin')" aria-label="Back" data-i18n-aria="common.back">
+        <button class="icon-btn" data-action="goTo" data-arg="admin" aria-label="Back" data-i18n-aria="common.back">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
         </button>
         <div class="header-title center" data-i18n="adminStats.title">Stats</div>
-        <button class="icon-btn" onclick="adminStatsLoad(adminStatsState.period, true)" aria-label="Refresh" data-i18n-aria="common.refresh" id="admin-stats-refresh-btn">
+        <button class="icon-btn" data-action="adminStatsRefresh" aria-label="Refresh" data-i18n-aria="common.refresh" id="admin-stats-refresh-btn">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
       </header>
       <main class="page no-nav admin-stats-page">
         <!-- Period selector — controls every card on the page -->
         <div class="admin-stats-period" role="tablist" aria-label="Period">
-          <button class="admin-stats-period-btn" data-period="24h" onclick="adminStatsSetPeriod('24h')" role="tab" data-i18n="adminStats.period24h">24h</button>
-          <button class="admin-stats-period-btn" data-period="7d"  onclick="adminStatsSetPeriod('7d')"  role="tab" data-i18n="adminStats.period7d">7 days</button>
-          <button class="admin-stats-period-btn" data-period="30d" onclick="adminStatsSetPeriod('30d')" role="tab" data-i18n="adminStats.period30d">30 days</button>
-          <button class="admin-stats-period-btn" data-period="all" onclick="adminStatsSetPeriod('all')" role="tab" data-i18n="adminStats.periodAll">All</button>
+          <button class="admin-stats-period-btn" data-period="24h" data-action="adminStatsSetPeriod" data-arg="24h" role="tab" data-i18n="adminStats.period24h">24h</button>
+          <button class="admin-stats-period-btn" data-period="7d"  data-action="adminStatsSetPeriod" data-arg="7d"  role="tab" data-i18n="adminStats.period7d">7 days</button>
+          <button class="admin-stats-period-btn" data-period="30d" data-action="adminStatsSetPeriod" data-arg="30d" role="tab" data-i18n="adminStats.period30d">30 days</button>
+          <button class="admin-stats-period-btn" data-period="all" data-action="adminStatsSetPeriod" data-arg="all" role="tab" data-i18n="adminStats.periodAll">All</button>
         </div>
 
         <!-- Hero — the "is the app alive" number -->
@@ -624,8 +624,8 @@
     <!-- Detail sheet for a single metric — opens when an admin taps any
          card on the stats screen. Reuses .sheet-backdrop. State lives in
          adminStatsDetailKey (set on open). -->
-    <div class="sheet-backdrop" id="admin-stats-detail-backdrop" onclick="closeAdminStatsDetail(event)">
-      <div class="admin-stats-detail-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="sheet-backdrop" id="admin-stats-detail-backdrop" data-action="closeAdminStatsDetail" data-action-self>
+      <div class="admin-stats-detail-sheet" role="dialog" aria-modal="true">
         <div class="admin-stats-detail-handle" aria-hidden="true"></div>
         <div class="admin-stats-detail-head">
           <div class="admin-stats-detail-head-text">
@@ -633,7 +633,7 @@
             <div class="admin-stats-detail-value" id="admin-stats-detail-value"></div>
             <div class="admin-stats-detail-delta" id="admin-stats-detail-delta"></div>
           </div>
-          <button class="icon-btn admin-stats-detail-close" onclick="closeAdminStatsDetail()" aria-label="Close" data-i18n-aria="common.close">
+          <button class="icon-btn admin-stats-detail-close" data-action="closeAdminStatsDetail" aria-label="Close" data-i18n-aria="common.close">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
           </button>
         </div>
@@ -646,14 +646,14 @@
     <!-- Action sheet for an admin feedback row — Mark Done/New / Delete.
          Reuses the .fb-action-sheet styles so the visual language stays
          consistent with the rest of the app. State in adminFbMenuPostId. -->
-    <div class="sheet-backdrop" id="admin-fb-menu-backdrop" onclick="closeAdminFbMenu(event)">
-      <div class="fb-action-sheet" onclick="event.stopPropagation()">
+    <div class="sheet-backdrop" id="admin-fb-menu-backdrop" data-action="closeAdminFbMenu" data-action-self>
+      <div class="fb-action-sheet">
         <div class="fb-action-handle"></div>
-        <button class="fb-action-row" id="admin-fb-menu-toggle" onclick="adminFbToggleStatusFromMenu()">
+        <button class="fb-action-row" id="admin-fb-menu-toggle" data-action="adminFbToggleStatusFromMenu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
           <span id="admin-fb-menu-toggle-label" data-i18n="adminFb.menuMarkDone">Mark as done</span>
         </button>
-        <button class="fb-action-row is-danger" onclick="adminFbDeleteFromMenu()">
+        <button class="fb-action-row is-danger" data-action="adminFbDeleteFromMenu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
           <span data-i18n="adminFb.menuDelete">Delete post</span>
         </button>

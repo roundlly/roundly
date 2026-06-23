@@ -1231,6 +1231,21 @@
     });
 
     document.addEventListener('click', (e) => {
+      // Phase 3 DOM decoupling: generic action delegation. Replaces inline
+      // onclick="fn('arg')" with data-action="fn" [data-arg="..."]. This ONE
+      // listener covers current AND dynamically-rendered elements, and coexists
+      // with not-yet-converted inline onclick during the migration. The named fn
+      // must be a global; it receives data-arg (a single string) or no argument.
+      // data-action-self fires ONLY when the click lands directly on the element
+      // (sheet backdrops — replaces the old inner onclick="event.stopPropagation()").
+      const actionEl = e.target.closest('[data-action]');
+      if (actionEl && !(actionEl.hasAttribute('data-action-self') && e.target !== actionEl)) {
+        const fn = window[actionEl.getAttribute('data-action')];
+        if (typeof fn === 'function') {
+          if (actionEl.hasAttribute('data-arg')) fn(actionEl.getAttribute('data-arg'));
+          else fn();
+        }
+      }
       const navBtn = e.target.closest('.nav-item');
       if (navBtn && navBtn.dataset.go) { goTo(navBtn.dataset.go); return; }
       const chip = e.target.closest('.player-picker .chip');
