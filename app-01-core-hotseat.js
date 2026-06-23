@@ -1427,7 +1427,7 @@
     }
 
     function infoIcon(key){
-      return `<button class="info-btn" onclick="showInfo('${key}')" aria-label="What's this?">i</button>`;
+      return `<button class="info-btn" data-action="showInfo" data-arg="${key}" aria-label="What's this?">i</button>`;
     }
 
     // Shared between Hot Seat ('hot') and Chameleon ('cham') lobbies. Flips
@@ -1446,7 +1446,7 @@
       const recWrap = document.getElementById('btn-recommended-wrap');
 
       const roundsSeg = [1,2,3,5].map(r =>
-        `<button onclick="setRounds(${r})" class="${state.rounds===r?'active':''}">${r}</button>`
+        `<button data-action="setRounds" data-arg="${r}" class="${state.rounds===r?'active':''}">${r}</button>`
       ).join('');
 
       const orderSeg = [
@@ -1454,7 +1454,7 @@
         {v:'random',k:'order.random'},
         {v:'host',k:'order.host'},
       ].map(o =>
-        `<button onclick="setOrder('${o.v}')" class="${state.order===o.v?'active':''}">${t(o.k)}</button>`
+        `<button data-action="setOrder" data-arg="${o.v}" class="${state.order===o.v?'active':''}">${t(o.k)}</button>`
       ).join('');
 
       const recActive = state.mode === 'classic' && state.category === 'mixed' && state.rounds === 1 && state.order === 'rotating';
@@ -1469,7 +1469,7 @@
       ` : '';
 
       recWrap.innerHTML = `
-        <button class="btn-recommended${recActive ? ' applied' : ''}" id="btn-recommended" onclick="applyRecommended()">
+        <button class="btn-recommended${recActive ? ' applied' : ''}" id="btn-recommended" data-action="applyRecommended">
           <div class="btn-recommended-icon">✨</div>
           <div class="btn-recommended-text">
             <div class="btn-recommended-title">${t('lobby.useRecommended')}</div>
@@ -1480,14 +1480,14 @@
       `;
 
       list.innerHTML = `
-        <div class="setting-row" onclick="openModeSheet()" style="cursor:pointer">
+        <div class="setting-row" data-action="openModeSheet" style="cursor:pointer">
           <div class="setting-row-label">${t('lobby.mode')}</div>
           <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
             <span>${t('mode.' + state.mode)}</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
           </div>
         </div>
-        <div class="setting-row" onclick="openCategorySheet()" style="cursor:pointer">
+        <div class="setting-row" data-action="openCategorySheet" style="cursor:pointer">
           <div class="setting-row-label">${t('lobby.category')}</div>
           <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
             <span>${t('cat.' + state.category)}</span>
@@ -1564,7 +1564,7 @@
       setTimeout(() => document.getElementById('mode-backdrop').classList.remove('active'), 140);
     }
     function setCategory(c){ if (state.code && !hotIsHost()) return; state.category = c; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'category', p_value: c }); renderSettings(); }
-    function setRounds(r){ if (state.code && !hotIsHost()) return; state.rounds = r; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'rounds', p_value: r }); renderSettings(); }
+    function setRounds(r){ r = Number(r); if (state.code && !hotIsHost()) return; state.rounds = r; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'rounds', p_value: r }); renderSettings(); }
     function setOrder(o){ if (state.code && !hotIsHost()) return; state.order = o; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'order', p_value: o }); renderSettings(); }
 
     // ---------- Gameplay ----------

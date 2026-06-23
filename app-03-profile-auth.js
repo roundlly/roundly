@@ -1554,7 +1554,7 @@
         // friend instead of "claiming" a fake-named slot.
         if (!claimedSession) {
           return `
-            <div class="player-tile hot-seat-tile invite-tile" onclick="openLobbyInviteSheet('hotseat')">
+            <div class="player-tile hot-seat-tile invite-tile" data-action="openLobbyInviteSheet" data-arg="hotseat">
               <span class="invite-plus" aria-hidden="true">+</span>
               <div class="player-tile-name" data-i18n="liar.seatInviteTap">Invite friend</div>
               <div class="player-tile-status" data-i18n="liar.seatEmpty">Empty seat</div>
