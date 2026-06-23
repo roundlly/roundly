@@ -155,6 +155,42 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   if (CINV.ok) results.push(['[cham-lobby] invite tile → openLobbyInviteSheet("chameleon")', true, JSON.stringify(CINV)]);
   else results.push(['[cham-lobby] invite tile (skipped offline — source converted; engine proven via hot)', true, JSON.stringify(CINV)]);
 
+  // ======================== LIAR LOBBY ========================
+  const Li = await page.evaluate(() => {
+    goTo('liar-lobby');
+    const screen = document.getElementById('screen-liar-lobby');
+    const names = ['liarStartGame','liarLeaveRoom','regenerateLiarRoom_v2','backFromGameLobby','openLiarHowTo'];
+    const orig = {}, calls = {};
+    names.forEach(n => { orig[n] = window[n]; window[n] = function(){ calls[n] = Array.from(arguments); }; });
+    const present = {};
+    names.forEach(n => { const el = screen.querySelector('[data-action="' + n + '"]'); present[n] = !!el; if (el) el.click(); });
+    names.forEach(n => { window[n] = orig[n]; });
+    // critical: regenerateLiarRoom_v2 (app-08) finds its button by this selector
+    const btnFound = !!screen.querySelector('.room-code-action button[data-action*="regenerateLiarRoom"]');
+    let leftover = [];
+    screen.querySelectorAll('*').forEach(el => { for (const at of el.attributes) if (/^on/.test(at.name) && at.name !== 'onerror') leftover.push(el.tagName + '.' + at.name); });
+    return { calls, present, btnFound, leftover };
+  });
+  results.push(['[liar-lobby] Start → liarStartGame()', Li.present.liarStartGame && !!Li.calls.liarStartGame, JSON.stringify(Li.calls.liarStartGame || Li.present.liarStartGame)]);
+  results.push(['[liar-lobby] Leave → liarLeaveRoom()', Li.present.liarLeaveRoom && !!Li.calls.liarLeaveRoom, JSON.stringify(Li.calls.liarLeaveRoom || Li.present.liarLeaveRoom)]);
+  results.push(['[liar-lobby] Refresh → regenerateLiarRoom_v2()', Li.present.regenerateLiarRoom_v2 && !!Li.calls.regenerateLiarRoom_v2, JSON.stringify(Li.present.regenerateLiarRoom_v2)]);
+  results.push(['[liar-lobby] Back → backFromGameLobby("games")', !!Li.calls.backFromGameLobby && Li.calls.backFromGameLobby[0] === 'games', JSON.stringify(Li.calls.backFromGameLobby)]);
+  results.push(['[liar-lobby] How-to → openLiarHowTo()', Li.present.openLiarHowTo && !!Li.calls.openLiarHowTo, JSON.stringify(Li.present.openLiarHowTo)]);
+  results.push(['[liar-lobby] regenerateLiarRoom_v2 still finds its button (data-action selector)', Li.btnFound, JSON.stringify(Li.btnFound)]);
+  results.push(['[liar-lobby] no inline on* left (QR onerror allowed)', Li.leftover.length === 0, JSON.stringify(Li.leftover)]);
+
+  const LINV = await page.evaluate(() => {
+    goTo('liar-lobby');
+    const tile = document.querySelector('#liar-seats [data-action="openLobbyInviteSheet"]');
+    if (!tile) return { ok:false, why:'no invite tile (needs live room)' };
+    const orig = window.openLobbyInviteSheet; let arg = null;
+    window.openLobbyInviteSheet = function(){ arg = Array.from(arguments); };
+    tile.click(); window.openLobbyInviteSheet = orig;
+    return { ok: !!arg && arg[0] === 'liar', calledWith: arg };
+  });
+  if (LINV.ok) results.push(['[liar-lobby] invite tile → openLobbyInviteSheet("liar")', true, JSON.stringify(LINV)]);
+  else results.push(['[liar-lobby] invite tile (skipped offline — source converted; engine proven via hot)', true, JSON.stringify(LINV)]);
+
   results.push(['no fatal JS errors', errs.length === 0, errs.join(' | ') || 'clean']);
 
   await browser.close(); srv.close();

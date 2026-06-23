@@ -1939,7 +1939,7 @@
       const fb = document.getElementById('liar-room-qr-fallback');
       if (fb) fb.classList.remove('show');
       setRoomQrSrc(document.getElementById('liar-room-qr'), qrUrl(liarJoinUrl(code)));
-      const btn = document.querySelector('#screen-liar-lobby .room-code-action button[onclick*="regenerateLiarRoom"]');
+      const btn = document.querySelector('#screen-liar-lobby .room-code-action button[data-action*="regenerateLiarRoom"]');
       if (btn) {
         btn.classList.remove('spinning');
         void btn.offsetWidth;
@@ -2006,7 +2006,7 @@
         // instead of "claiming" a fake-named slot.
         if (!claimedSession) {
           return `
-            <button class="liar-seat liar-seat-invite" type="button" onclick="openLobbyInviteSheet('liar')" data-empty="1">
+            <button class="liar-seat liar-seat-invite" type="button" data-action="openLobbyInviteSheet" data-arg="liar" data-empty="1">
               <span class="liar-seat-invite-icon" aria-hidden="true">+</span>
               <div class="liar-seat-info">
                 <div class="liar-seat-name" data-i18n="liar.seatInviteTap">Invite friend</div>
