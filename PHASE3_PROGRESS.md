@@ -67,13 +67,36 @@ The only inline `.replace` escaper chain was `friendsEscape`'s own body, so no o
 changing. Verified: **smoke 9/9, mp 28/28**. (The alias names can be fully removed in a later
 mechanical pass if ever desired — not necessary.)
 
+## ✅ DONE — DOM delegation step 1: ADMIN cluster (commit `refactor(dom): convert admin screens…`)
+First onclick→delegation conversion. **Established the reusable pattern** for every remaining screen:
+
+**The engine** (app-01, folded into the EXISTING global `document` click listener at ~line 1233,
+next to the pre-existing `data-go` nav delegation):
+- `data-action="fnName"` + optional `data-arg="x"` → calls `window.fnName(x)` (or no-arg). One
+  listener covers static AND dynamically-rendered elements, and coexists with not-yet-converted
+  inline `onclick` during the migration (the branch only acts on `[data-action]` elements).
+- `data-action-self` → fires only when the click lands directly on the element. Used on sheet
+  backdrops; **replaces** the old inner `onclick="event.stopPropagation()"` (which had to be removed
+  or it would stop the bubble before the document listener — so action buttons inside the sheet would
+  die). Backdrop pattern: `<div class="sheet-backdrop" data-action="closeX" data-action-self>`.
+- Runtime/typed args (e.g. `adminStatsLoad(adminStatsState.period, true)`) don't fit declarative
+  `data-arg` → add a tiny zero-arg wrapper fn (`adminStatsRefresh` / `adminFeedbackRefresh`).
+
+**Converted:** 17 static handlers (index.html admin home/feedback/stats + the 2 sheets) + 5 dynamic
+(app-05 render output). Zero inline `on*` left in the admin DOM. All function names kept (smoke green).
+
+**Verified:** smoke 9/9, mp 28/28, **`node tmp/verify-admin-delegation.js` 6/6** (drives real clicks:
+`data-arg`, `goTo` wiring, both backdrop self-guards, no leftover handlers, no errors). Extend that
+script per future screen — it's the only automated catch for wiring (smoke never clicks buttons).
+⚠️ `goTo('admin')` is **access-gated** → admin screens only open for an owner/admin account.
+
 ## ⏳ REMAINING
-- **onclick → delegation, ONE screen per PR**, order (smallest blast radius first):
-  sheet/modal backdrops → `screen-wheel-test` (12) + liar-lab chips (6) → admin screens
-  (stats 6 / feedback 3) → the 4 game lobbies (5–6 each) → **friends/invite rows LAST**
-  (args carry escaped user ids; intersects XSS). Pattern: one `addEventListener` on the screen
-  root reading `data-action`/`data-arg`, strip that screen's inline `onclick`s only.
-  **Each converted screen MUST be hand-clicked on two phones — smoke can't catch broken wiring.**
+- **onclick → delegation, ONE screen per PR**, remaining order (smallest blast radius first):
+  `screen-wheel-test` (12, lab) + liar-lab chips (6) → the 4 game lobbies (5–6 each) →
+  sheet/modal backdrops elsewhere → **friends/invite rows LAST** (args carry escaped user ids;
+  intersects XSS). Use the `data-action`/`data-action-self` pattern above; strip that screen's inline
+  handlers only. **Each converted screen MUST be hand-clicked on two phones — smoke can't catch wiring.**
+  (~248 inline handlers remain across the app after admin.)
 - **state containment (riskiest, least urgent — owner decision whether to do this cycle):** keep the
   global-lexical binding + field names verbatim (pinned by mp-test), funnel writes through explicit
   `set(patch)` fns, optional dev-only `Proxy` to assert. Order: `liarState` → `chamState` →
