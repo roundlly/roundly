@@ -482,131 +482,175 @@
     function hotCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_hotLeaveGraceTimers, sessionId); }
     function hotResetPresenceState(){ huddleResetPresenceState(_hotLeaveGraceTimers, _hotPresentSessions); }
 
-    let _hotChannel = null;
-    let _hotChannelCode = null;
-    let _hotChannelSessionId = null;
-    function hotWireSync(){
+    // ---------------------------------------------------------------------------
+    // Shared realtime engine for Hot Seat / Chameleon / Liar's Cup.
+    //
+    // Opens the live Supabase channel, tracks presence (keyed on the session id
+    // so a refresh-rejoin looks like the same key and cancels the leave-grace
+    // timer), listens for room UPDATE/INSERT, and surfaces the "{name} left"
+    // seat-vanish toast. One engine so a fix lands in all three at once.
+    //
+    // Mafia keeps its own bespoke mafiaWireSync (narrator model: a single
+    // event:'*' handler, merge-assign without clearing keys, no closedByHost,
+    // profile-based name resolution, debounced reconcile).
+    //
+    // The per-game channel/presence module `let`s are read/written through the
+    // `refs` accessor closures — they're also touched by sign-out/auth teardown
+    // (app-03), leave/force-leave (app-06/app-09), presence queries
+    // (app-07/app-09) and the mp-test harness (by name), so they must stay
+    // exactly where and what they are. Per-game behavioural quirks ride in as
+    // hooks: normalizeIncoming / restoreMeId / gracefulEnd / afterApply.
+    function huddleWireSync(opts){
       if (!window.sb) return;
-      if (!state.code) return;
-      const mySid = hotGetSessionId();
-      if (_hotChannel && _hotChannelCode === state.code && _hotChannelSessionId === mySid) return;
-      if (_hotChannel) {
-        try { window.sb.removeChannel(_hotChannel); } catch(e){}
-        _hotChannel = null; _hotChannelCode = null; _hotChannelSessionId = null;
-        hotResetPresenceState();
+      const gameState = opts.gameState;
+      if (!gameState.code) return;
+      const sid = opts.getSessionId();
+      // Already subscribed to this code AND this session id — no-op. Session id
+      // is part of the key because presence is captured at channel-creation time,
+      // so an identity change (anon → Google) needs a rebuild or our presence
+      // keeps echoing the stale anon id.
+      if (opts.refs.getChannel() && opts.refs.getChannelCode() === gameState.code && opts.refs.getChannelSessionId() === sid) return;
+      if (opts.refs.getChannel()) {
+        try { window.sb.removeChannel(opts.refs.getChannel()); } catch(e){}
+        opts.refs.setChannel(null); opts.refs.setChannelCode(null); opts.refs.setChannelSessionId(null);
+        opts.resetPresenceState();
       }
-      const code = state.code;
+      const code = gameState.code;
       const handler = (payload) => {
         const newState = payload && payload.new && payload.new.state;
         if (!newState) return;
-        if (typeof newState.revision === 'number' && newState.revision <= (state.revision || 0)) return;
+        if (typeof newState.revision === 'number' && newState.revision <= (gameState.revision || 0)) return;
         // Host closed the room — auto-leave for every other player still seated.
-        if (newState.closedByHost && hotMe.myId) {
+        if (newState.closedByHost && opts.meObj.myId) {
           if (typeof showLobbyToast === 'function') {
             try { showLobbyToast(t('lobby.hostClosedRoom'), 3500); } catch(e){}
           }
-          hotForceLeaveLocal();
+          opts.forceLeaveLocal();
           return;
         }
-        if (!Array.isArray(newState.playersUsedThisRound)) newState.playersUsedThisRound = [];
+        if (opts.normalizeIncoming) opts.normalizeIncoming(newState);
         // Capture who was seated BEFORE applying the update so we can detect a
         // player leaving — explicit Leave AND disconnect both surface here as a
-        // seat that vanished from claimedBy. Gives Hot Seat the "{name} left"
-        // notice that Chameleon/Liar already have.
-        const _prevClaimedBy = Object.assign({}, state.claimedBy || {});
-        const _prevPhase = state.phase;
-        const _mySidNow = hotGetSessionId();
-        Object.keys(state).forEach(k => { delete state[k]; });
-        Object.assign(state, newState);
-        // Restore meId from claim so getMyRole works locally
-        const sid = hotGetSessionId();
-        const claimed = Object.entries(state.claimedBy || {}).find(([pid, s]) => s === sid);
-        if (claimed) { hotMe.myId = claimed[0]; state.meId = claimed[0]; }
-        // ----- Player-left notice + graceful end (parity with Chameleon/Liar) -----
+        // seat that vanished from claimedBy → the "{name} left" notice.
+        const _prevClaimedBy = Object.assign({}, gameState.claimedBy || {});
+        const _prevPhase = gameState.phase;
+        const _mySidNow = opts.getSessionId();
+        Object.keys(gameState).forEach(k => { delete gameState[k]; });
+        Object.assign(gameState, newState);
+        // Restore meId from claim so role/seat lookups keep working locally.
+        if (opts.restoreMeId) {
+          const claimed = Object.entries(gameState.claimedBy || {}).find(([pid, s]) => s === _mySidNow);
+          if (claimed) { opts.meObj.myId = claimed[0]; state.meId = claimed[0]; }
+        }
+        // ----- Player-left notice (+ optional graceful end) -----
         try {
-          if (hotMe.myId) {  // only notify players still seated in this room
-            const _newClaimedBy = state.claimedBy || {};
+          if (opts.meObj.myId) {  // only notify players still seated in this room
+            const _newClaimedBy = gameState.claimedBy || {};
             const _goneSeats = Object.keys(_prevClaimedBy).filter(pid =>
               _prevClaimedBy[pid] && !_newClaimedBy[pid] && _prevClaimedBy[pid] !== _mySidNow);
             if (_goneSeats.length && typeof showLobbyToast === 'function') {
-              const p = (state.players || []).find(x => x.id === _goneSeats[0]);
+              const p = (gameState.players || []).find(x => x.id === _goneSeats[0]);
               let nm; try { nm = (p && typeof playerDisplayFor === 'function') ? playerDisplayFor(p, _prevClaimedBy).name : (p && p.name); } catch(e){}
-              showLobbyToast(t('hot.toastPlayerLeft', { name: nm || (p && p.name) || '?' }), 3500);
+              showLobbyToast(t(opts.toastLeftKey, { name: nm || (p && p.name) || '?' }), 3500);
             }
-            // A game in progress that drops below 2 players ends gracefully back
-            // to the lobby. The remaining player became host via the leave RPC,
-            // so only they write the reset (revision bump prevents re-trigger).
-            const _wasMid = _prevPhase && _prevPhase !== 'lobby' && _prevPhase !== 'result';
-            const _stillMid = state.phase && state.phase !== 'lobby' && state.phase !== 'result';
-            if (_wasMid && _stillMid && Object.keys(_newClaimedBy).length < 2 && hotIsHost()) {
-              try { if (typeof showLobbyToast === 'function') showLobbyToast(t('hot.otherPlayerLeft'), 3500); } catch(e){}
-              state.phase = 'lobby';
-              state.playersUsedThisRound = [];
-              hotPersist();
-            }
+            if (opts.gracefulEnd) opts.gracefulEnd({ prevClaimedBy: _prevClaimedBy, newClaimedBy: _newClaimedBy, prevPhase: _prevPhase });
           }
         } catch(e){}
+        if (opts.afterApply) opts.afterApply();
         const activeId = document.querySelector('.screen.active');
         const currentId = activeId ? activeId.id.replace('screen-', '') : null;
-        const hotScreens = ['lobby','splash','play','result'];
-        if (currentId && hotScreens.indexOf(currentId) !== -1) hotRerender();
+        if (currentId && opts.isOnGameScreen(currentId)) opts.rerender();
       };
-      // Presence handlers — key is the auth session id so refresh-rejoin
-      // looks like the same key, naturally cancelling the grace timer.
+      // Presence handlers — key is the session id so refresh-rejoin looks like
+      // the same key, naturally cancelling the grace timer.
       const onPresenceSync = () => {
-        const presState = _hotChannel.presenceState();
+        const presState = opts.refs.getChannel().presenceState();
         const fresh = new Set(Object.keys(presState || {}));
-        fresh.forEach(sid => {
-          if (_hotLeaveGraceTimers.has(sid)) hotCancelLeaveGrace(sid);
-        });
-        _hotPresentSessions = fresh;
-        if (typeof hotRerender === 'function') hotRerender();
+        fresh.forEach(s => { if (opts.graceTimers.has(s)) opts.cancelGrace(s); });
+        opts.refs.setPresent(fresh);
+        if (typeof opts.rerender === 'function') opts.rerender();
       };
       const onPresenceJoin = ({ key }) => {
         if (!key) return;
-        _hotPresentSessions.add(key);
-        hotCancelLeaveGrace(key);
+        opts.refs.getPresent().add(key);
+        opts.cancelGrace(key);
       };
       const onPresenceLeave = ({ key }) => {
         if (!key) return;
-        // DON'T delete from _hotPresentSessions immediately — start a grace
-        // timer so a quick refresh-rejoin doesn't trigger the "gone" flow.
-        hotStartLeaveGrace(key);
+        // DON'T delete immediately — start a grace timer so a quick
+        // refresh-rejoin doesn't trigger the "gone" flow.
+        opts.startGrace(key);
       };
-      _hotChannelSessionId = mySid;
-      _hotChannel = window.sb
-        .channel('hotseat_room:' + code, { config: { presence: { key: mySid || ('tab_' + Math.random()) } } })
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'hotseat_rooms', filter:'code=eq.' + code }, handler)
-        .on('postgres_changes', { event:'INSERT', schema:'public', table:'hotseat_rooms', filter:'code=eq.' + code }, handler)
+      opts.refs.setChannelCode(code);
+      opts.refs.setChannelSessionId(sid);
+      const channel = window.sb
+        .channel(opts.channelName + code, { config: { presence: { key: opts.presenceKey || ('tab_' + Math.random()) } } })
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:opts.table, filter:'code=eq.' + code }, handler)
+        .on('postgres_changes', { event:'INSERT', schema:'public', table:opts.table, filter:'code=eq.' + code }, handler)
         .on('presence', { event: 'sync'  }, onPresenceSync)
         .on('presence', { event: 'join'  }, onPresenceJoin)
         .on('presence', { event: 'leave' }, onPresenceLeave)
         .subscribe(async (status) => {
           if (status !== 'SUBSCRIBED') return;
-          if (_hotChannelCode !== code) return;
-          // Announce our presence the moment we're subscribed
+          if (opts.refs.getChannelCode() !== code) return;
+          // Announce our presence the moment we're subscribed.
           try {
-            await _hotChannel.track({
-              user_id: mySid,
-              joined_at: Date.now(),
-            });
+            await opts.refs.getChannel().track({ user_id: opts.getTrackUserId(), joined_at: Date.now() });
           } catch(e){}
-          // Reconcile: between the initial hotLoadRoom and this point, other
-          // devices may have written updates that the channel wasn't yet live
-          // to deliver. Re-fetch once so we catch the gap, then re-render.
+          // Reconcile the gap between the initial load and the live subscription:
+          // other devices may have written updates the channel wasn't yet live to
+          // deliver. Re-fetch once, then re-render.
           try {
-            const ok = await hotLoadRoom(code);
+            const ok = await opts.loadRoom(code);
             if (ok) {
-              const sid = hotGetSessionId();
-              const claimed = Object.entries(state.claimedBy || {}).find(([pid, s]) => s === sid);
-              if (claimed) { hotMe.myId = claimed[0]; state.meId = claimed[0]; }
+              if (opts.restoreMeId) {
+                const claimed = Object.entries(gameState.claimedBy || {}).find(([pid, s]) => s === opts.getSessionId());
+                if (claimed) { opts.meObj.myId = claimed[0]; state.meId = claimed[0]; }
+              }
               const activeId = document.querySelector('.screen.active');
               const currentId = activeId ? activeId.id.replace('screen-', '') : null;
-              if (currentId && ['lobby','splash','play','result'].indexOf(currentId) !== -1) hotRerender();
+              if (currentId && opts.isOnGameScreen(currentId)) opts.rerender();
             }
           } catch(e){}
         });
-      _hotChannelCode = code;
+      opts.refs.setChannel(channel);
+    }
+
+    let _hotChannel = null;
+    let _hotChannelCode = null;
+    let _hotChannelSessionId = null;
+    function hotWireSync(){
+      const mySid = hotGetSessionId();
+      huddleWireSync({
+        gameState: state, meObj: hotMe, getSessionId: hotGetSessionId,
+        channelName: 'hotseat_room:', table: 'hotseat_rooms',
+        presenceKey: mySid, getTrackUserId: () => mySid,
+        toastLeftKey: 'hot.toastPlayerLeft', restoreMeId: true,
+        rerender: hotRerender, loadRoom: hotLoadRoom, forceLeaveLocal: hotForceLeaveLocal,
+        resetPresenceState: hotResetPresenceState,
+        graceTimers: _hotLeaveGraceTimers, cancelGrace: hotCancelLeaveGrace, startGrace: hotStartLeaveGrace,
+        isOnGameScreen: (id) => ['lobby','splash','play','result'].indexOf(id) !== -1,
+        normalizeIncoming: (ns) => { if (!Array.isArray(ns.playersUsedThisRound)) ns.playersUsedThisRound = []; },
+        // A game in progress that drops below 2 players ends gracefully back to
+        // the lobby. The remaining player became host via the leave RPC, so only
+        // they write the reset (revision bump prevents re-trigger).
+        gracefulEnd: ({ newClaimedBy, prevPhase }) => {
+          const _wasMid = prevPhase && prevPhase !== 'lobby' && prevPhase !== 'result';
+          const _stillMid = state.phase && state.phase !== 'lobby' && state.phase !== 'result';
+          if (_wasMid && _stillMid && Object.keys(newClaimedBy).length < 2 && hotIsHost()) {
+            try { if (typeof showLobbyToast === 'function') showLobbyToast(t('hot.otherPlayerLeft'), 3500); } catch(e){}
+            state.phase = 'lobby';
+            state.playersUsedThisRound = [];
+            hotPersist();
+          }
+        },
+        refs: {
+          getChannel: () => _hotChannel, setChannel: (c) => { _hotChannel = c; },
+          getChannelCode: () => _hotChannelCode, setChannelCode: (c) => { _hotChannelCode = c; },
+          getChannelSessionId: () => _hotChannelSessionId, setChannelSessionId: (s) => { _hotChannelSessionId = s; },
+          getPresent: () => _hotPresentSessions, setPresent: (s) => { _hotPresentSessions = s; },
+        },
+      });
     }
     // Hot Seat rerender — wrapped through the generic sync gate so cross-device
     // dramatic moments land at the same wall-clock instant. See the

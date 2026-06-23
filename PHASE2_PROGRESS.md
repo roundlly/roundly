@@ -1,7 +1,7 @@
 # Phase 2 Progress & Handoff
 
 > Resume point for continuing the shared-engine work in a new chat.
-> Last updated: 2026-06-22. Read this first, then `PHASE2_FINDINGS.md` and `ARCHITECTURE_REVIEW.md`.
+> Last updated: 2026-06-23. **PHASE 2 COMPLETE (17/17).** Read this first, then `PHASE2_FINDINGS.md` and `ARCHITECTURE_REVIEW.md`.
 
 ## The goal (recap)
 Each of the 4 games (Hot Seat, Chameleon, Liar, Mafia) had its own copy of the same
@@ -9,7 +9,7 @@ plumbing — **17 "families" × 4 games = ~68 near-duplicate functions**. Phase 
 each set of 4 copies with **one shared `huddle*` helper**, killing the duplication that
 causes "fix one bug, the others stay broken."
 
-## ✅ Done — 11 of 17 families merged (all verified)
+## ✅ Done — 12 of 17 families merged (Phase 2 COMPLETE — all 17 resolved & verified)
 Shared helpers all live in `app-01-core-hotseat.js` near the top:
 
 | # | Family | Shared helper | Verified by |
@@ -25,6 +25,7 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 | 9 | LeaveRoom (3 of 4) | `huddleLeaveRoom(opts)` — Hot/Cham/Liar; Mafia stays separate (narrator model). Per-game `preLeave`/`teardown`/`context` callbacks preserve each game's exact behavior | smoke 9/9 + mp 28/28 (mp clicks the RPC, not the button — do a 2-phone Leave tap too) |
 | 10 | ConfirmUserGone (3 of 4) | `huddleConfirmUserGone(sessionId, opts)` — Hot/Cham/Liar; Mafia separate (narrator election + passes seat id). Folded in Cham/Liar's `*HandleConfirmedDisconnect` indirection helpers | smoke 9/9 + mp 28/28 (NB: mp tests explicit-leave, not the 60s disconnect path — behavior-preserving refactor) |
 | 11 | AutoClaimIfNeeded (3 of 4) | `huddleAutoClaimIfNeeded(meObj, gameState, claimSeat)` — Hot/Cham/Liar were byte-identical; Mafia separate (session-keyed, p1..p8, inline claim) | smoke 9/9 + mp 28/28 (covered by the room-create seats=1 check) |
+| 12 | WireSync (3 of 4) — THE LAST FAMILY | `huddleWireSync(opts)` — Hot/Cham/Liar; Mafia separate (narrator model: single `event:'*'` handler, merge-assign w/o key-wipe, no closedByHost, profile-based name resolution, debounced reconcile). The realtime engine: opens the channel, tracks presence, handles `postgres_changes`, drives the "{name} left" seat-vanish toast. Per-game module `let`s (`_<g>Channel*`/`_<g>PresentSessions`) kept by name & reached via accessor closures so sign-out/auth (app-03), leave/force-leave (app-06/09), presence reads (app-07/09) and `mp-test` (by name) all still work. Per-game quirks ride in as hooks: `normalizeIncoming` (Hot's `playersUsedThisRound[]`), `restoreMeId` (Hot/Cham yes incl. global `state.meId` write; Liar no), `gracefulEnd` (Hot/Cham host→lobby <2; Hot also resets `playersUsedThisRound`), `afterApply` (Cham `myVote` restore), lazy `getTrackUserId` (preserves Hot=snapshot, Cham/Liar=lazy track timing). Liar's `pagehide`/`beforeunload` fastUntrack left in place. | smoke 9/9 + mp 28/28 + adversarial diff-review (4 reviewers + synthesis, SAFE_TO_TEST/0 bugs) + real 2-phone test (join→see→leave→refresh, all 3 games) |
 
 **GetSessionId/Bootstrap merge notes (2026-06-23):**
 - All 4 `<game>Bootstrap`/`<game>GetSessionId` now delegate to the shared pair. Each game passes its own `me` object (kept separate because each holds extra per-game fields). The `tab_` fallback was **KEPT** (deliberate safety net for offline / 429 anon rate-limit — it is NOT dead code).
@@ -53,13 +54,11 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 - ~~**LeaveRoom**~~ — ✅ **DONE 2026-06-23** (table row 9): 3-of-4 merge to `huddleLeaveRoom(opts)`; Mafia separate. smoke 9/9 + mp 28/28.
 - ~~**ConfirmUserGone**~~ — ✅ **DONE 2026-06-23** (table row 10): 3-of-4 merge to `huddleConfirmUserGone(sessionId, opts)`; Mafia separate. smoke 9/9 + mp 28/28.
 - ~~**AutoClaimIfNeeded**~~ — ✅ **DONE 2026-06-23** (table row 11): 3-of-4 merge to `huddleAutoClaimIfNeeded(...)`; Mafia separate. smoke 9/9 + mp 28/28.
-- **`WireSync`** — THE LAST FAMILY (16/17 done). The biggest/hardest: it's the realtime
-subscription setup (channel create + presence track + postgres_changes handler + the
-seat-vanish "left" toast diffing). Genuinely divergent per game and the highest-risk
-merge. Approach with care — full read of all 4, behavior-preserving extraction, then
-`smoke` 9/9 + `mp` 28/28 + a real 2-phone test (join, see each other, one leaves, refresh).
-Do NOT merge blind.
-`LeaveRoom` is the natural next one (we were just deep in leave/sign-out logic).
+- ~~**`WireSync`**~~ — ✅ **DONE 2026-06-23** (table row 12): 3-of-4 merge to `huddleWireSync(opts)`;
+Mafia separate. The biggest/highest-risk merge. Verified: smoke 9/9 + mp 28/28 (first run, no
+flake) + adversarial diff-review (SAFE_TO_TEST, 0 bugs; the one real delta — Cham/Liar tracking
+a snapshot vs the old lazy read — was fixed byte-exact via lazy `getTrackUserId`) + real 2-phone
+test. **This was the last family — Phase 2 is complete.**
 
 ## How to verify (any change)
 ```

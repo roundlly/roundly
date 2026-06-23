@@ -208,126 +208,25 @@
     let _liarChannelCode = null;
     let _liarChannelSessionId = null;
     function liarWireSync(){
-      if (!window.sb) return;
-      if (!liarState.code) return;
-      // Already subscribed to this code AND for this session id — no-op.
-      // Session id is checked because presence is keyed on liarMe.sessionId at
-      // channel-creation time, so a user-identity change (anon → Google) needs
-      // a rebuild — otherwise our presence keeps echoing the stale anon id.
-      const sid = liarGetSessionId();
-      if (_liarChannel && _liarChannelCode === liarState.code && _liarChannelSessionId === sid) return;
-      // Different code, different session, or stale channel — tear down and re-subscribe.
-      if (_liarChannel) {
-        try { window.sb.removeChannel(_liarChannel); } catch(e){}
-        _liarChannel = null;
-        _liarChannelCode = null;
-        _liarChannelSessionId = null;
-        liarResetPresenceState();
-      }
-      const code = liarState.code;
-      const handler = (payload) => {
-        const newState = payload && payload.new && payload.new.state;
-        if (!newState) return;
-        if (typeof newState.revision === 'number' &&
-            newState.revision <= (liarState.revision || 0)) return;
-        // Host closed the room — auto-leave for every other player still seated.
-        if (newState.closedByHost && liarMe.myId) {
-          if (typeof showLobbyToast === 'function') {
-            try { showLobbyToast(t('lobby.hostClosedRoom'), 3500); } catch(e){}
-          }
-          liarForceLeaveLocal();
-          return;
-        }
-        // Capture seating BEFORE applying — detect a player leaving (explicit
-        // Leave OR disconnect) for the "{name} left" notice. claimedBy only
-        // changes on a real leave (elimination uses alivePlayers), so this never
-        // mis-fires on a normal knockout. Sole-survivor logic handles end-of-game,
-        // so there's no return-to-lobby here.
-        const _prevClaimedBy = Object.assign({}, liarState.claimedBy || {});
-        const _mySidNow = liarGetSessionId();
-        Object.keys(liarState).forEach(k => delete liarState[k]);
-        Object.assign(liarState, newState);
-        try {
-          if (liarMe.myId) {
-            const _newClaimedBy = liarState.claimedBy || {};
-            const _goneSeats = Object.keys(_prevClaimedBy).filter(pid =>
-              _prevClaimedBy[pid] && !_newClaimedBy[pid] && _prevClaimedBy[pid] !== _mySidNow);
-            if (_goneSeats.length && typeof showLobbyToast === 'function') {
-              const p = (liarState.players || []).find(x => x.id === _goneSeats[0]);
-              let nm; try { nm = (p && typeof playerDisplayFor === 'function') ? playerDisplayFor(p, _prevClaimedBy).name : (p && p.name); } catch(e){}
-              showLobbyToast(t('liar.toastPlayerLeft', { name: nm || (p && p.name) || '?' }), 3500);
-            }
-          }
-        } catch(e){}
-        // Only re-navigate if the user is currently on a Liar's Cup screen.
-        // If they've used the back button to leave (e.g. to Games tab), don't yank
-        // them back — state is updated silently and they'll see it on return.
-        const activeId = document.querySelector('.screen.active');
-        const currentId = activeId ? activeId.id.replace('screen-', '') : null;
-        if (currentId && currentId.startsWith('liar-')) {
-          liarRerender();
-        }
-      };
-      // Presence-event handlers. Key is the auth.uid so refresh = same key.
-      const onSync = () => {
-        // Reconcile our local set with the channel's authoritative snapshot.
-        const state = _liarChannel.presenceState();
-        const fresh = new Set(Object.keys(state || {}));
-        // Anyone newly arrived clears their grace timer (refresh covers this).
-        fresh.forEach(sid => {
-          if (_liarLeaveGraceTimers.has(sid)) liarCancelLeaveGrace(sid);
-        });
-        _liarPresentSessions = fresh;
-        if (typeof liarRerender === 'function') liarRerender();
-      };
-      const onJoin = ({ key }) => {
-        if (!key) return;
-        _liarPresentSessions.add(key);
-        liarCancelLeaveGrace(key);
-      };
-      const onLeave = ({ key }) => {
-        if (!key) return;
-        // DON'T delete from _liarPresentSessions immediately — start a grace
-        // timer so a refresh-rejoin (~1-3s) doesn't trigger the "left" flow.
-        liarStartLeaveGrace(key);
-      };
-      _liarChannelSessionId = sid;
-      _liarChannel = window.sb
-        .channel('liar_room:' + code, { config: { presence: { key: liarMe.sessionId || ('tab_' + Math.random()) } } })
-        .on('postgres_changes', {
-          event: 'UPDATE', schema: 'public', table: 'liar_rooms',
-          filter: 'code=eq.' + code,
-        }, handler)
-        .on('postgres_changes', {
-          event: 'INSERT', schema: 'public', table: 'liar_rooms',
-          filter: 'code=eq.' + code,
-        }, handler)
-        .on('presence', { event: 'sync'  }, onSync)
-        .on('presence', { event: 'join'  }, onJoin)
-        .on('presence', { event: 'leave' }, onLeave)
-        .subscribe(async (status) => {
-          if (status !== 'SUBSCRIBED') return;
-          if (_liarChannelCode !== code) return;
-          // Announce our presence the moment we're subscribed. The auth user ID
-          // is stable across reload so refresh-rejoin works seamlessly.
-          try {
-            await _liarChannel.track({
-              user_id: liarMe.sessionId,
-              joined_at: Date.now(),
-            });
-          } catch(e){}
-          // Reconcile gap between initial load and live subscription —
-          // catches writes from other devices that landed in the race window.
-          try {
-            const ok = await liarLoadRoom(code);
-            if (ok) {
-              const activeId = document.querySelector('.screen.active');
-              const currentId = activeId ? activeId.id.replace('screen-', '') : null;
-              if (currentId && currentId.startsWith('liar-')) liarRerender();
-            }
-          } catch(e){}
-        });
-      _liarChannelCode = code;
+      huddleWireSync({
+        gameState: liarState, meObj: liarMe, getSessionId: liarGetSessionId,
+        channelName: 'liar_room:', table: 'liar_rooms',
+        presenceKey: liarMe.sessionId, getTrackUserId: () => liarMe.sessionId,
+        toastLeftKey: 'liar.toastPlayerLeft', restoreMeId: false,
+        rerender: liarRerender, loadRoom: liarLoadRoom, forceLeaveLocal: liarForceLeaveLocal,
+        resetPresenceState: liarResetPresenceState,
+        graceTimers: _liarLeaveGraceTimers, cancelGrace: liarCancelLeaveGrace, startGrace: liarStartLeaveGrace,
+        // claimedBy only changes on a real leave (elimination uses alivePlayers),
+        // so the "{name} left" notice never mis-fires on a knockout. Sole-survivor
+        // logic handles end-of-game, so there's no graceful return-to-lobby here.
+        isOnGameScreen: (id) => id.startsWith('liar-'),
+        refs: {
+          getChannel: () => _liarChannel, setChannel: (c) => { _liarChannel = c; },
+          getChannelCode: () => _liarChannelCode, setChannelCode: (c) => { _liarChannelCode = c; },
+          getChannelSessionId: () => _liarChannelSessionId, setChannelSessionId: (s) => { _liarChannelSessionId = s; },
+          getPresent: () => _liarPresentSessions, setPresent: (s) => { _liarPresentSessions = s; },
+        },
+      });
     }
     // Best-effort fast-leave when the page is hiding/closing. The server emits
     // the `leave` event faster when we untrack explicitly than when waiting

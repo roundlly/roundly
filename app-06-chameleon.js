@@ -255,132 +255,40 @@
     let _chamChannelCode = null;
     let _chamChannelSessionId = null;
     function chamWireSync(){
-      if (!window.sb) return;
-      if (!chamState.code) return;
-      // Bind the channel to BOTH the room code AND the current session id.
-      // The presence key is captured at channel-creation time (see below), so a
-      // user-identity change (e.g., anon → Google sign-in) requires a rebuild
-      // — otherwise our presence echoes the stale anon id.
-      const sid = chamGetSessionId();
-      if (_chamChannel && _chamChannelCode === chamState.code && _chamChannelSessionId === sid) return;
-      if (_chamChannel) {
-        try { window.sb.removeChannel(_chamChannel); } catch(e){}
-        _chamChannel = null; _chamChannelCode = null; _chamChannelSessionId = null;
-        chamResetPresenceState();
-      }
-      const code = chamState.code;
-      const handler = (payload) => {
-        const newState = payload && payload.new && payload.new.state;
-        if (!newState) return;
-        if (typeof newState.revision === 'number' && newState.revision <= (chamState.revision || 0)) return;
-        // Host closed the room — auto-leave for every other player still seated.
-        if (newState.closedByHost && chamMe.myId) {
-          if (typeof showLobbyToast === 'function') {
-            try { showLobbyToast(t('lobby.hostClosedRoom'), 3500); } catch(e){}
+      huddleWireSync({
+        gameState: chamState, meObj: chamMe, getSessionId: chamGetSessionId,
+        channelName: 'chameleon_room:', table: 'chameleon_rooms',
+        presenceKey: chamMe.sessionId, getTrackUserId: () => chamMe.sessionId,
+        toastLeftKey: 'cham.toastPlayerLeft', restoreMeId: true,
+        rerender: chamRerender, loadRoom: chamLoadRoom, forceLeaveLocal: chamForceLeaveLocal,
+        resetPresenceState: chamResetPresenceState,
+        graceTimers: _chamLeaveGraceTimers, cancelGrace: chamCancelLeaveGrace, startGrace: chamStartLeaveGrace,
+        isOnGameScreen: (id) => ['cham-lobby','cham-splash','cham-play','cham-vote','cham-result'].indexOf(id) !== -1,
+        gracefulEnd: ({ newClaimedBy, prevPhase }) => {
+          const _wasMid = prevPhase && prevPhase !== 'lobby' && prevPhase !== 'result';
+          const _stillMid = chamState.phase && chamState.phase !== 'lobby' && chamState.phase !== 'result';
+          if (_wasMid && _stillMid && Object.keys(newClaimedBy).length < 2 && chamIsHost()) {
+            try { if (typeof showLobbyToast === 'function') showLobbyToast(t('cham.otherPlayerLeft'), 3500); } catch(e){}
+            chamState.phase = 'lobby';
+            chamPersist();
           }
-          chamForceLeaveLocal();
-          return;
-        }
-        // Preserve myVote — it's per-device only (not shared)
-        const localMyVote = chamState.myVote;
-        // Capture seating BEFORE applying — detect a player leaving (explicit
-        // Leave OR disconnect both surface here as a vanished seat) for the
-        // "{name} left" notice + graceful end. Parity with Hot Seat.
-        const _prevClaimedBy = Object.assign({}, chamState.claimedBy || {});
-        const _prevPhase = chamState.phase;
-        const _mySidNow = chamGetSessionId();
-        Object.keys(chamState).forEach(k => { delete chamState[k]; });
-        Object.assign(chamState, newState);
-        // Restore meId from claim so existing code reading state.meId still works
-        const sid = chamGetSessionId();
-        const claimed = Object.entries(chamState.claimedBy || {}).find(([pid, s]) => s === sid);
-        if (claimed) { chamMe.myId = claimed[0]; state.meId = claimed[0]; }
-        // ----- Player-left notice + graceful end (parity with Hot Seat) -----
-        try {
-          if (chamMe.myId) {
-            const _newClaimedBy = chamState.claimedBy || {};
-            const _goneSeats = Object.keys(_prevClaimedBy).filter(pid =>
-              _prevClaimedBy[pid] && !_newClaimedBy[pid] && _prevClaimedBy[pid] !== _mySidNow);
-            if (_goneSeats.length && typeof showLobbyToast === 'function') {
-              const p = (chamState.players || []).find(x => x.id === _goneSeats[0]);
-              let nm; try { nm = (p && typeof playerDisplayFor === 'function') ? playerDisplayFor(p, _prevClaimedBy).name : (p && p.name); } catch(e){}
-              showLobbyToast(t('cham.toastPlayerLeft', { name: nm || (p && p.name) || '?' }), 3500);
-            }
-            const _wasMid = _prevPhase && _prevPhase !== 'lobby' && _prevPhase !== 'result';
-            const _stillMid = chamState.phase && chamState.phase !== 'lobby' && chamState.phase !== 'result';
-            if (_wasMid && _stillMid && Object.keys(_newClaimedBy).length < 2 && chamIsHost()) {
-              try { if (typeof showLobbyToast === 'function') showLobbyToast(t('cham.otherPlayerLeft'), 3500); } catch(e){}
-              chamState.phase = 'lobby';
-              chamPersist();
-            }
+        },
+        // Restore myVote if we've already voted in this round (per-device only).
+        afterApply: () => {
+          if (chamMe.myId && chamState.voteResults) {
+            const myVotedFor = Object.keys(chamState.voteResults).find(target =>
+              (chamState.voteResults[target] || []).includes(chamMe.myId)
+            );
+            if (myVotedFor) chamState.myVote = myVotedFor;
           }
-        } catch(e){}
-        // Restore myVote if we've already voted in this round
-        if (chamMe.myId && chamState.voteResults) {
-          const myVotedFor = Object.keys(chamState.voteResults).find(target =>
-            (chamState.voteResults[target] || []).includes(chamMe.myId)
-          );
-          if (myVotedFor) chamState.myVote = myVotedFor;
-        }
-        const activeId = document.querySelector('.screen.active');
-        const currentId = activeId ? activeId.id.replace('screen-', '') : null;
-        const chamScreens = ['cham-lobby','cham-splash','cham-play','cham-vote','cham-result'];
-        if (currentId && chamScreens.indexOf(currentId) !== -1) chamRerender();
-      };
-      // Presence-event handlers. Key is the auth session id so refresh = same key.
-      const onPresenceSync = () => {
-        const state = _chamChannel.presenceState();
-        const fresh = new Set(Object.keys(state || {}));
-        // Anyone newly arrived clears their grace timer (refresh covers this).
-        fresh.forEach(sid => {
-          if (_chamLeaveGraceTimers.has(sid)) chamCancelLeaveGrace(sid);
-        });
-        _chamPresentSessions = fresh;
-        if (typeof chamRerender === 'function') chamRerender();
-      };
-      const onPresenceJoin = ({ key }) => {
-        if (!key) return;
-        _chamPresentSessions.add(key);
-        chamCancelLeaveGrace(key);
-      };
-      const onPresenceLeave = ({ key }) => {
-        if (!key) return;
-        // DON'T delete from _chamPresentSessions immediately — start a grace
-        // timer so a refresh-rejoin (~1-3s) doesn't trigger the "left" flow.
-        chamStartLeaveGrace(key);
-      };
-      _chamChannelCode = code;
-      _chamChannelSessionId = sid;
-      _chamChannel = window.sb
-        .channel('chameleon_room:' + code, { config: { presence: { key: chamMe.sessionId || ('tab_' + Math.random()) } } })
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'chameleon_rooms', filter:'code=eq.' + code }, handler)
-        .on('postgres_changes', { event:'INSERT', schema:'public', table:'chameleon_rooms', filter:'code=eq.' + code }, handler)
-        .on('presence', { event: 'sync'  }, onPresenceSync)
-        .on('presence', { event: 'join'  }, onPresenceJoin)
-        .on('presence', { event: 'leave' }, onPresenceLeave)
-        .subscribe(async (status) => {
-          if (status !== 'SUBSCRIBED') return;
-          if (_chamChannelCode !== code) return;
-          // Announce our presence the moment we're subscribed.
-          try {
-            await _chamChannel.track({
-              user_id: chamMe.sessionId,
-              joined_at: Date.now(),
-            });
-          } catch(e){}
-          // Reconcile gap between initial load and live subscription.
-          try {
-            const ok = await chamLoadRoom(code);
-            if (ok) {
-              const sid = chamGetSessionId();
-              const claimed = Object.entries(chamState.claimedBy || {}).find(([pid, s]) => s === sid);
-              if (claimed) { chamMe.myId = claimed[0]; state.meId = claimed[0]; }
-              const activeId = document.querySelector('.screen.active');
-              const currentId = activeId ? activeId.id.replace('screen-', '') : null;
-              if (currentId && ['cham-lobby','cham-splash','cham-play','cham-vote','cham-result'].indexOf(currentId) !== -1) chamRerender();
-            }
-          } catch(e){}
-        });
+        },
+        refs: {
+          getChannel: () => _chamChannel, setChannel: (c) => { _chamChannel = c; },
+          getChannelCode: () => _chamChannelCode, setChannelCode: (c) => { _chamChannelCode = c; },
+          getChannelSessionId: () => _chamChannelSessionId, setChannelSessionId: (s) => { _chamChannelSessionId = s; },
+          getPresent: () => _chamPresentSessions, setPresent: (s) => { _chamPresentSessions = s; },
+        },
+      });
     }
     // Chameleon rerender — wrapped through the generic sync gate. See the
     // huddleSync* block for the mechanism.
