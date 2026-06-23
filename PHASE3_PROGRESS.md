@@ -1,8 +1,20 @@
 # Phase 3 Progress & Handoff — Contain state · decouple DOM · close XSS
 
-> Resume point for the Phase 3 refactor. Branch: `phase3-xss-dom-state`.
+> Resume point for the Phase 3 refactor. Branch: `phase3-xss-dom-state` (merged to `main`).
 > Read `ARCHITECTURE_REVIEW.md` §6 first, then this. Phases 2 (client split + shared
 > engine) and 4 (SQL) are COMPLETE. **No DB/SQL work happens in Phase 3.**
+
+> ## STATUS — Phase 3 WRAPPED 2026-06-24
+> - **Concern 1 — Close XSS: ✅ FULLY DONE.** 5 stored cross-user XSS sites fixed + one canonical
+>   `huddleEscape` (3 escapers consolidated). The only *live bug* in Phase 3. Phone-verified.
+> - **Concern 2 — Decouple DOM: 🟡 high-value screens done.** Event delegation (`data-action`) for
+>   admin + all 4 game lobbies. Remaining onclick (in-game/play screens, deferred sheets, lab chips)
+>   left as OPTIONAL future cleanup — no live bug; CSP payoff only lands once *all* are converted.
+> - **Concern 3 — Contain state: ⬜ intentionally NOT started.** Riskiest, least urgent; pinned by
+>   mp-test names. A future decision.
+> - 13 Phase 3 commits, each verified: `smoke` 9/9 + `mp` 28/28 + `tmp/verify-delegation.js` (40 checks,
+>   the only automated catch for button wiring since smoke/mp never click buttons).
+> - **To resume the DOM tail or start state:** follow the pattern + the `grep \[onclick` lesson below.
 
 ## The three concerns (from the architecture review)
 1. **Close XSS** — route all user text through one escaping helper (the only LIVE bug).
