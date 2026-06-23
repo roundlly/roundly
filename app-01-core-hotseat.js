@@ -768,7 +768,7 @@
       document.getElementById('room-code').textContent = code;
       resetQrSlot();
       setRoomQrSrc(document.getElementById('room-qr'), qrUrl(hotJoinUrl(code)));
-      const btn = document.querySelector('#screen-lobby .room-code-action button[onclick*="regenerateHotRoom"], #screen-lobby .room-code-action button[onclick*="regenerateRoom"]');
+      const btn = document.querySelector('#screen-lobby .room-code-action button[data-action*="regenerateHotRoom"], #screen-lobby .room-code-action button[data-action*="regenerateRoom"]');
       if (btn) {
         btn.classList.remove('spinning');
         void btn.offsetWidth;
@@ -1416,7 +1416,7 @@
       resetQrSlot();
       setRoomQrSrc(document.getElementById('room-qr'), qrUrl(code));
       // One-shot spin animation on the refresh button.
-      const btn = document.querySelector('.room-code-action button[onclick*="regenerateRoom"]');
+      const btn = document.querySelector('.room-code-action button[data-action*="regenerateRoom"]');
       if (btn) {
         btn.classList.remove('spinning');
         // Force reflow so removing + re-adding the class re-triggers the animation.

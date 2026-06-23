@@ -96,6 +96,9 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   });
   results.push(['[hot-lobby] empty-seat invite tile → openLobbyInviteSheet("hotseat")', INV.ok, JSON.stringify(INV)]);
 
+  const Lspin = await page.evaluate(() => { goTo('lobby'); return !!document.querySelector('#screen-lobby .room-code-action button[data-action*="regenerateHotRoom"]'); });
+  results.push(['[hot-lobby] regenerateHotRoom still finds its refresh button (data-action selector)', Lspin, JSON.stringify(Lspin)]);
+
   // Dynamic settings controls (rounds/order) — only if renderSettings populated them.
   const S = await page.evaluate(() => {
     goTo('lobby');
@@ -154,6 +157,9 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   // openLobbyInviteSheet delegation is already proven by the Hot Seat invite tile → skip-pass.
   if (CINV.ok) results.push(['[cham-lobby] invite tile → openLobbyInviteSheet("chameleon")', true, JSON.stringify(CINV)]);
   else results.push(['[cham-lobby] invite tile (skipped offline — source converted; engine proven via hot)', true, JSON.stringify(CINV)]);
+
+  const Cspin = await page.evaluate(() => { goTo('cham-lobby'); return !!document.querySelector('#screen-cham-lobby .room-code-action button[data-action*="regenerateChamRoom"]'); });
+  results.push(['[cham-lobby] regenerateChamRoom still finds its refresh button (data-action selector)', Cspin, JSON.stringify(Cspin)]);
 
   // ======================== LIAR LOBBY ========================
   const Li = await page.evaluate(() => {

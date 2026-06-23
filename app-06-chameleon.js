@@ -473,7 +473,7 @@
       if (codeEl) codeEl.textContent = code;
       if (fallback) fallback.classList.remove('show');
       setRoomQrSrc(document.getElementById('cham-room-qr'), qrUrl(chamJoinUrl(code)));
-      const btn = document.querySelector('#screen-cham-lobby .room-code-action button[onclick*="regenerateChamRoom"]');
+      const btn = document.querySelector('#screen-cham-lobby .room-code-action button[data-action*="regenerateChamRoom"]');
       if (btn) {
         btn.classList.remove('spinning');
         void btn.offsetWidth;
