@@ -1740,23 +1740,7 @@
       goTo('games');
     }
     async function hotResetPlayers(){
-      if (!hotIsHost()) return;
-      const ok = await huddleConfirm({
-        title: t('lobby.resetTitle'),
-        body: t('lobby.resetBody'),
-        confirmLabel: t('lobby.resetConfirm'),
-        danger: true,
-      });
-      if (!ok) return;
-      const mySid = hotGetSessionId();
-      const myPlayerId = hotMe.myId;
-      // Optimistic local update for snappy UI.
-      const next = {};
-      if (myPlayerId && mySid) next[myPlayerId] = mySid;
-      state.claimedBy = next;
-      renderLobbyPlayers();
-      // Server-validated host-only reset (C2 turn 4a).
-      huddleCallRPC('huddle_hot_reset_players', { p_code: state.code });
+      return huddleResetPlayers(hotIsHost, state, hotGetSessionId, hotMe, renderLobbyPlayers, 'huddle_hot_reset_players');
     }
 
     // ---------- Custom confirm dialog (replaces native confirm) ----------

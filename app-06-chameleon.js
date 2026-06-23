@@ -839,21 +839,7 @@
       goTo('games');
     }
     async function chamResetPlayers(){
-      if (!chamIsHost()) return;
-      const ok = await huddleConfirm({
-        title: t('lobby.resetTitle'),
-        body: t('lobby.resetBody'),
-        confirmLabel: t('lobby.resetConfirm'),
-        danger: true,
-      });
-      if (!ok) return;
-      const mySid = chamGetSessionId();
-      const myPlayerId = chamMe.myId;
-      const next = {};
-      if (myPlayerId && mySid) next[myPlayerId] = mySid;
-      chamState.claimedBy = next;
-      renderChamLobbyPlayers();
-      huddleCallRPC('huddle_cham_reset_players', { p_code: chamState.code });
+      return huddleResetPlayers(chamIsHost, chamState, chamGetSessionId, chamMe, renderChamLobbyPlayers, 'huddle_cham_reset_players');
     }
 
     // ---------- Topic picker sheet ----------

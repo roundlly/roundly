@@ -295,24 +295,10 @@
       goTo('games');
     }
     async function liarResetPlayers(){
-      const amHost = liarGetSessionId() === liarState.hostId;
-      if (!amHost) return;
-      const ok = await huddleConfirm({
-        title: t('lobby.resetTitle'),
-        body: t('lobby.resetBody'),
-        confirmLabel: t('lobby.resetConfirm'),
-        danger: true,
-      });
-      if (!ok) return;
-      const mySid = liarGetSessionId();
-      const myPlayerId = liarMe.myId;
-      // Optimistic local update for snappy UI; server returns canonical state.
-      const next = {};
-      if (myPlayerId && mySid) next[myPlayerId] = mySid;
-      liarState.claimedBy = next;
-      liarRenderSeats();
-      // Server-validated host-only reset (C2 turn 3c).
-      huddleCallRPC('huddle_liar_reset_players', { p_code: liarState.code });
+      return huddleResetPlayers(
+        () => liarGetSessionId() === liarState.hostId,
+        liarState, liarGetSessionId, liarMe, liarRenderSeats, 'huddle_liar_reset_players'
+      );
     }
 
     // Handler for the "Join with code" input — replaces our current room with the friend's.
