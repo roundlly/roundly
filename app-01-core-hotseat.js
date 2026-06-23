@@ -146,6 +146,17 @@
     // lifetime "wins" stat. Format: room-code:round:currentPlayerIdx.
     let _hotWinsBumpedKey = null;
 
+    // ---------- Shared HTML escaping (Phase 3: one canonical escaper for all user text) ----------
+    // Route ALL user-supplied text (display names, usernames, chat/feedback, typed room
+    // codes, search queries) through this before placing it in innerHTML. Same 5-char map as
+    // the existing escapeHTML (app-05) / friendsEscape (app-04), which are kept for now and
+    // will be consolidated onto this in a later step. IMPORTANT: t() does NOT escape its
+    // {param} substitutions, so pre-escape user values BEFORE passing them to t():
+    //   t('key', { name: huddleEscape(userName) })   — not   t('key', { name: userName }).
+    function huddleEscape(s){
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
     // ---------- Shared per-device identity (Phase 2: GetSessionId/Bootstrap merge) ----------
     // ONE implementation for all 4 games (Hot Seat, Chameleon, Liar, Mafia). Each game
     // passes its own `me` object ({ sessionId, bootstrapped, ... }); we pass the object
@@ -1784,7 +1795,7 @@
             <div class="role-hero-emoji">👂</div>
             <div class="word-label-big">${t('play.giveCluesFor')}</div>
             <div class="word-text-big">${state.currentWord}</div>
-            <div class="role-hero-sub">${t('play.describeIt', { name: playerDisplay.name })}</div>
+            <div class="role-hero-sub">${t('play.describeIt', { name: huddleEscape(playerDisplay.name) })}</div>
             ${modePill}
             ${helpButton}
           </div>

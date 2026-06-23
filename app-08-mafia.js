@@ -896,7 +896,7 @@
         const isDead = mafiaCardsDeadPlayers.has(seatId);
         const name = mafiaSeatNameFor(seatId);
         return '<button type="button" class="mafia-cards-narrator-row' + (isDead ? ' is-dead' : '') + '" onclick="mafiaCardsToggleDead(\'' + seatId + '\')">'
-          + '<span class="mafia-cards-narrator-row-name">' + name + '</span>'
+          + '<span class="mafia-cards-narrator-row-name">' + huddleEscape(name) + '</span>'
           + '<span class="mafia-cards-narrator-row-emoji">' + meta.emoji + '</span>'
           + '<span class="mafia-cards-narrator-row-role">' + t(meta.nameKey) + '</span>'
           + '<span class="mafia-cards-narrator-row-mark" aria-hidden="true">✗</span>'
@@ -963,7 +963,7 @@
         // teammate by regular Mafia. Server populates teammates for both roles.
         const isMafiaTeam = (role === 'mafia' || role === 'mafia_leader');
         if (isMafiaTeam && Array.isArray(mafiaMe.myTeammates) && mafiaMe.myTeammates.length > 0) {
-          const names = mafiaMe.myTeammates.map(mafiaSeatNameFor).join(' · ');
+          const names = mafiaMe.myTeammates.map(seatId => huddleEscape(mafiaSeatNameFor(seatId))).join(' · ');
           teammatesEl.innerHTML =
             '<span class="mafia-cards-role-teammates-label">' + t('mafia.roleCard.teammatesLabel') + '</span>' + names;
           teammatesEl.hidden = false;
@@ -1137,7 +1137,7 @@
             `<button class="${cls.join(' ')}" type="button" disabled>
                ${avatar}
                <div class="mafia-seat-info">
-                 <div class="mafia-seat-name">${mafiaSeatNameFor(seatId)}</div>
+                 <div class="mafia-seat-name">${huddleEscape(mafiaSeatNameFor(seatId))}</div>
                  <div class="mafia-seat-status">${
                    isNarrator ? t('mafia.statusNarrator')
                      : (isMe ? t('mafia.statusYou') : t('mafia.statusClaimed'))
@@ -1345,7 +1345,7 @@
           return `<button class="theme-option ${isCurrent ? 'active' : ''}" type="button" onclick="mafiaPickNarrator('${seatId}')">
             <div class="theme-option-icon">🎙️</div>
             <div class="theme-option-content">
-              <div class="theme-option-title">${mafiaSeatNameFor(seatId)}${isYou ? ' · ' + t('mafia.you') : ''}</div>
+              <div class="theme-option-title">${huddleEscape(mafiaSeatNameFor(seatId))}${isYou ? ' · ' + t('mafia.you') : ''}</div>
               <div class="theme-option-sub">${isCurrent ? t('mafia.narratorCurrent') : t('mafia.narratorPickThis')}</div>
             </div>
             ${isCurrent ? '<svg class="theme-option-check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
