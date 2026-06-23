@@ -55,11 +55,19 @@ only `.trim()`), interpolated raw into innerHTML at 5 sites:
 - `mafiaSeatNameFor` root cause: all 4 Mafia sites forgot the wrapper the Liar render (`app-08:2037`)
   already applies to the same value. `narratorName` (`app-08:1075`) was already safe (textContent).
 - Owner decision: **escaping only** this pass (no input-validation on the save path — fast-follow later).
-- Verified: **smoke 9/9, mp 28/28**.
+- Verified: **smoke 9/9, mp 28/28** + real two-phone test (profile + Mafia seat grid + Hot Seat hero all show literal `<b>…</b>`, no bold/popup).
+
+## ✅ DONE — XSS Step 1c (commit `refactor(security): consolidate escapeHTML + friendsEscape…`)
+Consolidated to ONE escaping implementation. There were three escapers with identical 5-char maps;
+`escapeHTML` (app-05) and `friendsEscape` (app-04) are now one-line **aliases** of the canonical
+`huddleEscape` (app-01). The ~105 existing call sites (63 + 42) are left untouched — lowest blast
+radius — and now route through `huddleEscape`, including the 6 already-safe MEDIUM innerHTML sites.
+Output byte-identical for real values (`escapeHTML(null)` now renders `''` not `'null'` — improvement).
+The only inline `.replace` escaper chain was `friendsEscape`'s own body, so no other sites needed
+changing. Verified: **smoke 9/9, mp 28/28**. (The alias names can be fully removed in a later
+mechanical pass if ever desired — not necessary.)
 
 ## ⏳ REMAINING
-- **XSS Step 1c (deferrable, no live bug):** point `escapeHTML`/`friendsEscape` at `huddleEscape`,
-  and migrate the 6 MEDIUM (already-escaped) sites onto it. Hygiene/dedup only.
 - **onclick → delegation, ONE screen per PR**, order (smallest blast radius first):
   sheet/modal backdrops → `screen-wheel-test` (12) + liar-lab chips (6) → admin screens
   (stats 6 / feedback 3) → the 4 game lobbies (5–6 each) → **friends/invite rows LAST**
