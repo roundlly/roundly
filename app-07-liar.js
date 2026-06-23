@@ -156,31 +156,12 @@
     }
 
     async function liarLoadRoom(code){
-      if (!window.sb) return false;
-      // Two-attempt retry — when an invitee taps Join the host's row may not
-      // have replicated to this client yet. Without retry the invitee would
-      // silently land in a fresh room with a different code.
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const { data, error } = await window.sb
-            .from('liar_rooms')
-            .select('state')
-            .eq('code', code)
-            .maybeSingle();
-          if (error) {
-            console.warn('[Huddle] liarLoadRoom query error (attempt ' + (attempt+1) + '):', error.message || error);
-          } else if (data && data.state) {
-            if (data.state.closedByHost) return false;
-            Object.keys(liarState).forEach(k => delete liarState[k]);
-            Object.assign(liarState, data.state);
-            return true;
-          }
-        } catch (e) {
-          console.warn('[Huddle] liarLoadRoom exception (attempt ' + (attempt+1) + '):', e);
-        }
-        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
-      }
-      return false;
+      const incoming = await huddleFetchRoomState('liar_rooms', code);
+      if (!incoming) return false;
+      if (incoming.closedByHost) return false;
+      Object.keys(liarState).forEach(k => delete liarState[k]);
+      Object.assign(liarState, incoming);
+      return true;
     }
 
     // Active Realtime channel — re-subscribed when the room code changes.

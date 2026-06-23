@@ -210,33 +210,12 @@
         });
     }
     async function chamLoadRoom(code){
-      if (!window.sb) return false;
-      // One retry with a short backoff — when an invitee taps Join the host's
-      // row may not have reached this client yet (replication lag, race with
-      // host's first persist). Catches transient failures without hanging the UI.
-      for (let attempt = 0; attempt < 2; attempt++){
-        try {
-          const { data, error } = await window.sb
-            .from('chameleon_rooms')
-            .select('state')
-            .eq('code', code)
-            .maybeSingle();
-          if (error) {
-            console.warn('[Huddle] chamLoadRoom query error (attempt ' + (attempt+1) + '):', error.message || error);
-          } else if (data && data.state) {
-            const incoming = data.state;
-            // Room was closed by the host — treat as gone.
-            if (incoming.closedByHost) return false;
-            Object.keys(chamState).forEach(k => { delete chamState[k]; });
-            Object.assign(chamState, incoming);
-            return true;
-          }
-        } catch(e) {
-          console.warn('[Huddle] chamLoadRoom exception (attempt ' + (attempt+1) + '):', e);
-        }
-        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
-      }
-      return false;
+      const incoming = await huddleFetchRoomState('chameleon_rooms', code);
+      if (!incoming) return false;
+      if (incoming.closedByHost) return false;   // room closed by host — treat as gone
+      Object.keys(chamState).forEach(k => { delete chamState[k]; });
+      Object.assign(chamState, incoming);
+      return true;
     }
     // ===== Chameleon multiplayer presence =====
     // Supabase Presence tracks every device subscribed to the room channel.

@@ -270,34 +270,13 @@
         });
     }
     async function hotLoadRoom(code){
-      if (!window.sb) return false;
-      // Two-attempt retry — when an invitee taps Join the host's row may not
-      // have replicated to this client yet (Supabase replication race).
-      // Single-attempt fetches were silently dropping the invitee into a fresh
-      // room with a different code; the retry catches the lag window.
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const { data, error } = await window.sb
-            .from('hotseat_rooms')
-            .select('state')
-            .eq('code', code)
-            .maybeSingle();
-          if (error) {
-            console.warn('[Huddle] hotLoadRoom query error (attempt ' + (attempt+1) + '):', error.message || error);
-          } else if (data && data.state) {
-            const incoming = data.state;
-            if (incoming.closedByHost) return false;
-            if (!Array.isArray(incoming.playersUsedThisRound)) incoming.playersUsedThisRound = [];
-            Object.keys(state).forEach(k => { delete state[k]; });
-            Object.assign(state, incoming);
-            return true;
-          }
-        } catch(e) {
-          console.warn('[Huddle] hotLoadRoom exception (attempt ' + (attempt+1) + '):', e);
-        }
-        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
-      }
-      return false;
+      const incoming = await huddleFetchRoomState('hotseat_rooms', code);
+      if (!incoming) return false;
+      if (incoming.closedByHost) return false;
+      if (!Array.isArray(incoming.playersUsedThisRound)) incoming.playersUsedThisRound = [];
+      Object.keys(state).forEach(k => { delete state[k]; });
+      Object.assign(state, incoming);
+      return true;
     }
     // ───── Presence tracking (Phase 2b) ─────────────────────────────────
     // Mirrors Chameleon's pattern. When a tab dies (OS kill, wifi drop, app
@@ -395,6 +374,28 @@
       timers.forEach(tid => { try { clearTimeout(tid); } catch(e){} });
       timers.clear();
       sessions.clear();
+    }
+    // Shared room-state fetch with one retry (covers Supabase replication lag
+    // when an invitee taps Join before the host's row has propagated). Returns
+    // the room's `state` object, or null if not found / errored. Each game keeps
+    // its own tiny apply step (closedByHost handling, state merge). Hot/Cham/Liar
+    // share this; Mafia's load has different control flow and stays separate.
+    async function huddleFetchRoomState(table, code){
+      if (!(window.sb && window.sb.from) || !code) return null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const { data, error } = await window.sb.from(table).select('state').eq('code', code).maybeSingle();
+          if (error) {
+            console.warn('[Huddle] load ' + table + ' error (attempt ' + (attempt+1) + '):', error.message || error);
+          } else if (data && data.state) {
+            return data.state;
+          }
+        } catch(e) {
+          console.warn('[Huddle] load ' + table + ' exception (attempt ' + (attempt+1) + '):', e);
+        }
+        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+      }
+      return null;
     }
     function hotCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_hotLeaveGraceTimers, sessionId); }
     function hotResetPresenceState(){ huddleResetPresenceState(_hotLeaveGraceTimers, _hotPresentSessions); }
