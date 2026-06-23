@@ -473,11 +473,7 @@
       });
     }
     async function chamAutoClaimIfNeeded(){
-      if (chamMe.myId) return;
-      if (chamState.phase && chamState.phase !== 'lobby') return;
-      const empty = (chamState.players || []).find(p => !chamState.claimedBy || !chamState.claimedBy[p.id]);
-      if (!empty) return;
-      await chamClaimSeat(empty.id);
+      return huddleAutoClaimIfNeeded(chamMe, chamState, chamClaimSeat);
     }
 
     // ---------- Lobby ----------

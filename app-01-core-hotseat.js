@@ -1282,12 +1282,20 @@
     // the claim RPC commits and joining players see their seat as unclaimed
     // until the next realtime echo lands, forcing them to refresh. See
     // mafiaAutoClaimIfNeeded for the pattern this matches.
+    // ---------- Shared lobby auto-claim (Phase 2, 3 of 4) ----------
+    // On lobby entry, take the first free seat — unless already seated or the
+    // game is past the lobby. Hot/Cham/Liar are identical; only the me object,
+    // state, and claim fn differ. Mafia is separate (session-keyed, p1..p8 ids,
+    // claims via huddle_claim_seat inline — see mafiaAutoClaimIfNeeded).
+    async function huddleAutoClaimIfNeeded(meObj, gameState, claimSeat){
+      if (meObj.myId) return;                                       // already seated
+      if (gameState.phase && gameState.phase !== 'lobby') return;   // game in progress — sit out
+      const empty = (gameState.players || []).find(p => !gameState.claimedBy || !gameState.claimedBy[p.id]);
+      if (!empty) return;                                           // room full
+      await claimSeat(empty.id);
+    }
     async function hotAutoClaimIfNeeded(){
-      if (hotMe.myId) return; // already seated (returning visitor)
-      if (state.phase && state.phase !== 'lobby') return; // game already in progress — sit out
-      const empty = (state.players || []).find(p => !state.claimedBy || !state.claimedBy[p.id]);
-      if (!empty) return; // room full
-      await hotClaimSeat(empty.id);
+      return huddleAutoClaimIfNeeded(hotMe, state, hotClaimSeat);
     }
 
     function qrUrl(code) {

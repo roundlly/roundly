@@ -1974,11 +1974,7 @@
     }
 
     async function liarAutoClaimIfNeeded(){
-      if (liarMe.myId) return;
-      if (liarState.phase && liarState.phase !== 'lobby') return;
-      const empty = (liarState.players || []).find(p => !liarState.claimedBy || !liarState.claimedBy[p.id]);
-      if (!empty) return;
-      await liarClaimSeat(empty.id);
+      return huddleAutoClaimIfNeeded(liarMe, liarState, liarClaimSeat);
     }
 
     function liarRenderSeats(){

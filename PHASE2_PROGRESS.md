@@ -9,7 +9,7 @@ plumbing — **17 "families" × 4 games = ~68 near-duplicate functions**. Phase 
 each set of 4 copies with **one shared `huddle*` helper**, killing the duplication that
 causes "fix one bug, the others stay broken."
 
-## ✅ Done — 10 of 17 families merged (all verified)
+## ✅ Done — 11 of 17 families merged (all verified)
 Shared helpers all live in `app-01-core-hotseat.js` near the top:
 
 | # | Family | Shared helper | Verified by |
@@ -24,6 +24,7 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 | 8 | Bootstrap | `huddleBootstrap(me, logLabel)` — all 4 games | smoke + mp (28/28) + manual phones |
 | 9 | LeaveRoom (3 of 4) | `huddleLeaveRoom(opts)` — Hot/Cham/Liar; Mafia stays separate (narrator model). Per-game `preLeave`/`teardown`/`context` callbacks preserve each game's exact behavior | smoke 9/9 + mp 28/28 (mp clicks the RPC, not the button — do a 2-phone Leave tap too) |
 | 10 | ConfirmUserGone (3 of 4) | `huddleConfirmUserGone(sessionId, opts)` — Hot/Cham/Liar; Mafia separate (narrator election + passes seat id). Folded in Cham/Liar's `*HandleConfirmedDisconnect` indirection helpers | smoke 9/9 + mp 28/28 (NB: mp tests explicit-leave, not the 60s disconnect path — behavior-preserving refactor) |
+| 11 | AutoClaimIfNeeded (3 of 4) | `huddleAutoClaimIfNeeded(meObj, gameState, claimSeat)` — Hot/Cham/Liar were byte-identical; Mafia separate (session-keyed, p1..p8, inline claim) | smoke 9/9 + mp 28/28 (covered by the room-create seats=1 check) |
 
 **GetSessionId/Bootstrap merge notes (2026-06-23):**
 - All 4 `<game>Bootstrap`/`<game>GetSessionId` now delegate to the shared pair. Each game passes its own `me` object (kept separate because each holds extra per-game fields). The `tab_` fallback was **KEPT** (deliberate safety net for offline / 429 anon rate-limit — it is NOT dead code).
@@ -51,10 +52,13 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 ### Bucket B — need LIVE MULTIPLAYER verification (`npm run mp`)
 - ~~**LeaveRoom**~~ — ✅ **DONE 2026-06-23** (table row 9): 3-of-4 merge to `huddleLeaveRoom(opts)`; Mafia separate. smoke 9/9 + mp 28/28.
 - ~~**ConfirmUserGone**~~ — ✅ **DONE 2026-06-23** (table row 10): 3-of-4 merge to `huddleConfirmUserGone(sessionId, opts)`; Mafia separate. smoke 9/9 + mp 28/28.
-`WireSync`, `AutoClaimIfNeeded` — the realtime core still left (the ONLY substantive
-families remaining; `WireSync` is the biggest/hardest, do it last). Each is genuinely
-divergent; merge ONE at a time and re-run `npm run mp` (28/28) + 2-phone test after each.
-Do NOT merge these blind.
+- ~~**AutoClaimIfNeeded**~~ — ✅ **DONE 2026-06-23** (table row 11): 3-of-4 merge to `huddleAutoClaimIfNeeded(...)`; Mafia separate. smoke 9/9 + mp 28/28.
+- **`WireSync`** — THE LAST FAMILY (16/17 done). The biggest/hardest: it's the realtime
+subscription setup (channel create + presence track + postgres_changes handler + the
+seat-vanish "left" toast diffing). Genuinely divergent per game and the highest-risk
+merge. Approach with care — full read of all 4, behavior-preserving extraction, then
+`smoke` 9/9 + `mp` 28/28 + a real 2-phone test (join, see each other, one leaves, refresh).
+Do NOT merge blind.
 `LeaveRoom` is the natural next one (we were just deep in leave/sign-out logic).
 
 ## How to verify (any change)
