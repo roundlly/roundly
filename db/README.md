@@ -21,6 +21,12 @@ See [`../PHASE4_FINDINGS.md`](../PHASE4_FINDINGS.md) for the full audit.
   — adds `huddle_set_guest_name()` so no-account players' typed names show on their seats.
   Additive, idempotent (`CREATE OR REPLACE`), server-only. The app graceful-degrades until applied.
 
+- **Mafia reconnect safety (later change):** also apply [`fix/02_mafia_disconnect_no_autoeliminate.sql`](fix/02_mafia_disconnect_no_autoeliminate.sql)
+  — replaces `huddle_mafia_handle_disconnect` so a mid-game disconnect is a no-op instead of
+  moving the player to `deadIds` + running a win-check that could end the game and leak roles.
+  Lobby still frees the seat. Idempotent (`CREATE OR REPLACE`), server-only. The client already
+  stops calling it mid-game, so the app is safe until applied.
+
 - **To rebuild from scratch** (new project / disaster recovery): run `migrations/*.sql` in
   filename order, then `fix/00`.
 
@@ -31,6 +37,7 @@ db/
   fix/
     00_drop_ambiguous_start_game.sql   the Phase 4 change to apply to prod
     01_add_guest_name_rpc.sql          adds huddle_set_guest_name (guest display names)
+    02_mafia_disconnect_no_autoeliminate.sql  disconnect no longer auto-eliminates/ends a Mafia game
   migrations/                          ordered from-scratch build (reflects live)
     01_tables.sql                      tables, indexes, triggers, realtime publication
     02_helpers.sql                     is_claimant / asserts / time / shuffle / is_admin / trigger fns

@@ -3809,6 +3809,18 @@
       text-align:right;visibility:hidden;
     }
     .mafia-cards-narrator-row.is-dead .mafia-cards-narrator-row-mark{visibility:visible}
+    /* "Away" — a player's phone is currently disconnected. We never auto-out
+       them; this just flags it so the narrator can wait or mark them out. */
+    .mafia-cards-narrator-row.is-away{border-style:dashed;border-color:var(--border-strong)}
+    .mafia-cards-narrator-row-away{
+      flex-shrink:0;
+      font-size:10.5px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;
+      padding:2px 7px;border-radius:999px;white-space:nowrap;
+      color:#9a6700;background:rgba(255,193,7,.18);border:1px solid rgba(255,193,7,.45);
+    }
+    [data-theme="dark"] .mafia-cards-narrator-row-away{
+      color:#ffd54a;background:rgba(255,193,7,.14);border-color:rgba(255,193,7,.35);
+    }
     .mafia-cards-narrator-narrator-row{
       display:flex;align-items:center;gap:12px;padding:11px 12px;
       background:transparent;border:1px dashed var(--border-strong);

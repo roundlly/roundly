@@ -158,6 +158,18 @@
         if (typeof mafiaRerender === 'function') mafiaRerender();
         return;
       }
+      // Mid-game we NEVER auto-eliminate a dropped player. The narrator is the
+      // source of truth at the table and decides whether to wait for them or
+      // mark them out by hand. A disconnect mid-game just surfaces as an "away"
+      // badge on the narrator dashboard (derived from presence in
+      // mafiaCardsRenderNarrator). Only in the LOBBY do we free the seat via
+      // the RPC so it reopens for someone else. (db/fix/02 also hardens the
+      // server so the RPC can't end a game on disconnect even if it is called.)
+      const inLobby = !mafiaState.phase || mafiaState.phase === 'lobby';
+      if (!inLobby) {
+        if (typeof mafiaRerender === 'function') mafiaRerender();
+        return;
+      }
       Promise.resolve(huddleCallRPC('huddle_mafia_handle_disconnect', {
         p_code: mafiaState.code,
         p_player_id: goneSeatId,
@@ -890,13 +902,22 @@
         villager:     { emoji:'👤',  nameKey:'mafia.rules.role.villager.name' },
       };
       const seats = Object.keys(roleMap).sort(); // p1, p2, ... — stable order
+      const _claimedBy = mafiaState.claimedBy || {};
       const rows = seats.map(seatId => {
         const role = roleMap[seatId];
         const meta = ROLE_META[role] || ROLE_META.villager;
         const isDead = mafiaCardsDeadPlayers.has(seatId);
+        // "Away": this seat's phone is currently disconnected (its session is
+        // not in our live presence set). We never auto-eliminate on a drop —
+        // we just flag it so the narrator can choose to wait or mark them out
+        // by hand. Skipped once the narrator has already marked them out.
+        const seatSid = _claimedBy[seatId];
+        const isAway = !isDead && !!seatSid && !mafiaIsSessionPresent(seatSid);
         const name = mafiaSeatNameFor(seatId);
-        return '<button type="button" class="mafia-cards-narrator-row' + (isDead ? ' is-dead' : '') + '" onclick="mafiaCardsToggleDead(\'' + seatId + '\')">'
+        return '<button type="button" class="mafia-cards-narrator-row' + (isDead ? ' is-dead' : '') + (isAway ? ' is-away' : '') + '" onclick="mafiaCardsToggleDead(\'' + seatId + '\')"'
+          + (isAway ? ' title="' + huddleEscape(t('mafiaCards.narrator.awayHint')) + '"' : '') + '>'
           + '<span class="mafia-cards-narrator-row-name">' + huddleEscape(name) + '</span>'
+          + (isAway ? '<span class="mafia-cards-narrator-row-away">' + t('mafiaCards.narrator.away') + '</span>' : '')
           + '<span class="mafia-cards-narrator-row-emoji">' + meta.emoji + '</span>'
           + '<span class="mafia-cards-narrator-row-role">' + t(meta.nameKey) + '</span>'
           + '<span class="mafia-cards-narrator-row-mark" aria-hidden="true">✗</span>'
