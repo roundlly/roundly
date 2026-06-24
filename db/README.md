@@ -17,6 +17,10 @@ See [`../PHASE4_FINDINGS.md`](../PHASE4_FINDINGS.md) for the full audit.
   (`PGRST203`). Safe, server-only, no redeploy. Everything else under `migrations/` already
   matches live (the files are `CREATE OR REPLACE`, so re-running them is a harmless no-op).
 
+- **Guest display names (later change):** also apply [`fix/01_add_guest_name_rpc.sql`](fix/01_add_guest_name_rpc.sql)
+  — adds `huddle_set_guest_name()` so no-account players' typed names show on their seats.
+  Additive, idempotent (`CREATE OR REPLACE`), server-only. The app graceful-degrades until applied.
+
 - **To rebuild from scratch** (new project / disaster recovery): run `migrations/*.sql` in
   filename order, then `fix/00`.
 
@@ -25,7 +29,8 @@ See [`../PHASE4_FINDINGS.md`](../PHASE4_FINDINGS.md) for the full audit.
 ```
 db/
   fix/
-    00_drop_ambiguous_start_game.sql   the one change to apply to prod
+    00_drop_ambiguous_start_game.sql   the Phase 4 change to apply to prod
+    01_add_guest_name_rpc.sql          adds huddle_set_guest_name (guest display names)
   migrations/                          ordered from-scratch build (reflects live)
     01_tables.sql                      tables, indexes, triggers, realtime publication
     02_helpers.sql                     is_claimant / asserts / time / shuffle / is_admin / trigger fns

@@ -1770,9 +1770,40 @@
         if (typeof rerenderFn === 'function') rerenderFn();
       } catch(e) { console.warn('[Huddle] ensureClaimantProfiles failed:', e); }
     }
+    // Resolve a guest's typed name (no-account players who joined via the login
+    // screen). It lives in the room state's `guestNames` map keyed by the
+    // claimant's auth uid, mirrored on whichever game state is loaded — all four
+    // game states are globals, so we scan them and return the first match.
+    function huddleGuestNameFor(sessionId){
+      if (!sessionId) return null;
+      const states = [
+        (typeof state !== 'undefined') ? state : null,
+        (typeof liarState !== 'undefined') ? liarState : null,
+        (typeof chamState !== 'undefined') ? chamState : null,
+        (typeof mafiaState !== 'undefined') ? mafiaState : null,
+      ];
+      for (let i = 0; i < states.length; i++){
+        const gn = states[i] && states[i].guestNames && states[i].guestNames[sessionId];
+        if (gn) return String(gn);
+      }
+      return null;
+    }
     function profileForClaim(sessionId){
       if (!sessionId) return null;
-      return claimantProfiles.get(sessionId) || null;
+      const real = claimantProfiles.get(sessionId);
+      // A real profile only WINS if it actually carries a name. Anonymous
+      // players get a blank profile row (display_name '', no username); that
+      // must NOT shadow the name they typed on the join screen — otherwise the
+      // typed name shows for a moment, then the blank row loads and blanks it.
+      const realHasName = !!(real && (real.username || (real.display_name && real.display_name.trim())));
+      if (realHasName) return real;
+      // Otherwise surface a guest's typed name as a minimal profile, so it flows
+      // through the same claimDisplayName / playerDisplayFor path as real names.
+      const gn = huddleGuestNameFor(sessionId);
+      if (gn) return { display_name: gn, guest: true };
+      // No usable name anywhere → hand back the (nameless) real row if present,
+      // else null; callers fall back to the neutral "Player" placeholder.
+      return real || null;
     }
     function claimDisplayName(profile, slotPlaceholder){
       if (!profile) return slotPlaceholder;

@@ -276,6 +276,36 @@
         </div>
 
         <div class="login-clean-cta">
+          <!-- Host vs guest in one line: the host signs in (billing comes later);
+               everyone else just joins, no login required. -->
+          <div class="login-note">
+            <svg class="login-note-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+            </svg>
+            <span data-i18n="login.noteHostOnly">Only the host signs in with Google. Everyone else just joins — signing in is optional.</span>
+          </div>
+
+          <!-- Guest join: type a name + room code (or scan the QR), no login.
+               Reuses the existing join-by-code routing via huddleLandingJoin().
+               The name is captured here; showing it in the lobby is Step 2, and
+               the QR scanner is Step 3 (huddleLandingScanQr is a placeholder). -->
+          <div class="login-join">
+            <div class="login-join-label" data-i18n="login.joiningGame">Joining a game?</div>
+            <input id="login-guest-name" class="input" type="text" maxlength="24" placeholder="Your name" data-i18n-placeholder="login.yourName" autocomplete="off" autocapitalize="words" enterkeyhint="next">
+            <div class="join-code-row">
+              <input id="login-join-code" type="text" maxlength="9" placeholder="ABCD-EFGH" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" onkeydown="if(event.key==='Enter'){huddleLandingJoin();}">
+              <button class="btn" type="button" id="login-qr-btn" onclick="huddleLandingScanQr()" data-i18n-aria="login.scanQr" aria-label="Scan QR code" style="width:46px;padding:0;flex-shrink:0">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3"/><path d="M21 17v4"/><path d="M17 21h1"/>
+                </svg>
+              </button>
+            </div>
+            <button class="btn btn-primary" type="button" id="login-join-btn" onclick="huddleLandingJoin()" data-i18n="login.joinGame">Join game</button>
+            <div id="login-join-status" class="login-status"></div>
+          </div>
+
+          <div class="login-or"><span data-i18n="login.or">or</span></div>
+
           <button class="btn btn-google" type="button" id="login-google-btn" onclick="huddleSignInWithGoogle()">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -2562,6 +2592,37 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
 
   <!-- app.js was split into ordered fragments (Phase 1). They share one global
        scope and MUST stay in this numeric order — do not reorder or add defer/module. -->
+  <!-- In-app QR scanner overlay (Step 3). Opened from the login screen's QR
+       button; reads a Roundlly room QR and feeds the code into the normal join
+       flow (so the guest's typed name is still saved). -->
+  <div class="qr-scan-backdrop" id="qr-scan-backdrop" aria-hidden="true">
+    <div class="qr-scan-panel">
+      <button class="qr-scan-close" type="button" onclick="huddleStopScanQr()" aria-label="Close">&#10005;</button>
+      <div class="qr-scan-title" data-i18n="login.scanTitle">Scan the room QR</div>
+      <div class="qr-scan-video-wrap"><video id="qr-scan-video" playsinline muted></video></div>
+      <div class="qr-scan-hint" id="qr-scan-hint" data-i18n="login.scanHint">Point your camera at the room's QR code.</div>
+    </div>
+  </div>
+
+  <!-- Guest name prompt — shown when someone arrives via a scanned QR / shared
+       link with no name yet, so they never join as "...". Reuses the sheet UI. -->
+  <div class="sheet-backdrop" id="guest-name-backdrop" onclick="if(event.target===this)huddleCancelNameModal()">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <button class="icon-btn" type="button" onclick="huddleCancelNameModal()" aria-label="Close">&#10005;</button>
+      <div class="sheet-handle"></div>
+      <div class="sheet-title" data-i18n="login.nameSheetTitle">Almost in — what's your name?</div>
+      <div class="sheet-body" data-i18n="login.nameSheetSub">This is how everyone in the game sees you.</div>
+      <div class="field" style="margin-bottom:12px">
+        <input id="guest-name-input" class="input" type="text" maxlength="24" placeholder="Your name" data-i18n-placeholder="login.yourName" autocomplete="off" autocapitalize="words" enterkeyhint="go" onkeydown="if(event.key==='Enter'){huddleGuestNameSubmit();}">
+      </div>
+      <div id="guest-name-status" class="login-status" style="margin-bottom:10px"></div>
+      <button class="btn btn-primary" type="button" onclick="huddleGuestNameSubmit()" data-i18n="login.joinGame">Join game</button>
+    </div>
+  </div>
+
+  <!-- Lightweight QR scanner (nimiq/qr-scanner). Lazy-used by the login screen;
+       deferred so it never blocks app boot, and guarded if it fails to load. -->
+  <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js" defer></script>
   <script src="app-01-core-hotseat.js"></script>
   <script src="app-02-i18n.js"></script>
   <script src="app-03-profile-auth.js"></script>

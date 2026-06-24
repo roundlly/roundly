@@ -389,41 +389,41 @@
       el.textContent = text || '';
       el.className = 'join-code-status' + (kind ? ' ' + kind : '');
     }
-    async function attemptJoinByCode(){
-      const input = document.getElementById('join-code-input');
-      if (!input) return;
-      const btn = document.querySelector('#join-code-backdrop .btn-primary');
-      let code = (input.value || '').toUpperCase().trim().replace(/[^A-Z0-9-]/g, '');
+    // Shared core for join-by-code, used by BOTH the Games-tab sheet
+    // (attemptJoinByCode) and the login screen (huddleLandingJoin). Probes all
+    // four game tables in parallel — first match wins — then routes into the
+    // matching lobby. opts: { setStatus(text,kind), btn, onEmpty(), onMatch(game,code) }
+    async function huddleJoinByCodeCore(rawCode, opts){
+      opts = opts || {};
+      const setStatus = opts.setStatus || function(){};
+      const btn = opts.btn || null;
+      let code = (rawCode || '').toUpperCase().trim().replace(/[^A-Z0-9-]/g, '');
       // Auto-insert dash if user typed 8 alphanumerics in a row
       if (code.length === 8 && !code.includes('-')) {
         code = code.slice(0, 4) + '-' + code.slice(4);
       }
-      // Empty-input hint — was silently no-op, which made the Join button
-      // feel broken when tapped without a code. Distinct copy so the user
-      // knows the app is responding.
+      // Empty-input hint — distinct copy so the Join button doesn't feel broken
+      // when tapped without a code.
       if (!code) {
-        setJoinCodeStatus(t('joinCode.enterCode'), 'error');
-        try { input.focus(); } catch(_){}
+        setStatus(t('joinCode.enterCode'), 'error');
+        if (opts.onEmpty) opts.onEmpty();
         return;
       }
       if (!window.sb) {
-        setJoinCodeStatus(t('joinCode.networkError'), 'error');
+        setStatus(t('joinCode.networkError'), 'error');
         return;
       }
-      // Disable the button while the probe runs so tapping it 5 times doesn't
-      // fire 5 parallel queries against Supabase.
+      // Disable the button while the probe runs so tapping it repeatedly
+      // doesn't fire parallel queries against Supabase.
       if (btn) { btn.disabled = true; btn.setAttribute('aria-busy','true'); }
-      setJoinCodeStatus(t('joinCode.checking'), 'searching');
-      // Hard 6s timeout — prevents the sheet getting stuck on "Looking for
-      // the room…" forever when the network is dead. Rejects with a tagged
-      // error so the catch block can show the network-error copy.
+      setStatus(t('joinCode.checking'), 'searching');
+      // Hard 6s timeout — prevents getting stuck on "Looking for the room…"
+      // forever when the network is dead.
       const timeoutMs = 6000;
       const timeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('__timeout__')), timeoutMs));
       try {
         // Probe all four game tables in parallel — first match wins.
-        // Mafia was missing before, which silently returned "Not found"
-        // for any Mafia code shared by a friend.
         const probe = Promise.all([
           window.sb.from('liar_rooms').select('code').eq('code', code).maybeSingle(),
           window.sb.from('hotseat_rooms').select('code').eq('code', code).maybeSingle(),
@@ -431,14 +431,13 @@
           window.sb.from('mafia_rooms').select('code').eq('code', code).maybeSingle(),
         ]);
         const [liar, hot, cham, mafia] = await Promise.race([probe, timeout]);
-        // If any individual probe came back with a server-side error (not a
-        // null row — those are fine), treat as network error rather than
-        // "not found", so the user knows to retry vs re-check the code.
+        // A server-side error (not a null row — those are fine) means network
+        // trouble, so the user knows to retry vs re-check the code.
         const probeErr = (liar && liar.error) || (hot && hot.error)
           || (cham && cham.error) || (mafia && mafia.error);
         if (probeErr) {
           console.warn('[Huddle] join-by-code probe error:', probeErr);
-          setJoinCodeStatus(t('joinCode.networkError'), 'error');
+          setStatus(t('joinCode.networkError'), 'error');
           return;
         }
         let game = null;
@@ -447,7 +446,7 @@
         else if (cham.data && cham.data.code === code) game = 'chameleon';
         else if (mafia.data && mafia.data.code === code) game = 'mafia';
         if (!game) {
-          setJoinCodeStatus(t('joinCode.notFound'), 'error');
+          setStatus(t('joinCode.notFound'), 'error');
           return;
         }
         // Cache the code so the matching lobby's auto-load path picks it up
@@ -458,26 +457,226 @@
           else if (game === 'mafia')    huddlePersistLastRoom('mafia',code);
         } catch(e){}
         // Set URL BEFORE opening the lobby so the lobby's URL reader picks up
-        // THIS code (not a stale one from a previous game session). Mirrors
-        // the inviteAccept flow at line 7572.
+        // THIS code (not a stale one from a previous session).
         try {
           const url = '/?room=' + encodeURIComponent(code) + '&game=' + encodeURIComponent(game);
           history.replaceState(history.state || {}, '', url);
         } catch(e){}
-        closeJoinCodeSheet();
+        // Step 2: persist the guest's typed name into THIS room (stored server-side
+        // keyed by the caller's own uid) so every player sees it on the guest's
+        // seat. Also enforces no-duplicate names — on a clash the server returns
+        // 'name_taken' and we make the user pick another instead of joining.
+        const gname = (sessionStorage.getItem('huddle.guestName') || '').trim();
+        if (gname) {
+          const tableForGame = { liar:'liar_rooms', hotseat:'hotseat_rooms', chameleon:'chameleon_rooms', mafia:'mafia_rooms' };
+          const nameRes = await huddleCallRPC('huddle_set_guest_name', { p_table: tableForGame[game], p_code: code, p_name: gname.slice(0, 24) });
+          const nameErr = nameRes && nameRes.error;
+          if (nameErr && /name_taken/.test(String((nameErr.message) || '') + String((nameErr.code) || ''))) {
+            setStatus(t('login.nameTaken'), 'error');
+            const nm = document.getElementById('login-guest-name');
+            if (nm) { try { nm.focus(); if (nm.select) nm.select(); } catch(_){} }
+            return; // abort the join — they need a different name
+          }
+          // Other (transient) errors don't block joining — they'd just be
+          // nameless, which is recoverable; log and continue.
+          if (nameErr) console.warn('[Huddle] set guest name failed:', nameErr);
+        }
+        if (opts.onMatch) opts.onMatch(game, code);
         if (game === 'liar')          openLiarLobby();
         else if (game === 'hotseat')  openLobby();
         else if (game === 'chameleon') openChamLobby();
         else if (game === 'mafia')    openMafiaLobby();
       } catch(e) {
-        // Distinguish "the server hung up / no internet" from "code wasn't
-        // in any table". Same red status row, different copy.
-        const isTimeout = e && e.message === '__timeout__';
         console.warn('[Huddle] join-by-code probe failed:', e);
-        setJoinCodeStatus(t(isTimeout ? 'joinCode.networkError' : 'joinCode.networkError'), 'error');
+        setStatus(t('joinCode.networkError'), 'error');
       } finally {
         if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); }
       }
+    }
+
+    // Games-tab sheet entry point — same behaviour as before, now delegating to
+    // the shared core so the login screen can reuse the exact same routing.
+    async function attemptJoinByCode(){
+      const input = document.getElementById('join-code-input');
+      if (!input) return;
+      const btn = document.querySelector('#join-code-backdrop .btn-primary');
+      await huddleJoinByCodeCore(input.value, {
+        setStatus: setJoinCodeStatus,
+        btn: btn,
+        onEmpty: function(){ try { input.focus(); } catch(_){} },
+        onMatch: function(){ closeJoinCodeSheet(); },
+      });
+    }
+
+    // ---------- Login-screen guest join (name + room code, no Google login) ----------
+    function setLoginJoinStatus(text, kind){
+      const el = document.getElementById('login-join-status');
+      if (!el) return;
+      el.textContent = text || '';
+      el.className = 'login-status' + (kind ? ' ' + kind : '');
+    }
+
+    // ---------- Guest name prompt (scanned-QR / shared-link joins) ----------
+    // Shown when a guest arrives via a room link with no name yet, so they never
+    // join as "...". Ensures a non-empty, room-unique name is stored before they
+    // take a seat. Resolves true once a name is accepted, false if they back out.
+    let _guestNameCtx = null;
+    function huddleSetGuestNameStatus(text, kind){
+      const el = document.getElementById('guest-name-status');
+      if (!el) return;
+      el.textContent = text || '';
+      el.className = 'login-status' + (kind ? ' ' + kind : '');
+    }
+    function huddleAskGuestNameForRoom(table, code){
+      return new Promise(async (resolve) => {
+        // Need an (anonymous) session so the name-write RPC is authenticated.
+        try { if (typeof liarBootstrap === 'function') await liarBootstrap(); } catch(e){}
+        let prefill = '';
+        try { prefill = (sessionStorage.getItem('huddle.guestName') || '').trim(); } catch(e){}
+        _guestNameCtx = { table: table, code: code, resolve: resolve };
+        const bd = document.getElementById('guest-name-backdrop');
+        const input = document.getElementById('guest-name-input');
+        if (input) input.value = prefill;
+        huddleSetGuestNameStatus('', '');
+        if (bd) bd.classList.add('active');
+        setTimeout(() => { try { if (input) input.focus(); } catch(e){} }, 80);
+      });
+    }
+    async function huddleGuestNameSubmit(){
+      if (!_guestNameCtx) return;
+      const input = document.getElementById('guest-name-input');
+      const val = ((input && input.value) || '').trim().slice(0, 24);
+      if (!val) {
+        huddleSetGuestNameStatus(t('login.needName'), 'error');
+        if (input) { try { input.focus(); } catch(e){} }
+        return;
+      }
+      const btn = document.querySelector('#guest-name-backdrop .btn-primary');
+      if (btn) btn.disabled = true;
+      const res = await huddleCallRPC('huddle_set_guest_name', { p_table: _guestNameCtx.table, p_code: _guestNameCtx.code, p_name: val });
+      if (btn) btn.disabled = false;
+      const err = res && res.error;
+      if (err && /name_taken/.test(String((err.message) || '') + String((err.code) || ''))) {
+        huddleSetGuestNameStatus(t('login.nameTaken'), 'error');
+        if (input) { try { input.focus(); if (input.select) input.select(); } catch(e){} }
+        return;
+      }
+      if (err) {
+        // Transient (e.g. network) — let them retry rather than join nameless.
+        huddleSetGuestNameStatus(t('joinCode.networkError'), 'error');
+        return;
+      }
+      try { sessionStorage.setItem('huddle.guestName', val); } catch(e){}
+      huddleFinishNameModal(true);
+    }
+    function huddleFinishNameModal(ok){
+      const bd = document.getElementById('guest-name-backdrop');
+      if (bd) bd.classList.remove('active');
+      const ctx = _guestNameCtx;
+      _guestNameCtx = null;
+      if (ctx && ctx.resolve) ctx.resolve(!!ok);
+    }
+    function huddleCancelNameModal(){ huddleFinishNameModal(false); }
+    async function huddleLandingJoin(){
+      const codeEl = document.getElementById('login-join-code');
+      if (!codeEl) return;
+      const nameEl = document.getElementById('login-guest-name');
+      const btn = document.getElementById('login-join-btn');
+      // A name is required to join — no nameless "..." seats.
+      const nameVal = ((nameEl && nameEl.value) || '').trim();
+      if (!nameVal) {
+        setLoginJoinStatus(t('login.needName'), 'error');
+        if (nameEl) { try { nameEl.focus(); } catch(_){} }
+        return;
+      }
+      try { sessionStorage.setItem('huddle.guestName', nameVal.slice(0, 24)); } catch(e){}
+      // A fresh guest on the login screen has no session yet, and the seat-claim
+      // RPC requires one. Establish the anonymous session up front (the lobby
+      // bootstraps too, but doing it here keeps the very first join reliable).
+      try { if (typeof liarBootstrap === 'function') await liarBootstrap(); } catch(e){}
+      await huddleJoinByCodeCore(codeEl.value, {
+        setStatus: setLoginJoinStatus,
+        btn: btn,
+        onEmpty: function(){ try { codeEl.focus(); } catch(_){} },
+      });
+    }
+    // ---------- In-app QR scanner (Step 3 — nimiq/qr-scanner) ----------
+    let _qrScanner = null;
+    function huddleLandingScanQr(){
+      // A name is required before joining by any method, including scanning.
+      const nameEl = document.getElementById('login-guest-name');
+      if (!((nameEl && nameEl.value) || '').trim()) {
+        setLoginJoinStatus(t('login.needName'), 'error');
+        if (nameEl) { try { nameEl.focus(); } catch(e){} }
+        return;
+      }
+      // Library didn't load (offline / CDN blocked) → fall back to typing.
+      if (typeof QrScanner === 'undefined') {
+        setLoginJoinStatus(t('login.scanUnavailable'), 'error');
+        const codeEl = document.getElementById('login-join-code');
+        if (codeEl) { try { codeEl.focus(); } catch(e){} }
+        return;
+      }
+      huddleStartScanQr();
+    }
+    async function huddleStartScanQr(){
+      const backdrop = document.getElementById('qr-scan-backdrop');
+      const video = document.getElementById('qr-scan-video');
+      const hint = document.getElementById('qr-scan-hint');
+      if (!backdrop || !video) return;
+      backdrop.classList.add('active');
+      backdrop.setAttribute('aria-hidden', 'false');
+      if (hint) hint.textContent = t('login.scanHint');
+      try {
+        _qrScanner = new QrScanner(video, function(result){ huddleOnQrDecoded(result); }, {
+          preferredCamera: 'environment',
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+          returnDetailedScanResult: true,
+          maxScansPerSecond: 5,
+        });
+        await _qrScanner.start();
+      } catch(e){
+        // Most common on phones: camera denied, or opened inside an in-app
+        // browser (Instagram/WhatsApp) that forbids the camera. Fall back to
+        // the code field rather than leaving the user stuck on a black screen.
+        console.warn('[Huddle] QR camera failed to start:', e);
+        if (hint) hint.textContent = t('login.scanNoCamera');
+        setTimeout(function(){
+          huddleStopScanQr();
+          setLoginJoinStatus(t('login.scanNoCamera'), 'error');
+          const codeEl = document.getElementById('login-join-code');
+          if (codeEl) { try { codeEl.focus(); } catch(_){} }
+        }, 1600);
+      }
+    }
+    function huddleStopScanQr(){
+      try { if (_qrScanner) { _qrScanner.stop(); _qrScanner.destroy(); } } catch(e){}
+      _qrScanner = null;
+      const backdrop = document.getElementById('qr-scan-backdrop');
+      if (backdrop) { backdrop.classList.remove('active'); backdrop.setAttribute('aria-hidden', 'true'); }
+    }
+    function huddleOnQrDecoded(result){
+      const text = String((result && result.data != null) ? result.data : (result || ''));
+      let url;
+      try { url = new URL(text, window.location.origin); } catch(e){ return; } // not a URL → keep scanning
+      const ROOM_RE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
+      const GAMES = { liar:1, hotseat:1, chameleon:1, mafia:1 };
+      const room = (url.searchParams.get('room') || '').toUpperCase();
+      const game = url.searchParams.get('game') || '';
+      // Security: only accept OUR OWN room links — never navigate to an
+      // arbitrary URL a malicious QR might encode.
+      if (url.origin !== window.location.origin || !ROOM_RE.test(room) || !GAMES[game]) {
+        const hint = document.getElementById('qr-scan-hint');
+        if (hint) hint.textContent = t('login.scanNotRoom');
+        return; // keep scanning
+      }
+      // Valid Roundlly room QR → close the camera, drop the code into the field,
+      // and run the SAME join path so the guest's typed name is still saved.
+      huddleStopScanQr();
+      const codeEl = document.getElementById('login-join-code');
+      if (codeEl) codeEl.value = room;
+      huddleLandingJoin();
     }
 
     function handleLiarQrError(){
@@ -1879,19 +2078,37 @@
     // QR or opened a shared link — skip the login screen and jump directly into the
     // Liar's Cup lobby for that specific room.
     (function autoOpenFromRoomUrl(){
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('room');
-        const game = params.get('game');
-        if (code) {
-          setTimeout(() => {
-            if (game === 'hotseat')        openLobby();
-            else if (game === 'chameleon') openChamLobby();
-            else if (game === 'mafia')     openMafiaLobby();
-            else                           openLiarLobby(); // backwards compat: missing/liar game param
-          }, 0);
-        }
-      } catch(e){}
+      let params;
+      try { params = new URLSearchParams(window.location.search); } catch(e){ return; }
+      const code = params.get('room');
+      const game = params.get('game');
+      if (!code) return;
+      const openFn = () => {
+        if (game === 'hotseat')        openLobby();
+        else if (game === 'chameleon') openChamLobby();
+        else if (game === 'mafia')     openMafiaLobby();
+        else                           openLiarLobby(); // backwards compat: missing/liar game param
+      };
+      const tableForGame = { hotseat:'hotseat_rooms', chameleon:'chameleon_rooms', mafia:'mafia_rooms', liar:'liar_rooms' };
+      setTimeout(async () => {
+        try {
+          // Signed-in users already have a name → straight in. Guests (scanned a
+          // QR with their phone camera, or opened a shared link) must pick a name
+          // first so they never join as "..." — same name-required + no-duplicate
+          // rules as the start screen.
+          let signedIn = false;
+          try {
+            if (window.sb) {
+              const { data: { user } } = await window.sb.auth.getUser();
+              signedIn = !!(user && !user.is_anonymous);
+            }
+          } catch(e){}
+          if (signedIn) { openFn(); return; }
+          const ok = await huddleAskGuestNameForRoom(tableForGame[game] || 'liar_rooms', String(code).toUpperCase());
+          if (ok) openFn();
+          else if (typeof goTo === 'function') goTo('login');
+        } catch(e){ try { openFn(); } catch(_){} }
+      }, 0);
     })();
 
     // Twemoji is loaded with `defer` so it executes AFTER this inline script.
