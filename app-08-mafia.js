@@ -590,12 +590,16 @@
       if (_mafiaRoleFetchPromise) return _mafiaRoleFetchPromise;
       _mafiaRoleFetchPromise = (async () => {
         try {
-          const result = await huddleCallRPC('huddle_mafia_get_my_role', {
+          const res = await huddleCallRPC('huddle_mafia_get_my_role', {
             p_code: mafiaState.code,
           });
-          // RPC contract (from huddle_c2_mafia.sql):
+          // huddleCallRPC wraps the response as { data, error } — unwrap it.
+          // (Reads have no realtime fallback, so a missing unwrap silently
+          // leaves myRole null and "Reveal Role" never shows anything.)
+          // RPC payload contract (from huddle_c2_mafia.sql):
           //   { role: 'mafia'|'detective'|'doctor'|'villager',
           //     teammates: ['p3','p7'] }   // only populated for mafia
+          const result = res && res.data;
           if (result && result.role) {
             mafiaMe.myRole = result.role;
             mafiaMe.myTeammates = Array.isArray(result.teammates) ? result.teammates : [];
@@ -1026,9 +1030,12 @@
       const fetchForCode = mafiaState.code;
       _mafiaNarratorStateFetch = (async () => {
         try {
-          const result = await huddleCallRPC('huddle_mafia_get_narrator_state', {
+          const res = await huddleCallRPC('huddle_mafia_get_narrator_state', {
             p_code: fetchForCode,
           });
+          // huddleCallRPC wraps the response as { data, error } — unwrap it.
+          // (Without this the narrator roster is stuck on "Loading roles…".)
+          const result = res && res.data;
           // Stale guard: only commit the cache if the room code hasn't changed.
           if (result && result.roles && mafiaState.code === fetchForCode) {
             mafiaMe.narratorRoles = result.roles;
