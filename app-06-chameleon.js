@@ -206,7 +206,7 @@
     // ===== Chameleon multiplayer presence =====
     // Supabase Presence tracks every device subscribed to the room channel.
     // When a tab dies (OS kill, wifi drop, app switch-away), the WebSocket
-    // eventually drops and Supabase emits a `presence.leave`. A 5-second grace
+    // eventually drops and Supabase emits a `presence.leave`. A 60-second grace
     // timer covers legitimate refreshes (auth user ID is stable across reload).
     // After the grace expires, the lowest-connected peer fires
     // huddle_cham_handle_disconnect server-side, which does phase-aware cleanup

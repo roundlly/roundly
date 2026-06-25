@@ -143,7 +143,7 @@
     // Reliability beats browser events: `beforeunload`/`pagehide` don't fire on
     // mobile when the OS kills the browser, but the WebSocket eventually drops
     // and Supabase emits a `presence.leave` event (~1-2s for clean closes,
-    // ~30-60s for unclean drops like wifi loss). 5-second grace timer covers
+    // ~30-60s for unclean drops like wifi loss). 60-second grace timer covers
     // legitimate refreshes (auth user ID is stable across reload).
     let _liarPresentSessions = new Set(); // sessionIds currently connected
     let _liarLeaveGraceTimers = new Map(); // sessionId → grace timer id
@@ -189,7 +189,7 @@
       if (liarIsPlayerPresent(expectedActorId)) return false;
       return liarLowestSeatConnectedPlayer() === liarMe.myId;
     }
-    // After the 5s grace expires without a rejoin, treat the session as gone.
+    // After the 60s grace expires without a rejoin, treat the session as gone.
     // Only the lowest-connected peer fires the cleanup mutation — everyone
     // updates their _liarPresentSessions set, but only one peer writes to
     // Supabase so we avoid a thundering-herd on liarPersist().
