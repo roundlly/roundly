@@ -912,6 +912,12 @@
       // pulls the migrated state.)
       try { if (typeof chamWireSync === 'function') chamWireSync(); } catch(e){}
       try { if (typeof liarWireSync === 'function') liarWireSync(); } catch(e){}
+      // Mafia was missing here too: rebuild its channel so it re-keys presence
+      // on the new user id AND its reconcile-on-subscribe pulls the migrated
+      // state (incl. the now-migrated narratorUid from fix/03) — so the host's
+      // narrator dashboard recovers after an anon→Google sign-in without a
+      // manual refresh. No-op if not in a Mafia room (mafiaWireSync guards on code).
+      try { if (typeof mafiaWireSync === 'function') mafiaWireSync(); } catch(e){}
       try {
         const { data, error } = await window.sb
           .from('profiles')

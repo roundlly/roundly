@@ -27,6 +27,12 @@ See [`../PHASE4_FINDINGS.md`](../PHASE4_FINDINGS.md) for the full audit.
   Lobby still frees the seat. Idempotent (`CREATE OR REPLACE`), server-only. The client already
   stops calling it mid-game, so the app is safe until applied.
 
+- **Mafia narrator survives sign-in (later change):** also apply [`fix/03_migrate_narrator_uid.sql`](fix/03_migrate_narrator_uid.sql)
+  — `huddle_migrate_seat` now also moves `narratorUid` (not just `claimedBy` + `hostId`) when the
+  migrating session was the narrator. Without it, a host signing in with Google mid-lobby leaves
+  `narratorUid` on the dead anon id → the narrator dashboard is stuck on "Loading roles…" and
+  `start_game` mis-deals roles. Reproduced in `tmp/repro-mafia-signin.js`. Idempotent, server-only.
+
 - **To rebuild from scratch** (new project / disaster recovery): run `migrations/*.sql` in
   filename order, then `fix/00`.
 
@@ -38,6 +44,7 @@ db/
     00_drop_ambiguous_start_game.sql   the Phase 4 change to apply to prod
     01_add_guest_name_rpc.sql          adds huddle_set_guest_name (guest display names)
     02_mafia_disconnect_no_autoeliminate.sql  disconnect no longer auto-eliminates/ends a Mafia game
+    03_migrate_narrator_uid.sql        seat migration also moves narratorUid (host Google sign-in)
   migrations/                          ordered from-scratch build (reflects live)
     01_tables.sql                      tables, indexes, triggers, realtime publication
     02_helpers.sql                     is_claimant / asserts / time / shuffle / is_admin / trigger fns
