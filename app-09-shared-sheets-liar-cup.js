@@ -2092,19 +2092,27 @@
       const tableForGame = { hotseat:'hotseat_rooms', chameleon:'chameleon_rooms', mafia:'mafia_rooms', liar:'liar_rooms' };
       setTimeout(async () => {
         try {
-          // Signed-in users already have a name → straight in. Guests (scanned a
-          // QR with their phone camera, or opened a shared link) must pick a name
-          // first so they never join as "..." — same name-required + no-duplicate
-          // rules as the start screen.
-          let signedIn = false;
+          const tbl = tableForGame[game] || 'liar_rooms';
+          const upperCode = String(code).toUpperCase();
+          let user = null;
+          try { if (window.sb) { const r = await window.sb.auth.getUser(); user = r && r.data && r.data.user; } } catch(e){}
+          // Signed-in users already have a name → straight in.
+          if (user && !user.is_anonymous) { openFn(); return; }
+          // RECONNECT: an anonymous user who ALREADY holds a seat in this room is
+          // RETURNING (refresh / phone lock / reopen mid-game), not joining fresh.
+          // Send them straight back into their seat — do NOT re-prompt for a name
+          // (that name sheet was blocking every Mafia reconnect). Only a truly new
+          // guest (no seat yet) gets the name-required + no-duplicate prompt.
           try {
-            if (window.sb) {
-              const { data: { user } } = await window.sb.auth.getUser();
-              signedIn = !!(user && !user.is_anonymous);
+            if (user && user.id && window.sb) {
+              const { data: row } = await window.sb.from(tbl).select('state').eq('code', upperCode).maybeSingle();
+              const cb = row && row.state && row.state.claimedBy;
+              if (cb && Object.values(cb).indexOf(user.id) !== -1) { openFn(); return; }
             }
           } catch(e){}
-          if (signedIn) { openFn(); return; }
-          const ok = await huddleAskGuestNameForRoom(tableForGame[game] || 'liar_rooms', String(code).toUpperCase());
+          // Fresh guest join (scanned a QR / opened a shared link, no seat yet) →
+          // pick a name first so they never join as "..." (same rules as the start screen).
+          const ok = await huddleAskGuestNameForRoom(tbl, upperCode);
           if (ok) openFn();
           else if (typeof goTo === 'function') goTo('login');
         } catch(e){ try { openFn(); } catch(_){} }

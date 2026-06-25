@@ -662,12 +662,52 @@
       mafiaCardsHasSeenDay = false;
     }
 
+    // The narrator dashboard's "who's out" + Night/Day are tracked locally (the
+    // narrator is the source of truth). Without persistence, a refresh / phone
+    // reopen mid-game loses them and the dashboard shows a "Game ended" overlay
+    // (stranding the narrator). Persist per-room so a reconnect restores exactly
+    // where they were. Cleared on End game.
+    function mafiaCardsNarratorStateKey(){ return (mafiaState && mafiaState.code) ? ('huddle.mafia.narr.' + mafiaState.code) : null; }
+    function mafiaCardsPersistNarratorLocalState(){
+      const key = mafiaCardsNarratorStateKey();
+      if (!key) return;
+      try {
+        localStorage.setItem(key, JSON.stringify({
+          dead: Array.from(mafiaCardsDeadPlayers),
+          phase: mafiaCardsLocalPhase,
+          seenDay: mafiaCardsHasSeenDay,
+        }));
+      } catch(e){}
+    }
+    function mafiaCardsRestoreNarratorLocalState(){
+      const key = mafiaCardsNarratorStateKey();
+      if (!key) return false;
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return false;
+        const saved = JSON.parse(raw);
+        if (!saved) return false;
+        mafiaCardsDeadPlayers.clear();
+        (Array.isArray(saved.dead) ? saved.dead : []).forEach(s => mafiaCardsDeadPlayers.add(s));
+        if (saved.phase === 'day' || saved.phase === 'night') mafiaCardsLocalPhase = saved.phase;
+        mafiaCardsHasSeenDay = !!saved.seenDay;
+        // We have authoritative local state for this game again → not "ended".
+        _mafiaCardsGameOwnedInThisTab = true;
+        return true;
+      } catch(e){ return false; }
+    }
+    function mafiaCardsClearNarratorLocalState(){
+      const key = mafiaCardsNarratorStateKey();
+      if (key) { try { localStorage.removeItem(key); } catch(e){} }
+    }
+
     function mafiaCardsTogglePhase(){
       mafiaCardsLocalPhase = (mafiaCardsLocalPhase === 'night') ? 'day' : 'night';
       // The first time the narrator flips to Day, we know the opening
       // night is done. Used by the script render to auto-collapse the
       // "READ ONCE" section and auto-expand the "EVERY ROUND" sections.
       if (mafiaCardsLocalPhase === 'day') mafiaCardsHasSeenDay = true;
+      mafiaCardsPersistNarratorLocalState();
       mafiaCardsRenderNarrator();
     }
 
@@ -678,6 +718,7 @@
       } else {
         mafiaCardsDeadPlayers.add(seatId);
       }
+      mafiaCardsPersistNarratorLocalState();
       mafiaCardsRenderNarrator();
     }
 
@@ -687,6 +728,9 @@
       // dead set, round progress). These are client-only so we can do them
       // before/regardless of the server call.
       mafiaCardsResetNarratorLocalState();
+      // Drop the persisted snapshot for this room — the game is over, a reload
+      // should NOT resurrect the old dashboard.
+      mafiaCardsClearNarratorLocalState();
       // Clear the narrator's role-map cache so the next start_game re-fetches.
       mafiaMe.narratorRoles = null;
       mafiaMe.myRole = null;
@@ -838,11 +882,18 @@
     }
 
     function mafiaCardsRenderNarrator(){
+      // Reconnect: if this tab didn't observe the lobby→active transition
+      // (refresh / phone reopen mid-game), try to restore the narrator's saved
+      // local state (dead set, Night/Day) for this room so the dashboard resumes
+      // instead of stranding them on the "Game ended" overlay below.
+      if (!_mafiaCardsGameOwnedInThisTab && mafiaState && mafiaState.phase && mafiaState.phase !== 'lobby') {
+        mafiaCardsRestoreNarratorLocalState();
+      }
       // "Game ended" guard — if this tab missed the lobby → active
-      // transition, the in-memory dashboard state (phase pill, dead set,
-      // round progress) is gone. Show the ended overlay and hide the
-      // dashboard panels so the narrator doesn't act on stale defaults.
-      // The End game button stays visible — it's the only way out.
+      // transition AND nothing was restorable, the in-memory dashboard state
+      // (phase pill, dead set, round progress) is gone. Show the ended overlay
+      // and hide the dashboard panels so the narrator doesn't act on stale
+      // defaults. The End game button stays visible — it's the only way out.
       const endedOverlay = document.getElementById('mafia-cards-ended-overlay');
       const _isLost = !_mafiaCardsGameOwnedInThisTab
                       && (mafiaState && mafiaState.phase && mafiaState.phase !== 'lobby');
@@ -855,6 +906,9 @@
         if (el) el.style.display = _isLost ? 'none' : '';
       });
       if (_isLost) return; // skip dashboard work — overlay is the whole UI
+      // Snapshot the current local dashboard state so a refresh / phone reopen
+      // can resume exactly here instead of hitting the "Game ended" overlay.
+      mafiaCardsPersistNarratorLocalState();
 
       // Phase pill
       const phaseEmoji = document.getElementById('mafia-cards-narrator-phase-emoji');
