@@ -1104,9 +1104,13 @@
       'splash':1, 'play':1, 'result':1,
       'cham-splash':1, 'cham-play':1, 'cham-vote':1, 'cham-result':1,
       'liar-play':1,
-      // Mafia screens that carry ?room=&game=. Lobby + (future) in-game screens.
-      'mafia-lobby':1, 'mafia-role':1, 'mafia-narrator':1, 'mafia-vote':1,
-      'mafia-out':1, 'mafia-result':1,
+      // Mafia (Cards mode) screens that carry ?room=&game= so a refresh / phone
+      // reopen RESTORES the game instead of dropping the user on the Games tab.
+      // mafia-cards-game = narrator dashboard, mafia-cards-role = player card.
+      'mafia-lobby':1, 'mafia-cards-game':1, 'mafia-cards-role':1,
+      // Legacy classic-mode screens (engine removed; kept harmless in case any
+      // stale path still routes to them).
+      'mafia-role':1, 'mafia-narrator':1, 'mafia-vote':1, 'mafia-out':1, 'mafia-result':1,
     };
 
     function goTo(screen) {
