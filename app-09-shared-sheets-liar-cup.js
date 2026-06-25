@@ -2083,12 +2083,15 @@
       const code = params.get('room');
       const game = params.get('game');
       if (!code) return;
+      // Returns the open promise so callers can await routing before revealing.
       const openFn = () => {
-        if (game === 'hotseat')        openLobby();
-        else if (game === 'chameleon') openChamLobby();
-        else if (game === 'mafia')     openMafiaLobby();
-        else                           openLiarLobby(); // backwards compat: missing/liar game param
+        if (game === 'hotseat')        return openLobby();
+        else if (game === 'chameleon') return openChamLobby();
+        else if (game === 'mafia')     return openMafiaLobby();
+        else                           return openLiarLobby(); // backwards compat: missing/liar game param
       };
+      // Drop the boot reconnect veil (see index.html). Idempotent.
+      const hideVeil = () => { try { document.documentElement.removeAttribute('data-reconnecting'); } catch(e){} };
       const tableForGame = { hotseat:'hotseat_rooms', chameleon:'chameleon_rooms', mafia:'mafia_rooms', liar:'liar_rooms' };
       setTimeout(async () => {
         try {
@@ -2096,8 +2099,9 @@
           const upperCode = String(code).toUpperCase();
           let user = null;
           try { if (window.sb) { const r = await window.sb.auth.getUser(); user = r && r.data && r.data.user; } } catch(e){}
-          // Signed-in users already have a name → straight in.
-          if (user && !user.is_anonymous) { openFn(); return; }
+          // Signed-in users already have a name → straight in. (await so the veil
+          // only lifts once we've routed to the right screen — no lobby flash.)
+          if (user && !user.is_anonymous) { await openFn(); return; }
           // RECONNECT: an anonymous user who ALREADY holds a seat in this room is
           // RETURNING (refresh / phone lock / reopen mid-game), not joining fresh.
           // Send them straight back into their seat — do NOT re-prompt for a name
@@ -2107,15 +2111,18 @@
             if (user && user.id && window.sb) {
               const { data: row } = await window.sb.from(tbl).select('state').eq('code', upperCode).maybeSingle();
               const cb = row && row.state && row.state.claimedBy;
-              if (cb && Object.values(cb).indexOf(user.id) !== -1) { openFn(); return; }
+              if (cb && Object.values(cb).indexOf(user.id) !== -1) { await openFn(); return; }
             }
           } catch(e){}
           // Fresh guest join (scanned a QR / opened a shared link, no seat yet) →
-          // pick a name first so they never join as "..." (same rules as the start screen).
+          // drop the veil so the name sheet is visible, then pick a name first so
+          // they never join as "..." (same rules as the start screen).
+          hideVeil();
           const ok = await huddleAskGuestNameForRoom(tbl, upperCode);
-          if (ok) openFn();
+          if (ok) await openFn();
           else if (typeof goTo === 'function') goTo('login');
-        } catch(e){ try { openFn(); } catch(_){} }
+        } catch(e){ try { await openFn(); } catch(_){} }
+        finally { hideVeil(); }
       }, 0);
     })();
 

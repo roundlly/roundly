@@ -40,6 +40,7 @@ async function snapshot(page){
       rosterText: roster ? roster.textContent.trim().slice(0,40) : null,
       myId: (typeof mafiaMe!=='undefined') ? mafiaMe.myId : '?',
       phase: (typeof mafiaState!=='undefined') ? mafiaState.phase : '?',
+      veilStillUp: document.documentElement.hasAttribute('data-reconnecting'),
     };
   });
 }

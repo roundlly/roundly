@@ -184,6 +184,11 @@
             else if (game === 'chameleon')  bootScreen = 'cham-lobby';
             else if (game === 'mafia')      bootScreen = 'mafia-lobby';
             else                            bootScreen = 'liar-lobby'; // default + back-compat for legacy URLs (no &game= param)
+            // Reconnecting into a room from the URL: show a loading veil so the
+            // user never sees the lobby flash before the app loads the room and
+            // routes to the correct in-game screen. Hidden by autoOpenFromRoomUrl
+            // once routing completes (+ a safety timeout below). Covers ALL games.
+            document.documentElement.setAttribute('data-reconnecting', '1');
           }
         } catch(e) {}
 
@@ -222,6 +227,8 @@
         if (bootScreen) {
           document.documentElement.setAttribute('data-boot-screen', bootScreen);
         }
+        // Safety net: never let the reconnect veil get stuck if routing fails.
+        try { setTimeout(function(){ document.documentElement.removeAttribute('data-reconnecting'); }, 6000); } catch(e){}
       } catch(e) {}
     })();
   </script>
@@ -229,6 +236,15 @@
 </head>
 <body>
   <div class="app">
+
+    <!-- ============ RECONNECT VEIL ============
+         Covers the screen during a ?room= refresh / phone-reopen while the app
+         loads the room and routes to the correct in-game screen, so the user
+         never sees the lobby flash first. Shown via html[data-reconnecting]
+         (set by the boot script), hidden by autoOpenFromRoomUrl once routed.
+         Works for every game. -->
+    <div id="huddle-reconnect-veil" aria-hidden="true"><div class="huddle-reconnect-spinner"></div></div>
+
 
     <!-- ============ OFFLINE BANNER (top-of-screen, persistent) ============
          Surfaces when navigator.onLine flips to false. Neutral copy

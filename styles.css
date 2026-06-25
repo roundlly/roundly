@@ -78,6 +78,22 @@
     html[data-boot-screen="liar-lobby"] #screen-login{display:none}
     html[data-boot-screen="liar-lobby"] #screen-liar-lobby{display:flex}
 
+    /* Reconnect veil — covers the screen during a ?room= refresh / phone reopen
+       so the lobby never flashes before the app routes to the right in-game
+       screen. Shown by the boot script (html[data-reconnecting]); hidden by
+       autoOpenFromRoomUrl once routing completes. Universal across all games. */
+    #huddle-reconnect-veil{display:none}
+    html[data-reconnecting] #huddle-reconnect-veil{
+      display:flex;position:fixed;inset:0;z-index:9999;
+      align-items:center;justify-content:center;background:var(--bg,#fff);
+    }
+    .huddle-reconnect-spinner{
+      width:34px;height:34px;border-radius:50%;
+      border:3px solid var(--border,#e5e7eb);border-top-color:var(--text,#111827);
+      animation:huddleReconnectSpin .8s linear infinite;
+    }
+    @keyframes huddleReconnectSpin{to{transform:rotate(360deg)}}
+
     .header{position:sticky;top:0;z-index:10;height:var(--header-h);background:var(--bg);
       border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 8px;gap:8px}
     .header-title{font-size:17px;font-weight:600;letter-spacing:-.01em;flex:1;text-align:left;padding-left:8px}
