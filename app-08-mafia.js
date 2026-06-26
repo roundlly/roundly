@@ -629,8 +629,13 @@
     // Local-only state. Reset when a new Mafia Cards game starts (see
     // mafiaStartGame). Never written to SQL — the narrator IS the source
     // of truth at the table.
-    let mafiaCardsLocalPhase = 'night';            // 'night' | 'day'
-    const mafiaCardsDeadPlayers = new Set();       // seatIds marked dead by narrator
+    // Teleprompter state. The narrator is always on exactly one beat of the
+    // game; the screen shows only that beat's lines. 'opening' is the one-time
+    // setup / meet night, then night ↔ day loop. Round drives friendly
+    // headings ("Night 2"). Local-only (the narrator is the source of truth
+    // at the table) and persisted per-room so a refresh resumes in place.
+    let mafiaCardsStage = 'opening';               // 'opening' | 'night' | 'day'
+    let mafiaCardsRound = 0;                        // 0 during opening; 1+ once the loop starts
 
     // True once THIS tab observed the game transition from lobby → active
     // (either because the user started the game here, or because realtime
@@ -655,14 +660,11 @@
     }
 
     function mafiaCardsResetNarratorLocalState(){
-      mafiaCardsLocalPhase = 'night';
-      mafiaCardsDeadPlayers.clear();
+      mafiaCardsStage = 'opening';
+      mafiaCardsRound = 0;
       // Reset every player's local reveal state too — a new game means
       // their role is hidden again until they tap Reveal Role.
       mafiaCardsRoleRevealed = false;
-      // Reset round-progress signal so the script panel defaults back to
-      // "opening expanded, every-round collapsed" for the new game.
-      mafiaCardsHasSeenDay = false;
     }
 
     // The narrator dashboard's "who's out" + Night/Day are tracked locally (the
@@ -676,9 +678,8 @@
       if (!key) return;
       try {
         localStorage.setItem(key, JSON.stringify({
-          dead: Array.from(mafiaCardsDeadPlayers),
-          phase: mafiaCardsLocalPhase,
-          seenDay: mafiaCardsHasSeenDay,
+          stage: mafiaCardsStage,
+          round: mafiaCardsRound,
         }));
       } catch(e){}
     }
@@ -690,10 +691,10 @@
         if (!raw) return false;
         const saved = JSON.parse(raw);
         if (!saved) return false;
-        mafiaCardsDeadPlayers.clear();
-        (Array.isArray(saved.dead) ? saved.dead : []).forEach(s => mafiaCardsDeadPlayers.add(s));
-        if (saved.phase === 'day' || saved.phase === 'night') mafiaCardsLocalPhase = saved.phase;
-        mafiaCardsHasSeenDay = !!saved.seenDay;
+        if (saved.stage === 'opening' || saved.stage === 'night' || saved.stage === 'day') {
+          mafiaCardsStage = saved.stage;
+        }
+        mafiaCardsRound = (typeof saved.round === 'number' && saved.round >= 0) ? saved.round : 0;
         // We have authoritative local state for this game again → not "ended".
         _mafiaCardsGameOwnedInThisTab = true;
         return true;
@@ -704,22 +705,17 @@
       if (key) { try { localStorage.removeItem(key); } catch(e){} }
     }
 
-    function mafiaCardsTogglePhase(){
-      mafiaCardsLocalPhase = (mafiaCardsLocalPhase === 'night') ? 'day' : 'night';
-      // The first time the narrator flips to Day, we know the opening
-      // night is done. Used by the script render to auto-collapse the
-      // "READ ONCE" section and auto-expand the "EVERY ROUND" sections.
-      if (mafiaCardsLocalPhase === 'day') mafiaCardsHasSeenDay = true;
-      mafiaCardsPersistNarratorLocalState();
-      mafiaCardsRenderNarrator();
-    }
-
-    function mafiaCardsToggleDead(seatId){
-      if (!seatId) return;
-      if (mafiaCardsDeadPlayers.has(seatId)) {
-        mafiaCardsDeadPlayers.delete(seatId);
+    // Advance to the next beat. This single forward action replaces the old
+    // Night/Day toggle — opening → night 1 → day 1 → night 2 → day 2 → …
+    function mafiaCardsAdvance(){
+      if (mafiaCardsStage === 'opening') {
+        mafiaCardsStage = 'night';
+        mafiaCardsRound = 1;
+      } else if (mafiaCardsStage === 'night') {
+        mafiaCardsStage = 'day';
       } else {
-        mafiaCardsDeadPlayers.add(seatId);
+        mafiaCardsStage = 'night';
+        mafiaCardsRound += 1;
       }
       mafiaCardsPersistNarratorLocalState();
       mafiaCardsRenderNarrator();
@@ -753,246 +749,246 @@
       mafiaRerender();
     }
 
-    // Reference-script content. Each section is a NESTED collapsible inside
-    // the "What do I say?" panel, with a "kind" label (READ ONCE / EVERY
-    // ROUND / ENDGAME) prominently displayed so the narrator can see at a
-    // glance which lines are one-time vs repeating. Defaults to open in
-    // round 1 (opening) or after round 1 (every-round + endgame) — see
-    // mafiaCardsHasSeenDay for the round-progress signal.
-    const MAFIA_CARDS_SCRIPT = [
-      {
-        id: 'opening',
-        titleKey: 'mafiaCards.script.openingTitle',
-        kindKey: 'mafiaCards.script.kindOnce',
-        defaultOpenWhen: 'round1',
-        lines: [
-          { key: 'mafia.script.opening.night1Open.text' },
-          { key: 'mafia.script.opening.night1MafiaMeet.text' },
-          { key: 'mafia.script.opening.night1MafiaSleep.text' },
-          { key: 'mafia.script.opening.day0Morning.text' },
-        ],
-      },
-      {
-        id: 'round-loop',
-        titleKey: 'mafiaCards.script.roundLoopTitle',
-        kindKey: 'mafiaCards.script.kindEveryRound',
-        defaultOpenWhen: 'afterRound1',
-        lines: [
-          { type: 'subheading', textKey: 'mafiaCards.script.subNight' },
-          { key: 'mafia.script.middle.nightOpen.text' },
-          { key: 'mafia.script.middle.mafiaWake.text' },
-          { key: 'mafia.script.middle.mafiaSleep.text' },
-          { key: 'mafia.script.middle.detectiveWake.text', hintKey: 'mafiaCards.script.detectiveHint', requiresRole: 'detective' },
-          { key: 'mafia.script.middle.leaderHint.text',     requiresRole: 'mafiaLeader' },
-          { key: 'mafia.script.middle.detectiveSleep.text', requiresRole: 'detective' },
-          { key: 'mafia.script.middle.doctorWake.text' },
-          { key: 'mafia.script.middle.doctorSleep.text' },
-          { key: 'mafia.script.middle.childNightDeath.text', requiresRole: 'child' },
-          { type: 'subheading', textKey: 'mafiaCards.script.subDay' },
-          { key: 'mafia.script.middle.dayReveal.text', hintKey: 'mafiaCards.script.dayRevealHint' },
-          { key: 'mafia.script.middle.dayDiscuss.text' },
-          { key: 'mafiaCards.script.voteCardsLine' },
-          { key: 'mafia.script.middle.childVoteDeath.text', requiresRole: 'child' },
-        ],
-      },
-      {
-        id: 'endgame',
-        titleKey: 'mafiaCards.script.endgameTitle',
-        kindKey: 'mafiaCards.script.kindEndgame',
-        defaultOpenWhen: 'never',
-        lines: [
-          { key: 'mafiaCards.script.endgameTownWins' },
-          { key: 'mafiaCards.script.endgameMafiaWins' },
-        ],
-      },
-    ];
+    // The narrator's script, grouped by the beat it belongs to. The screen
+    // shows ONLY the current beat (opening / night / day); the whole thing is
+    // also viewable via "See the whole script". Each line is something to SAY
+    // (key, shown big and quoted) and/or a stage direction to DO (hintKey,
+    // shown small and muted). requiresRole hides a line unless that optional
+    // role is in the game. endgame (win conditions) is reference-only.
+    const MAFIA_CARDS_SCRIPT = {
+      opening: [
+        { key: 'mafia.script.opening.night1Open.text',      hintKey: 'mafia.script.opening.night1Open.stageDir' },
+        { key: 'mafia.script.opening.night1MafiaMeet.text', hintKey: 'mafia.script.opening.night1MafiaMeet.stageDir' },
+        { key: 'mafia.script.opening.night1MafiaSleep.text' },
+        { key: 'mafia.script.opening.day0Morning.text' },
+      ],
+      night: [
+        { key: 'mafia.script.middle.nightOpen.text' },
+        { key: 'mafia.script.middle.mafiaWake.text',      hintKey: 'mafia.script.middle.mafiaWake.stageDir' },
+        { key: 'mafia.script.middle.mafiaSleep.text' },
+        { key: 'mafia.script.middle.detectiveWake.text',  hintKey: 'mafiaCards.script.detectiveHint', requiresRole: 'detective' },
+        { hintKey: 'mafia.script.middle.leaderHint.text', requiresRole: 'mafiaLeader' },
+        { key: 'mafia.script.middle.detectiveSleep.text', requiresRole: 'detective' },
+        { key: 'mafia.script.middle.doctorWake.text',     hintKey: 'mafia.script.middle.doctorWake.stageDir' },
+        { key: 'mafia.script.middle.doctorSleep.text' },
+        { hintKey: 'mafia.script.middle.childNightDeath.text', requiresRole: 'child' },
+      ],
+      day: [
+        { key: 'mafia.script.middle.dayReveal.text',  hintKey: 'mafiaCards.script.dayRevealHint' },
+        { key: 'mafia.script.middle.dayDiscuss.text' },
+        { key: 'mafiaCards.script.voteCardsLine' },
+        { hintKey: 'mafia.script.middle.childVoteDeath.text', requiresRole: 'child' },
+      ],
+      endgame: [
+        { key: 'mafiaCards.script.endgameTownWins' },
+        { key: 'mafiaCards.script.endgameMafiaWins' },
+      ],
+    };
 
-    // Narrator-only rules — three focused rules with detailed explanations.
-    // bodyKey can include <strong> tags for emphasis on key phrases.
+    // Role cheat-sheet meta (emoji + display name) for the "who's who" list
+    // inside the Rules sheet. Mafia Leader uses its OWN name so the narrator
+    // can spot them for the Godfather lie (thumbs-DOWN when investigated).
+    const MAFIA_CARDS_ROLE_META = {
+      mafia:        { emoji:'🔪',  nameKey:'mafia.rules.role.mafia.name' },
+      mafia_leader: { emoji:'🎩',  nameKey:'mafia.cheatSheet.mafiaLeader' },
+      doctor:       { emoji:'🩺',  nameKey:'mafia.rules.role.doctor.name' },
+      detective:    { emoji:'🕵️', nameKey:'mafia.rules.role.detective.name' },
+      child:        { emoji:'👶',  nameKey:'mafia.rules.role.child.name' },
+      villager:     { emoji:'👤',  nameKey:'mafia.rules.role.villager.name' },
+    };
+
+    // Narrator-only rules — three focused rules, each an emoji + title you tap
+    // open. r2 (the Detective) carries its Mafia-Leader exception as a separate
+    // highlighted callout so the longest rule still reads calmly.
     const MAFIA_CARDS_NARRATOR_RULES = [
-      { titleKey: 'mafiaCards.rules.r1.title', bodyKey: 'mafiaCards.rules.r1.body' },
-      { titleKey: 'mafiaCards.rules.r2.title', bodyKey: 'mafiaCards.rules.r2.body' },
-      { titleKey: 'mafiaCards.rules.r3.title', bodyKey: 'mafiaCards.rules.r3.body' },
+      { emoji: '👁',  titleKey: 'mafiaCards.rules.r1.title', bodyKey: 'mafiaCards.rules.r1.body' },
+      { emoji: '🕵️', titleKey: 'mafiaCards.rules.r2.title', bodyKey: 'mafiaCards.rules.r2.body', exceptionKey: 'mafiaCards.rules.r2.exception' },
+      { emoji: '⚖️', titleKey: 'mafiaCards.rules.r3.title', bodyKey: 'mafiaCards.rules.r3.body' },
     ];
 
-    // Tracks whether the narrator has flipped to Day at least once. Used to
-    // decide default open/closed state for script subsections: round 1 →
-    // opening expanded; round 2+ → every-round sections expanded, opening
-    // collapsed. Reset on every new game start.
-    let mafiaCardsHasSeenDay = false;
-
-    function mafiaCardsRenderRules(){
-      const list = document.getElementById('mafia-cards-rules-list');
-      if (!list) return;
-      list.innerHTML = MAFIA_CARDS_NARRATOR_RULES.map(r =>
-        '<li class="mafia-cards-rules-item">'
-          + '<div class="mafia-cards-rules-item-title">' + t(r.titleKey) + '</div>'
-          + '<div class="mafia-cards-rules-item-body">' + t(r.bodyKey) + '</div>'
-        + '</li>'
-      ).join('');
+    // ---- Script rendering (teleprompter + overview) ----
+    // A line shows if its optional-role gate passes (or it has no gate).
+    function mafiaCardsLineActive(line){
+      if (line.requiresRole === 'detective')   return mafiaIsDetectiveActive();
+      if (line.requiresRole === 'child')       return mafiaIsChildActive();
+      if (line.requiresRole === 'mafiaLeader') return mafiaIsLeaderActive();
+      return true;
+    }
+    // One script line → a SAY paragraph (big, quoted) and/or a DO note (muted).
+    function mafiaCardsRenderStageLine(line){
+      let html = '';
+      if (line.key)     html += '<p class="mafia-narr-say">' + t(line.key) + '</p>';
+      if (line.hintKey) html += '<p class="mafia-narr-do"><span class="mafia-narr-do-mark" aria-hidden="true">›</span>' + t(line.hintKey) + '</p>';
+      return '<div class="mafia-narr-line">' + html + '</div>';
     }
 
-    function mafiaCardsRenderScript(){
-      const body = document.getElementById('mafia-cards-script-body');
+    // Small chevron used on every tap-to-expand row.
+    const MAFIA_NARR_CHEVRON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>';
+
+    // ---- Who's who bottom sheet (the narrator's secret cheat sheet) ----
+    function mafiaCardsOpenWho(){
+      mafiaCardsRenderWhoSheet();
+      const bd = document.getElementById('mafia-cards-who-backdrop');
+      if (bd) bd.classList.add('active');
+    }
+    function mafiaCardsCloseWho(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'mafia-cards-who-backdrop') return;
+      const bd = document.getElementById('mafia-cards-who-backdrop');
+      if (bd) bd.classList.remove('active');
+    }
+    function mafiaCardsRenderWhoSheet(){
+      const body = document.getElementById('mafia-cards-who-sheet-body');
       if (!body) return;
-      const detectiveActive = mafiaIsDetectiveActive();
-      const childActive     = mafiaIsChildActive();
-      const leaderActive    = mafiaIsLeaderActive();
-      // Subheading lines always pass; cue lines are filtered by requiresRole.
-      const lineActive = (line) => {
-        if (line.type === 'subheading') return true;
-        if (line.requiresRole === 'detective')  return detectiveActive;
-        if (line.requiresRole === 'child')      return childActive;
-        if (line.requiresRole === 'mafiaLeader')return leaderActive;
-        return true;
-      };
-      // Decide default open state: opening is auto-collapsed once Day has
-      // been triggered at least once; every-round sections auto-open at
-      // that point. Narrator can manually override either way.
-      const inRound1 = !mafiaCardsHasSeenDay;
-      const shouldOpen = (section) => {
-        if (section.defaultOpenWhen === 'round1') return inRound1;
-        if (section.defaultOpenWhen === 'afterRound1') return !inRound1;
-        return false; // 'never' = always collapsed by default
-      };
-      const renderLine = (line) => {
-        if (line.type === 'subheading') {
-          return '<div class="mafia-cards-script-subheading">' + t(line.textKey) + '</div>';
-        }
-        return '<div class="mafia-cards-script-line">'
-          + t(line.key)
-          + (line.hintKey ? '<em>' + t(line.hintKey) + '</em>' : '')
-        + '</div>';
-      };
-      body.innerHTML = MAFIA_CARDS_SCRIPT.map(section => {
-        const activeLines = section.lines.filter(lineActive);
-        // If everything left is just subheadings (no real cues), skip the
-        // section entirely. Otherwise render.
-        const hasRealCues = activeLines.some(l => l.type !== 'subheading');
-        if (!hasRealCues) return '';
-        const openAttr = shouldOpen(section) ? ' open' : '';
-        return '<details class="mafia-cards-script-section"' + openAttr + '>'
-          + '<summary class="mafia-cards-script-section-summary">'
-          +   '<span class="mafia-cards-script-section-kind">' + t(section.kindKey) + '</span>'
-          +   '<span class="mafia-cards-script-section-title">' + t(section.titleKey) + '</span>'
-          +   '<span class="mafia-cards-script-section-chevron" aria-hidden="true">▾</span>'
-          + '</summary>'
-          + '<div class="mafia-cards-script-section-lines">'
-          +   activeLines.map(renderLine).join('')
-          + '</div>'
-        + '</details>';
-      }).join('');
+      // Roles are never shown to players — narrator-only. Needed to answer the
+      // Detective. Loads lazily if not cached. Sorted by name so the narrator
+      // can find the player the Detective pointed at fast.
+      let listHtml;
+      const roleMap = mafiaMe.narratorRoles;
+      if (!roleMap) {
+        listHtml = '<div class="mafia-narr-loading">' + t('mafiaCards.narrator.loadingRoles') + '</div>';
+        mafiaFetchNarratorState();
+      } else {
+        const seats = Object.keys(roleMap).slice().sort((a, b) =>
+          mafiaSeatNameFor(a).localeCompare(mafiaSeatNameFor(b)));
+        listHtml = '<div class="mafia-narr-who">' + seats.map(seatId => {
+          const meta = MAFIA_CARDS_ROLE_META[roleMap[seatId]] || MAFIA_CARDS_ROLE_META.villager;
+          return '<div class="mafia-narr-who-row">'
+            + '<span class="mafia-narr-who-name">' + huddleEscape(mafiaSeatNameFor(seatId)) + '</span>'
+            + '<span class="mafia-narr-who-emoji" aria-hidden="true">' + meta.emoji + '</span>'
+            + '<span class="mafia-narr-who-role">' + t(meta.nameKey) + '</span>'
+          + '</div>';
+        }).join('') + '</div>';
+      }
+      body.innerHTML = '<p class="mafia-narr-sheet-intro">' + t('mafiaCards.rules.whoSub') + '</p>' + listHtml;
+      // Prime real names ("Ahmed") instead of "Player 3".
+      mafiaPrimeClaimantProfiles();
+    }
+
+    // ---- Rules bottom sheet (tap-to-expand accordion, rules only) ----
+    function mafiaCardsOpenRules(){
+      mafiaCardsRenderRulesSheet();
+      const bd = document.getElementById('mafia-cards-rules-backdrop');
+      if (bd) bd.classList.add('active');
+    }
+    function mafiaCardsCloseRules(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'mafia-cards-rules-backdrop') return;
+      const bd = document.getElementById('mafia-cards-rules-backdrop');
+      if (bd) bd.classList.remove('active');
+    }
+    function mafiaCardsRenderRulesSheet(){
+      const body = document.getElementById('mafia-cards-rules-sheet-body');
+      if (!body) return;
+      body.innerHTML =
+        '<p class="mafia-narr-sheet-intro">' + t('mafiaCards.rules.intro') + '</p>'
+        + MAFIA_CARDS_NARRATOR_RULES.map(r =>
+          '<details class="mafia-narr-acc">'
+            + '<summary class="mafia-narr-acc-summary">'
+              + '<span class="mafia-narr-acc-emoji" aria-hidden="true">' + r.emoji + '</span>'
+              + '<span class="mafia-narr-acc-title">' + t(r.titleKey) + '</span>'
+              + '<span class="mafia-narr-acc-chev" aria-hidden="true">' + MAFIA_NARR_CHEVRON + '</span>'
+            + '</summary>'
+            + '<div class="mafia-narr-acc-body">'
+              + '<p class="mafia-narr-acc-p">' + t(r.bodyKey) + '</p>'
+              + (r.exceptionKey
+                  ? '<div class="mafia-narr-callout"><span class="mafia-narr-callout-icon" aria-hidden="true">⚠️</span>'
+                    + '<span class="mafia-narr-callout-text">' + t(r.exceptionKey) + '</span></div>'
+                  : '')
+            + '</div>'
+          + '</details>'
+        ).join('');
+    }
+
+    // ---- Whole-script overview bottom sheet ----
+    function mafiaCardsOpenOverview(){
+      mafiaCardsRenderOverviewSheet();
+      const bd = document.getElementById('mafia-cards-overview-backdrop');
+      if (bd) bd.classList.add('active');
+    }
+    function mafiaCardsCloseOverview(ev){
+      if (ev && ev.target && ev.target.id && ev.target.id !== 'mafia-cards-overview-backdrop') return;
+      const bd = document.getElementById('mafia-cards-overview-backdrop');
+      if (bd) bd.classList.remove('active');
+    }
+    function mafiaCardsRenderOverviewSheet(){
+      const body = document.getElementById('mafia-cards-overview-sheet-body');
+      if (!body) return;
+      const groups = [
+        { emoji: '🎬', headKey: 'mafiaCards.script.openingTitle', lines: MAFIA_CARDS_SCRIPT.opening },
+        { emoji: '🌙', headKey: 'mafiaCards.overview.nightHead',  lines: MAFIA_CARDS_SCRIPT.night },
+        { emoji: '☀️', headKey: 'mafiaCards.overview.dayHead',    lines: MAFIA_CARDS_SCRIPT.day },
+        { emoji: '🏆', headKey: 'mafiaCards.script.endgameTitle', lines: MAFIA_CARDS_SCRIPT.endgame },
+      ];
+      body.innerHTML =
+        '<p class="mafia-narr-sheet-intro">' + t('mafiaCards.overview.intro') + '</p>'
+        + groups.map(g => {
+          const linesHtml = g.lines.filter(mafiaCardsLineActive).map(mafiaCardsRenderStageLine).join('');
+          if (!linesHtml) return '';
+          return '<details class="mafia-narr-acc">'
+            + '<summary class="mafia-narr-acc-summary">'
+              + '<span class="mafia-narr-acc-emoji" aria-hidden="true">' + g.emoji + '</span>'
+              + '<span class="mafia-narr-acc-title">' + t(g.headKey) + '</span>'
+              + '<span class="mafia-narr-acc-chev" aria-hidden="true">' + MAFIA_NARR_CHEVRON + '</span>'
+            + '</summary>'
+            + '<div class="mafia-narr-acc-body"><div class="mafia-narr-lines mafia-narr-lines-compact">' + linesHtml + '</div></div>'
+          + '</details>';
+        }).join('');
     }
 
     function mafiaCardsRenderNarrator(){
       // Reconnect: if this tab didn't observe the lobby→active transition
       // (refresh / phone reopen mid-game), try to restore the narrator's saved
-      // local state (dead set, Night/Day) for this room so the dashboard resumes
+      // local state (stage + round) for this room so the screen resumes
       // instead of stranding them on the "Game ended" overlay below.
       if (!_mafiaCardsGameOwnedInThisTab && mafiaState && mafiaState.phase && mafiaState.phase !== 'lobby') {
         mafiaCardsRestoreNarratorLocalState();
       }
-      // "Game ended" guard — if this tab missed the lobby → active
-      // transition AND nothing was restorable, the in-memory dashboard state
-      // (phase pill, dead set, round progress) is gone. Show the ended overlay
-      // and hide the dashboard panels so the narrator doesn't act on stale
-      // defaults. The End game button stays visible — it's the only way out.
+      // "Game ended" guard — if this tab missed the lobby → active transition
+      // AND nothing was restorable, the in-memory state (stage, round) is gone.
+      // Show the ended overlay and hide the live screen so the narrator doesn't
+      // act on stale defaults. The End game button stays — it's the way out.
+      const live = document.getElementById('mafia-cards-live');
       const endedOverlay = document.getElementById('mafia-cards-ended-overlay');
       const _isLost = !_mafiaCardsGameOwnedInThisTab
                       && (mafiaState && mafiaState.phase && mafiaState.phase !== 'lobby');
       if (endedOverlay) endedOverlay.hidden = !_isLost;
-      ['mafia-cards-narrator-phase',
-       'mafia-cards-players-panel',
-       'mafia-cards-rules-panel',
-       'mafia-cards-script-details'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = _isLost ? 'none' : '';
-      });
-      if (_isLost) return; // skip dashboard work — overlay is the whole UI
-      // Snapshot the current local dashboard state so a refresh / phone reopen
-      // can resume exactly here instead of hitting the "Game ended" overlay.
+      if (live) live.style.display = _isLost ? 'none' : '';
+      if (_isLost) return; // skip render — overlay is the whole UI
+      // Snapshot current state so a refresh / phone reopen resumes exactly here.
       mafiaCardsPersistNarratorLocalState();
 
-      // Phase pill
-      const phaseEmoji = document.getElementById('mafia-cards-narrator-phase-emoji');
-      const phaseLabel = document.getElementById('mafia-cards-narrator-phase-label');
-      if (phaseEmoji && phaseLabel) {
-        const isNight = mafiaCardsLocalPhase === 'night';
-        phaseEmoji.textContent = isNight ? '🌙' : '☀️';
-        phaseLabel.textContent = t(isNight ? 'mafiaCards.narrator.phaseNight' : 'mafiaCards.narrator.phaseDay');
-        phaseLabel.setAttribute('data-i18n', isNight ? 'mafiaCards.narrator.phaseNight' : 'mafiaCards.narrator.phaseDay');
+      // Keep the role cheat sheet warm for the "who's who" peek (the Detective
+      // answer needs it). No roster on screen — we just ensure it's fetching.
+      if (!mafiaMe.narratorRoles) mafiaFetchNarratorState();
+
+      // Stage heading: emoji + friendly "where am I" label.
+      const stage = mafiaCardsStage;
+      const emojiEl = document.getElementById('mafia-cards-stage-emoji');
+      const phaseEl = document.getElementById('mafia-cards-stage-phase');
+      if (emojiEl) emojiEl.textContent = (stage === 'day') ? '☀️' : '🌙';
+      if (phaseEl) {
+        if (stage === 'opening')      phaseEl.textContent = t('mafiaCards.stage.openingTitle');
+        else if (stage === 'night')   phaseEl.textContent = t('mafiaCards.stage.nightTitle', { n: mafiaCardsRound });
+        else                          phaseEl.textContent = t('mafiaCards.stage.dayTitle',   { n: mafiaCardsRound });
       }
 
-      // Alive/out stats chip — uses the local dead set + the narrator's
-      // role map total to compute live counts. Hidden until roles load
-      // (no point showing "0 alive" during the brief fetch window).
-      const statsEl = document.getElementById('mafia-cards-narrator-stats');
-      if (statsEl) {
-        const allSeats = mafiaMe.narratorRoles ? Object.keys(mafiaMe.narratorRoles) : [];
-        if (allSeats.length === 0) {
-          statsEl.textContent = '';
-        } else {
-          const dead = allSeats.filter(s => mafiaCardsDeadPlayers.has(s)).length;
-          const alive = allSeats.length - dead;
-          statsEl.innerHTML = t('mafiaCards.narrator.statsAliveOut', {
-            alive: '<b>' + alive + '</b>',
-            out:   '<b>' + dead + '</b>',
-          });
-        }
+      // Stage lines — only the current beat, role-gated.
+      const linesEl = document.getElementById('mafia-cards-stage-lines');
+      if (linesEl) {
+        const lines = (MAFIA_CARDS_SCRIPT[stage] || []).filter(mafiaCardsLineActive);
+        linesEl.innerHTML = lines.map(mafiaCardsRenderStageLine).join('');
       }
 
-      // Roster
-      const roster = document.getElementById('mafia-cards-narrator-roster');
-      if (!roster) return;
-      const roleMap = mafiaMe.narratorRoles;
-      if (!roleMap) {
-        // Not loaded yet — show loading state and trigger a fetch.
-        roster.innerHTML = '<div class="mafia-cards-narrator-loading">' + t('mafiaCards.narrator.loadingRoles') + '</div>';
-        mafiaFetchNarratorState();
-        return;
+      // Forward button label — says what tapping Next will do next.
+      const nextLabel = document.getElementById('mafia-cards-next-label');
+      if (nextLabel) {
+        const key = (stage === 'opening') ? 'mafiaCards.stage.nextFirstNight'
+                  : (stage === 'night')   ? 'mafiaCards.stage.nextWakeTown'
+                  :                         'mafiaCards.stage.nextStartNight';
+        nextLabel.textContent = t(key);
       }
-      // Cheat-sheet labels. Mafia Leader uses its OWN name so the narrator
-      // can spot them at a glance — critical for the Godfather behavior
-      // (narrator must give thumbs-DOWN when the Detective investigates them).
-      const ROLE_META = {
-        mafia:        { emoji:'🔪',  nameKey:'mafia.rules.role.mafia.name' },
-        mafia_leader: { emoji:'🎩',  nameKey:'mafia.cheatSheet.mafiaLeader' },
-        doctor:       { emoji:'🩺',  nameKey:'mafia.rules.role.doctor.name' },
-        detective:    { emoji:'🕵️', nameKey:'mafia.rules.role.detective.name' },
-        child:        { emoji:'👶',  nameKey:'mafia.rules.role.child.name' },
-        villager:     { emoji:'👤',  nameKey:'mafia.rules.role.villager.name' },
-      };
-      const seats = Object.keys(roleMap).sort(); // p1, p2, ... — stable order
-      const _claimedBy = mafiaState.claimedBy || {};
-      const rows = seats.map(seatId => {
-        const role = roleMap[seatId];
-        const meta = ROLE_META[role] || ROLE_META.villager;
-        const isDead = mafiaCardsDeadPlayers.has(seatId);
-        // "Away": this seat's phone is currently disconnected (its session is
-        // not in our live presence set). We never auto-eliminate on a drop —
-        // we just flag it so the narrator can choose to wait or mark them out
-        // by hand. Skipped once the narrator has already marked them out.
-        const seatSid = _claimedBy[seatId];
-        const isAway = !isDead && !!seatSid && !mafiaIsSessionPresent(seatSid);
-        const name = mafiaSeatNameFor(seatId);
-        return '<button type="button" class="mafia-cards-narrator-row' + (isDead ? ' is-dead' : '') + (isAway ? ' is-away' : '') + '" onclick="mafiaCardsToggleDead(\'' + seatId + '\')"'
-          + (isAway ? ' title="' + huddleEscape(t('mafiaCards.narrator.awayHint')) + '"' : '') + '>'
-          + '<span class="mafia-cards-narrator-row-name">' + huddleEscape(name) + '</span>'
-          + (isAway ? '<span class="mafia-cards-narrator-row-away">' + t('mafiaCards.narrator.away') + '</span>' : '')
-          + '<span class="mafia-cards-narrator-row-emoji">' + meta.emoji + '</span>'
-          + '<span class="mafia-cards-narrator-row-role">' + t(meta.nameKey) + '</span>'
-          + '<span class="mafia-cards-narrator-row-mark" aria-hidden="true">✗</span>'
-        + '</button>';
-      }).join('');
-      roster.innerHTML = rows || '<div class="mafia-cards-narrator-loading">' + t('mafiaCards.narrator.loadingRoles') + '</div>';
 
-      // Narrator rules + reference script panels. Both render even when
-      // collapsed so the content is ready the moment the narrator opens
-      // the <details>.
-      mafiaCardsRenderRules();
-      mafiaCardsRenderScript();
-      // Prime the profiles cache so the cheat sheet shows real names
-      // ("Ahmed") instead of "Player 3". No-op in lab mode (synthetic UIDs).
+      // Prime profile names so "who's who" shows real names ("Ahmed") when the
+      // narrator opens Rules. No-op in lab mode (synthetic UIDs).
       mafiaPrimeClaimantProfiles();
     }
 

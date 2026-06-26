@@ -3766,199 +3766,129 @@
        Other phones don't need to know who's dead; their card just stays
        face-down. */
     .mafia-cards-narrator{
-      display:flex;flex-direction:column;gap:16px;padding-top:4px;
+      display:flex;flex-direction:column;gap:14px;padding-top:4px;min-height:100%;
     }
-    .mafia-cards-narrator-phase{
-      display:inline-flex;align-items:center;gap:10px;align-self:flex-start;
-      padding:8px 16px;border-radius:var(--radius-pill);
-      background:var(--bg-subtle);border:1.5px solid var(--text);
-      font-size:13px;font-weight:700;letter-spacing:.04em;color:var(--text);
-      cursor:pointer;font-family:inherit;
-      transition:background-color .12s ease;
-    }
-    .mafia-cards-narrator-phase:hover{background:var(--bg-hover)}
-    .mafia-cards-narrator-phase-emoji{font-size:18px;line-height:1}
-    /* Stats chip — lives inline in the Players panel summary now. */
-    .mafia-cards-narrator-stats{
-      margin-left:auto;
-      font-size:12px;color:var(--text-tertiary);font-weight:600;
-      letter-spacing:.01em;white-space:nowrap;
-    }
-    .mafia-cards-narrator-stats b{color:var(--text)}
-    /* When stats are present, the chevron sits right of them — bump its
-       margin-left to 0 so it doesn't push the stats away from the title. */
-    .mafia-cards-panel-summary .mafia-cards-narrator-stats + .mafia-cards-panel-summary-chevron{
-      margin-left:8px;
-    }
-    /* Players panel: roster lives directly inside, no extra padding. */
-    .mafia-cards-players-body{padding-top:10px}
-    .mafia-cards-narrator-roster{
-      display:flex;flex-direction:column;gap:6px;
+    #mafia-cards-live{display:flex;flex-direction:column;gap:14px}
+
+    /* Top toolbar — three equal buttons: Who's who · Rules · Script. The
+       whole screen below is the teleprompter; these are the reference taps. */
+    .mafia-narr-toolbar{display:flex;gap:8px}
+    .mafia-narr-tool{
+      flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+      padding:11px 6px;border-radius:var(--radius-md);
       background:var(--bg-subtle);border:1px solid var(--border);
-      border-radius:var(--radius-md);padding:8px;
+      font-size:13px;font-weight:700;color:var(--text);
+      cursor:pointer;font-family:inherit;transition:background-color .12s ease,transform .06s ease;
     }
-    .mafia-cards-narrator-row{
-      display:flex;align-items:center;gap:12px;padding:11px 12px;
-      background:var(--bg);border:1px solid var(--border);
-      border-radius:var(--radius-sm);
-      font-family:inherit;text-align:left;cursor:pointer;width:100%;
-      transition:background-color .12s ease, opacity .15s ease;
+    .mafia-narr-tool:hover{background:var(--bg-hover)}
+    .mafia-narr-tool:active{transform:scale(.98)}
+    .mafia-narr-tool svg{width:16px;height:16px;flex-shrink:0}
+    .mafia-narr-tool span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    /* The teleprompter card — the star of the screen. */
+    .mafia-narr-stage{
+      background:var(--bg-subtle);border:1px solid var(--border);
+      border-radius:var(--radius-md);padding:18px 18px 22px;
+      display:flex;flex-direction:column;gap:16px;flex:1;
     }
-    [data-theme="dark"] .mafia-cards-narrator-row{background:rgba(0,0,0,.25)}
-    .mafia-cards-narrator-row:hover{background:var(--bg-hover)}
-    .mafia-cards-narrator-row.is-dead{opacity:.4}
-    .mafia-cards-narrator-row.is-dead .mafia-cards-narrator-row-name,
-    .mafia-cards-narrator-row.is-dead .mafia-cards-narrator-row-role{
-      text-decoration:line-through;text-decoration-thickness:1.5px;
+    .mafia-narr-stage-head{display:flex;align-items:center;gap:10px}
+    .mafia-narr-stage-emoji{font-size:22px;line-height:1;flex-shrink:0}
+    .mafia-narr-stage-phase{font-size:19px;font-weight:800;color:var(--text);letter-spacing:-.01em}
+    .mafia-narr-stage-sub{
+      margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--text-tertiary);white-space:nowrap;
     }
-    .mafia-cards-narrator-row-name{
-      flex:0 0 auto;min-width:74px;
-      font-size:13.5px;font-weight:700;color:var(--text);
+    .mafia-narr-lines{display:flex;flex-direction:column;gap:16px}
+    .mafia-narr-lines-compact{gap:12px}
+    .mafia-narr-line{display:flex;flex-direction:column;gap:5px}
+    /* Spoken line — large, read verbatim. Leading quote glyph signals "say". */
+    .mafia-narr-say{
+      margin:0;font-size:16.5px;line-height:1.5;color:var(--text);font-weight:500;
+      padding-left:17px;position:relative;
     }
-    .mafia-cards-narrator-row-emoji{font-size:18px;line-height:1;flex-shrink:0}
-    .mafia-cards-narrator-row-role{
-      flex:1;font-size:13.5px;font-weight:600;color:var(--text-secondary);
-      letter-spacing:-.005em;
+    .mafia-narr-say::before{
+      content:"\201C";position:absolute;left:0;top:0;
+      font-size:22px;line-height:1.1;color:var(--text-tertiary);font-weight:700;
     }
-    .mafia-cards-narrator-row-mark{
-      flex-shrink:0;width:18px;color:var(--text);font-weight:800;
-      text-align:right;visibility:hidden;
+    /* Stage direction — small, muted, "do this" (NOT spoken). */
+    .mafia-narr-do{
+      margin:0;font-size:12.5px;line-height:1.45;color:var(--text-tertiary);
+      font-style:italic;padding-left:17px;display:flex;gap:6px;align-items:flex-start;
     }
-    .mafia-cards-narrator-row.is-dead .mafia-cards-narrator-row-mark{visibility:visible}
-    /* "Away" — a player's phone is currently disconnected. We never auto-out
-       them; this just flags it so the narrator can wait or mark them out. */
-    .mafia-cards-narrator-row.is-away{border-style:dashed;border-color:var(--border-strong)}
-    .mafia-cards-narrator-row-away{
-      flex-shrink:0;
-      font-size:10.5px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;
-      padding:2px 7px;border-radius:999px;white-space:nowrap;
-      color:#9a6700;background:rgba(255,193,7,.18);border:1px solid rgba(255,193,7,.45);
+    .mafia-narr-do-mark{font-style:normal;font-weight:800;opacity:.7;line-height:1.45}
+    .mafia-narr-lines-compact .mafia-narr-say{font-size:15px}
+
+    /* Primary forward action. */
+    .mafia-narr-next{
+      width:100%;padding:16px 18px;border:none;border-radius:var(--radius-md);
+      background:var(--text);color:var(--bg);
+      font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:9px;
+      transition:opacity .12s ease, transform .06s ease;
     }
-    [data-theme="dark"] .mafia-cards-narrator-row-away{
-      color:#ffd54a;background:rgba(255,193,7,.14);border-color:rgba(255,193,7,.35);
-    }
-    .mafia-cards-narrator-narrator-row{
-      display:flex;align-items:center;gap:12px;padding:11px 12px;
-      background:transparent;border:1px dashed var(--border-strong);
-      border-radius:var(--radius-sm);
-      font-size:12.5px;color:var(--text-tertiary);font-style:italic;
-    }
-    .mafia-cards-narrator-help{
-      font-size:12px;color:var(--text-tertiary);line-height:1.5;
-      padding:0 4px;text-align:center;
-    }
+    .mafia-narr-next:hover{opacity:.92}
+    .mafia-narr-next:active{transform:scale(.99)}
+    .mafia-narr-next svg{width:19px;height:19px;flex-shrink:0}
+
+    /* End game — quiet, at the very bottom (rare, destructive). */
     .mafia-cards-narrator-end{
-      margin-top:8px;width:100%;
+      margin-top:auto;width:100%;padding:13px;
+      background:transparent;border:1px solid var(--border);border-radius:var(--radius-md);
+      font-size:14px;font-weight:600;color:var(--text-tertiary);
+      cursor:pointer;font-family:inherit;transition:background-color .12s ease,color .12s ease;
     }
+    .mafia-cards-narrator-end:hover{background:var(--bg-hover);color:var(--text-secondary)}
 
-    /* ===== Mafia Cards — narrator rules + reference script (redesign) ===
-       Two top-level collapsibles on the dashboard:
-         (1) Narrator rules — only the narrator sees these
-         (2) What do I say? — script with NESTED collapsible subsections
-             labelled "READ ONCE", "EVERY ROUND", "ENDGAME"
-       Monochrome by design — visual hierarchy via text labels + border
-       weight, NO colour accents (per project palette rules). */
-    .mafia-cards-panel{
+    /* ===== Mafia Cards — narrator bottom-sheet content (redesign) =======
+       Three sheets reached from the top toolbar: Who's who (cheat sheet),
+       Rules (tap-to-expand accordion), and the whole-script overview
+       (tap-to-expand by part). All render into the app-wide .sheet shell.
+       Calm by design — generous size + spacing, hierarchy via the sheet
+       title + a one-line intro, no shouty all-caps. Monochrome. */
+    .mafia-narr-sheet-intro{
+      font-size:14px;line-height:1.55;color:var(--text-secondary);margin:-4px 0 16px;
+    }
+    /* Tap-to-expand row (native <details>) — Rules + script overview.
+       Collapsed by default so the sheet opens short and calm. */
+    .mafia-narr-acc{
       background:var(--bg-subtle);border:1px solid var(--border);
-      border-radius:var(--radius-md);overflow:hidden;
+      border-radius:var(--radius-md);overflow:hidden;margin-bottom:10px;
     }
-    .mafia-cards-panel-summary{
-      list-style:none;cursor:pointer;
-      padding:14px 16px;
-      display:flex;align-items:center;gap:10px;
-      font-weight:700;font-size:14px;color:var(--text);
-      -webkit-tap-highlight-color:transparent;
+    .mafia-narr-acc-summary{
+      list-style:none;cursor:pointer;display:flex;align-items:center;gap:13px;
+      padding:15px 16px;-webkit-tap-highlight-color:transparent;
     }
-    .mafia-cards-panel-summary::-webkit-details-marker{display:none}
-    .mafia-cards-panel-summary::marker{content:""}
-    .mafia-cards-panel-summary-emoji{font-size:18px;line-height:1}
-    .mafia-cards-panel-summary-chevron{
-      margin-left:auto;font-size:12px;color:var(--text-tertiary);
-      transition:transform .2s ease;display:inline-block;
+    .mafia-narr-acc-summary::-webkit-details-marker{display:none}
+    .mafia-narr-acc-summary::marker{content:""}
+    .mafia-narr-acc-emoji{font-size:21px;line-height:1;flex-shrink:0}
+    .mafia-narr-acc-title{flex:1;font-size:15.5px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+    .mafia-narr-acc-chev{flex-shrink:0;color:var(--text-tertiary);display:inline-flex;transition:transform .2s ease}
+    .mafia-narr-acc[open] > .mafia-narr-acc-summary .mafia-narr-acc-chev{transform:rotate(180deg)}
+    .mafia-narr-acc-body{
+      padding:12px 16px 16px;border-top:1px solid var(--border);
     }
-    .mafia-cards-panel[open] > .mafia-cards-panel-summary .mafia-cards-panel-summary-chevron{
-      transform:rotate(180deg);
+    .mafia-narr-acc-p{margin:0;font-size:14px;line-height:1.65;color:var(--text-secondary)}
+    .mafia-narr-acc-p strong{color:var(--text);font-weight:600}
+    /* Callout — the Detective's "lie for the Mafia Leader" exception. */
+    .mafia-narr-callout{
+      margin-top:13px;display:flex;gap:10px;align-items:flex-start;
+      padding:12px 13px;border-radius:var(--radius-sm);
+      background:var(--bg-hover);border:1px solid var(--border-strong);
     }
-    .mafia-cards-panel-body{
-      padding:0 14px 14px;border-top:1px solid var(--border);
-      display:flex;flex-direction:column;gap:10px;padding-top:12px;
+    .mafia-narr-callout-icon{flex-shrink:0;font-size:16px;line-height:1.5}
+    .mafia-narr-callout-text{font-size:13.5px;line-height:1.55;color:var(--text)}
+    .mafia-narr-callout-text strong{font-weight:700}
+    .mafia-narr-acc-body .mafia-narr-lines{margin-top:2px}
+    /* Who's who — clean cheat-sheet list (name left, role right). */
+    .mafia-narr-who{display:flex;flex-direction:column;gap:7px}
+    .mafia-narr-who-row{
+      display:flex;align-items:center;gap:13px;padding:13px 14px;
+      background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius-md);
     }
-
-    /* Narrator rules — numbered list, each rule a small block. */
-    .mafia-cards-rules-list{
-      list-style:none;padding:0;margin:0;
-      display:flex;flex-direction:column;gap:10px;
-    }
-    .mafia-cards-rules-item{
-      background:var(--bg);border:1px solid var(--border);
-      border-radius:var(--radius-sm);padding:12px 14px;
-    }
-    [data-theme="dark"] .mafia-cards-rules-item{background:rgba(0,0,0,.25)}
-    .mafia-cards-rules-item-title{
-      font-size:13.5px;font-weight:800;color:var(--text);
-      letter-spacing:-.005em;margin-bottom:4px;
-    }
-    .mafia-cards-rules-item-body{
-      font-size:13px;line-height:1.55;color:var(--text-secondary);
-    }
-    .mafia-cards-rules-item-body strong{color:var(--text);font-weight:700}
-
-    /* Script subsections (nested collapsibles inside "What do I say?"). */
-    .mafia-cards-script-section{
-      background:var(--bg);border:1px solid var(--border);
-      border-radius:var(--radius-sm);overflow:hidden;
-    }
-    [data-theme="dark"] .mafia-cards-script-section{background:rgba(0,0,0,.25)}
-    .mafia-cards-script-section-summary{
-      list-style:none;cursor:pointer;padding:10px 14px;
-      display:flex;flex-direction:column;gap:2px;
-      -webkit-tap-highlight-color:transparent;position:relative;
-    }
-    .mafia-cards-script-section-summary::-webkit-details-marker{display:none}
-    .mafia-cards-script-section-summary::marker{content:""}
-    .mafia-cards-script-section-kind{
-      font-size:10px;font-weight:800;letter-spacing:.16em;
-      text-transform:uppercase;color:var(--text-tertiary);
-    }
-    .mafia-cards-script-section-title{
-      font-size:13.5px;font-weight:700;color:var(--text);
-      letter-spacing:-.005em;
-    }
-    .mafia-cards-script-section-chevron{
-      position:absolute;right:14px;top:50%;transform:translateY(-50%);
-      font-size:12px;color:var(--text-tertiary);
-      transition:transform .2s ease;
-    }
-    .mafia-cards-script-section[open] > .mafia-cards-script-section-summary .mafia-cards-script-section-chevron{
-      transform:translateY(-50%) rotate(180deg);
-    }
-    .mafia-cards-script-section-lines{
-      padding:0 14px 12px;border-top:1px solid var(--border);
-      display:flex;flex-direction:column;gap:6px;padding-top:10px;
-    }
-    .mafia-cards-script-subheading{
-      font-size:10.5px;font-weight:800;letter-spacing:.16em;
-      text-transform:uppercase;color:var(--text-tertiary);
-      margin-top:6px;padding-bottom:2px;
-      border-bottom:1px dashed var(--border);
-    }
-    .mafia-cards-script-subheading:first-child{margin-top:0}
-    .mafia-cards-script-line{
-      font-size:13.5px;line-height:1.5;color:var(--text);
-      padding-left:14px;position:relative;
-    }
-    .mafia-cards-script-line::before{
-      content:"";position:absolute;left:5px;top:8px;
-      width:4px;height:4px;border-radius:50%;background:var(--text-tertiary);
-    }
-    .mafia-cards-script-line em{
-      display:block;margin-top:3px;
-      color:var(--text);font-style:italic;font-size:12px;
-    }
-    .mafia-cards-narrator-loading{
-      padding:48px 24px;text-align:center;color:var(--text-tertiary);
-      font-style:italic;font-size:14px;
-    }
+    .mafia-narr-who-name{flex:0 1 auto;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap}
+    .mafia-narr-who-emoji{font-size:20px;line-height:1;flex-shrink:0}
+    .mafia-narr-who-role{flex:1 1 auto;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);line-height:1.35}
+    .mafia-narr-loading{padding:28px 12px;text-align:center;color:var(--text-tertiary);font-style:italic;font-size:14px}
 
     /* ===== Mafia Cards — player role screen (full-screen reveal) ========
        Mirrors the classic Mafia role card layout: large emoji + role name
@@ -4022,6 +3952,27 @@
     }
     .mafia-cards-role-toggle:hover{background:var(--bg-hover)}
     .mafia-cards-role-toggle svg{width:14px;height:14px;flex-shrink:0}
+    /* "How to win" card — win conditions shown to every player on their role
+       screen (general info, not secret). Always visible, sits above the
+       narrator-status footer. */
+    .mafia-cards-role-win{
+      margin:18px auto 0;max-width:340px;width:100%;
+      background:var(--bg-subtle);border:1px solid var(--border);
+      border-radius:var(--radius-md);padding:14px 16px;
+      display:flex;flex-direction:column;gap:8px;text-align:left;
+    }
+    .mafia-cards-role-win-head{
+      display:flex;align-items:center;gap:8px;
+      font-size:13px;font-weight:800;color:var(--text);letter-spacing:.01em;
+    }
+    .mafia-cards-role-win-row{
+      font-size:13px;line-height:1.5;color:var(--text-secondary);
+      padding-left:16px;position:relative;
+    }
+    .mafia-cards-role-win-row::before{
+      content:"";position:absolute;left:5px;top:8px;
+      width:4px;height:4px;border-radius:50%;background:var(--text-tertiary);
+    }
     .mafia-cards-role-status{
       font-size:13px;color:var(--text-tertiary);font-style:italic;
       text-align:center;line-height:1.45;padding:14px 20px 0;

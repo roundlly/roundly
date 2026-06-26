@@ -1413,60 +1413,100 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
       </header>
       <main class="page no-nav">
         <div class="mafia-cards-narrator" id="mafia-cards-narrator-shell">
-          <button type="button" class="mafia-cards-narrator-phase" id="mafia-cards-narrator-phase" onclick="mafiaCardsTogglePhase()">
-            <span class="mafia-cards-narrator-phase-emoji" id="mafia-cards-narrator-phase-emoji">🌙</span>
-            <span id="mafia-cards-narrator-phase-label" data-i18n="mafiaCards.narrator.phaseNight">Night</span>
-          </button>
-          <details class="mafia-cards-panel" id="mafia-cards-players-panel" open>
-            <summary class="mafia-cards-panel-summary">
-              <span class="mafia-cards-panel-summary-emoji">👥</span>
-              <span data-i18n="mafiaCards.narrator.playersTitle">Players</span>
-              <span class="mafia-cards-narrator-stats" id="mafia-cards-narrator-stats"></span>
-              <span class="mafia-cards-panel-summary-chevron" aria-hidden="true">▾</span>
-            </summary>
-            <div class="mafia-cards-panel-body mafia-cards-players-body">
-              <div class="mafia-cards-narrator-roster" id="mafia-cards-narrator-roster">
-                <div class="mafia-cards-narrator-loading" data-i18n="mafiaCards.narrator.loadingRoles">Loading roles…</div>
+          <!-- The whole screen is the script. Night/Day and the player roster
+               were removed — the narrator runs those by voice at the table.
+               Three reference taps live in the top toolbar: Who's who, Rules,
+               and the whole Script. Everything below #mafia-cards-live is
+               hidden behind the "Game ended" overlay on an unrecoverable
+               reconnect. -->
+          <div id="mafia-cards-live">
+            <div class="mafia-narr-toolbar">
+              <button type="button" class="mafia-narr-tool" onclick="mafiaCardsOpenWho()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span data-i18n="mafiaCards.who.btn">Who's who</span>
+              </button>
+              <button type="button" class="mafia-narr-tool" onclick="mafiaCardsOpenRules()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                <span data-i18n="mafiaCards.rules.openBtn">Rules</span>
+              </button>
+              <button type="button" class="mafia-narr-tool" onclick="mafiaCardsOpenOverview()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h8"></path><path d="M8 9h2"></path></svg>
+                <span data-i18n="mafiaCards.overview.btn">Script</span>
+              </button>
+            </div>
+
+            <!-- Teleprompter: only the current beat's lines. Populated by
+                 mafiaCardsRenderNarrator(). -->
+            <div class="mafia-narr-stage" id="mafia-cards-stage">
+              <div class="mafia-narr-stage-head">
+                <span class="mafia-narr-stage-emoji" id="mafia-cards-stage-emoji">🌙</span>
+                <span class="mafia-narr-stage-phase" id="mafia-cards-stage-phase" data-i18n="mafiaCards.stage.openingTitle">Opening night</span>
+                <span class="mafia-narr-stage-sub" data-i18n="mafiaCards.stage.readAloud">Read out loud</span>
               </div>
+              <div class="mafia-narr-lines" id="mafia-cards-stage-lines"></div>
             </div>
-          </details>
-          <details class="mafia-cards-panel" id="mafia-cards-rules-panel">
-            <summary class="mafia-cards-panel-summary">
-              <span class="mafia-cards-panel-summary-emoji">📋</span>
-              <span data-i18n="mafiaCards.rules.summary">Narrator rules</span>
-              <span class="mafia-cards-panel-summary-chevron" aria-hidden="true">▾</span>
-            </summary>
-            <div class="mafia-cards-panel-body">
-              <ol class="mafia-cards-rules-list" id="mafia-cards-rules-list">
-                <!-- populated by mafiaCardsRenderRules() -->
-              </ol>
-            </div>
-          </details>
-          <details class="mafia-cards-panel" id="mafia-cards-script-details">
-            <summary class="mafia-cards-panel-summary">
-              <span class="mafia-cards-panel-summary-emoji">📖</span>
-              <span data-i18n="mafiaCards.script.summary">What do I say?</span>
-              <span class="mafia-cards-panel-summary-chevron" aria-hidden="true">▾</span>
-            </summary>
-            <div class="mafia-cards-panel-body" id="mafia-cards-script-body">
-              <!-- populated by mafiaCardsRenderScript() on dashboard render -->
-            </div>
-          </details>
+
+            <!-- Primary forward action — absorbs the old Night/Day toggle's
+                 job (advance the game) and says what's next in plain words. -->
+            <button type="button" class="mafia-narr-next" id="mafia-cards-next" onclick="mafiaCardsAdvance()">
+              <span id="mafia-cards-next-label" data-i18n="mafiaCards.stage.nextFirstNight">Next — start the first night</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </button>
+          </div>
           <!-- "Game ended" overlay — shown when narrator's tab missed the
                lobby → active transition (e.g. they closed the tab mid-game
-               and reopened). The dashboard's phase pill / dead set are
-               in-memory only, so we can't honestly resume — we replace the
-               dashboard with a clear notice and route the narrator back to
-               a fresh lobby via the existing End game button. -->
+               and reopened). The narrator's stage + round are in-memory only,
+               so when nothing is restorable we can't honestly resume — we
+               replace the live screen with a clear notice and route them back
+               to a fresh lobby via the End game button below. -->
           <div class="mafia-cards-ended-overlay" id="mafia-cards-ended-overlay" hidden style="text-align:center;padding:32px 16px 16px;display:flex;flex-direction:column;align-items:center;gap:10px">
             <div style="font-size:48px;line-height:1">🎲</div>
             <div style="font-size:20px;font-weight:700" data-i18n="mafiaCards.narrator.endedTitle">Game ended</div>
             <div style="font-size:14px;color:var(--text-secondary);max-width:32ch;line-height:1.45" data-i18n="mafiaCards.narrator.endedBody">This game's progress was lost when the tab was closed. Tap End game to start a fresh round.</div>
           </div>
-          <button type="button" class="btn btn-primary btn-lg mafia-cards-narrator-end" onclick="mafiaCardsEndGame()" data-i18n="mafiaCards.narrator.endGame">End game</button>
+          <button type="button" class="mafia-cards-narrator-end" onclick="mafiaCardsEndGame()" data-i18n="mafiaCards.narrator.endGame">End game</button>
         </div>
       </main>
     </section>
+
+    <!-- ===== Mafia narrator — Who's who bottom sheet (secret cheat sheet) =====
+         Populated by mafiaCardsRenderWhoSheet(). -->
+    <div class="sheet-backdrop" id="mafia-cards-who-backdrop" onclick="mafiaCardsCloseWho(event)">
+      <div class="sheet" onclick="event.stopPropagation()" style="position:relative">
+        <button class="icon-btn" onclick="mafiaCardsCloseWho()" aria-label="Close" data-i18n-aria="common.close" style="position:absolute;top:8px;right:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" data-i18n="mafiaCards.who.title">Who's who</div>
+        <div id="mafia-cards-who-sheet-body"></div>
+      </div>
+    </div>
+
+    <!-- ===== Mafia narrator — Rules bottom sheet (tap-to-expand) =====
+         Populated by mafiaCardsRenderRulesSheet(). -->
+    <div class="sheet-backdrop" id="mafia-cards-rules-backdrop" onclick="mafiaCardsCloseRules(event)">
+      <div class="sheet" onclick="event.stopPropagation()" style="position:relative">
+        <button class="icon-btn" onclick="mafiaCardsCloseRules()" aria-label="Close" data-i18n-aria="common.close" style="position:absolute;top:8px;right:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" data-i18n="mafiaCards.rules.sheetTitle">Rules</div>
+        <div id="mafia-cards-rules-sheet-body"></div>
+      </div>
+    </div>
+
+    <!-- ===== Mafia narrator — whole-script overview bottom sheet =====
+         The "read ahead" escape hatch. Populated by mafiaCardsRenderOverviewSheet(). -->
+    <div class="sheet-backdrop" id="mafia-cards-overview-backdrop" onclick="mafiaCardsCloseOverview(event)">
+      <div class="sheet" onclick="event.stopPropagation()" style="position:relative">
+        <button class="icon-btn" onclick="mafiaCardsCloseOverview()" aria-label="Close" data-i18n-aria="common.close" style="position:absolute;top:8px;right:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" data-i18n="mafiaCards.overview.title">The whole script</div>
+        <div id="mafia-cards-overview-sheet-body"></div>
+      </div>
+    </div>
 
     <!-- ============ MAFIA CARDS — player role screen (full-screen) ============
          Non-narrator players land here once the game starts (cards mode).
@@ -1501,6 +1541,16 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
               <span id="mafia-cards-role-toggle-label" data-i18n="mafiaCards.role.revealBtn">Reveal Role</span>
             </button>
+          </div>
+          <!-- Win conditions — shown to EVERY player (general info, not secret),
+               so everyone knows the finish line the narrator is judging. -->
+          <div class="mafia-cards-role-win">
+            <div class="mafia-cards-role-win-head">
+              <span aria-hidden="true">🏆</span>
+              <span data-i18n="mafiaCards.role.winTitle">How to win</span>
+            </div>
+            <div class="mafia-cards-role-win-row" data-i18n="mafiaCards.script.endgameTownWins">Town wins when every Mafia is voted out.</div>
+            <div class="mafia-cards-role-win-row" data-i18n="mafiaCards.script.endgameMafiaWins">Mafia wins when their numbers equal or outnumber the villagers.</div>
           </div>
           <div class="mafia-cards-role-status" data-i18n="mafiaCards.role.status">Listen for the narrator. They'll guide the game.</div>
         </div>
