@@ -532,7 +532,7 @@
     function renderChamLobbyPlayers(){
       const grid = document.getElementById('cham-players-grid');
       if (grid && huddleLobbyHydrating(chamState && chamState.code)) {
-        grid.innerHTML = huddleLobbySkeletonHTML(6);
+        grid.innerHTML = huddleLobbySkeletonHTML(20);
         return;
       }
       if (!grid) return;

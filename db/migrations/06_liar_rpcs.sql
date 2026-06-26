@@ -134,7 +134,7 @@ BEGIN
     0
   );
 
-  v_multiplier := CASE WHEN v_alive_count > 4 THEN 2 ELSE 1 END;
+  v_multiplier := GREATEST(1, CEIL(v_alive_count / 4.0)::int);  -- ceil(players/4); see start_game
   WITH ranks AS (
     SELECT 'A' AS rank, generate_series(1, 6 * v_multiplier) AS n
     UNION ALL
@@ -568,7 +568,7 @@ BEGIN
         0
       );
 
-      v_multiplier := CASE WHEN v_new_alive_count > 4 THEN 2 ELSE 1 END;
+      v_multiplier := GREATEST(1, CEIL(v_new_alive_count / 4.0)::int);  -- ceil(players/4)
       WITH ranks AS (
         SELECT 'A' AS rank, generate_series(1, 6 * v_multiplier) AS n
         UNION ALL
@@ -1052,8 +1052,9 @@ BEGIN
     RAISE EXCEPTION 'need_at_least_2_players' USING ERRCODE = '42501';
   END IF;
 
-  -- Deck multiplier (matches liarBuildDeck): >4 players doubles the deck
-  v_multiplier := CASE WHEN v_alive_count > 4 THEN 2 ELSE 1 END;
+  -- Deck multiplier (matches liarBuildDeck): ceil(players / 4) → one 20-card unit
+  -- per (up to) 4 players. 2-4→1, 5-8→2, 9-12→3, 13-16→4, 17-20→5.
+  v_multiplier := GREATEST(1, CEIL(v_alive_count / 4.0)::int);
 
   -- Build deck (6A, 6K, 6Q, 2J × multiplier)
   WITH ranks AS (

@@ -345,19 +345,22 @@
     //                           but takes one player with them when they die).
     //   includeLeader:    ON  → steals ONE Mafia slot (Godfather — appears
     //                           innocent to the Detective; still on Mafia team).
-    // Mirror of the SQL in huddle_c2_mafia_optional_roles_v2.sql — keep these
-    // two formulas identical or the server will reject with role_count_mismatch.
+    // Mirror of the SQL in huddle_mafia_start_game (db/migrations/07_mafia_rpcs.sql)
+    // — keep these two formulas identical or the server rejects with role_count_mismatch.
     function mafiaRoleMixFor(playerCount, includeDetective, includeChild, includeLeader){
       if (includeDetective === undefined) includeDetective = true;
       includeChild  = !!includeChild;
       includeLeader = !!includeLeader;
       const det = includeDetective ? 1 : 0;
-      let mafia, villager;
-      if      (playerCount === 5) { mafia = 1; villager = 2; }
-      else if (playerCount === 6) { mafia = 1; villager = 3; }
-      else if (playerCount === 7) { mafia = 2; villager = 3; }
-      else if (playerCount === 8) { mafia = 2; villager = 4; }
-      else return null;
+      // Base mix — scales 5..20: ~1 Mafia per ~3 players (floor((n-1)/3)), always
+      // 1 Doctor and (when toggled on) 1 Detective; everyone else a Villager.
+      // Resulting mafia/villager per count: 5:1/2 6:1/3 7:2/3 8:2/4 9:2/5 10:3/5
+      // 11:3/6 12:3/7 13:4/7 14:4/8 15:4/9 16:5/9 17:5/10 18:5/11 19:6/11 20:6/12.
+      // Reproduces the original 5-8 table exactly. MUST match the server base mix
+      // in huddle_mafia_start_game (07_mafia_rpcs.sql) or a start throws role_count_mismatch.
+      if (playerCount < 5 || playerCount > 20) return null;
+      let mafia = Math.floor((playerCount - 1) / 3);
+      let villager = playerCount - mafia - 2;  // minus the Doctor + Detective slots
       if (!includeDetective) villager += 1;
       const leader = (includeLeader && mafia > 0) ? 1 : 0;
       if (leader) mafia -= 1;
@@ -503,8 +506,8 @@
         mafiaMe.myId = existingSeat[0];
         return;
       }
-      // Find lowest free seat id from p1..p8.
-      for (let n = 1; n <= 8; n++) {
+      // Find lowest free seat id from p1..p20.
+      for (let n = 1; n <= 20; n++) {
         const seatId = 'p' + n;
         if (!mafiaState.claimedBy[seatId]) {
           try {
@@ -1138,7 +1141,7 @@
       // past the picker, tap a dim Start button, and have no idea why it
       // does nothing. Only pulse for the host (guests can't pick anyway).
       const _playerCount = (typeof mafiaPlayerSeats === 'function') ? mafiaPlayerSeats().length : 0;
-      const _narratorIsBlocker = !narratorUid && isHost && _playerCount >= 5 && _playerCount <= 8;
+      const _narratorIsBlocker = !narratorUid && isHost && _playerCount >= 5 && _playerCount <= 20;
       card.classList.toggle('needs-attention', _narratorIsBlocker);
 
       if (!narratorUid) {
@@ -1169,17 +1172,17 @@
       const grid = document.getElementById('mafia-seats');
       const hint = document.getElementById('mafia-seats-hint');
       if (grid && huddleLobbyHydrating(mafiaState && mafiaState.code)) {
-        grid.innerHTML = huddleLobbySkeletonHTML(8);
+        grid.innerHTML = huddleLobbySkeletonHTML(20);
         return;
       }
       if (!grid) return;
       const sid = mafiaGetSessionId();
       const narratorUid = mafiaState.narratorUid;
 
-      // Render 8 slots (max supported player count). Each slot shows either
+      // Render 20 slots (max supported player count). Each slot shows either
       // a claim/invite tile or a claimed player.
       const html = [];
-      for (let n = 1; n <= 8; n++) {
+      for (let n = 1; n <= 20; n++) {
         const seatId = 'p' + n;
         const uid = mafiaState.claimedBy[seatId];
         const isNarrator = uid && narratorUid && uid === narratorUid;
@@ -1244,8 +1247,8 @@
         hintText = t('mafia.hintNeedMorePlayers', { n: needed });
       } else if (!narratorSet) {
         hintText = t('mafia.hintNeedNarrator');
-      } else if (playerCount > 8) {
-        // Shouldn't happen (only 8 seats) but defensive.
+      } else if (playerCount > 20) {
+        // Shouldn't happen (only 20 seats) but defensive.
         hintText = t('mafia.hintTooMany');
       } else {
         hintText = t('mafia.hintReady', { n: playerCount });
@@ -1389,7 +1392,7 @@
       const playerCount = mafiaPlayerSeats().length;
       const narratorSet = !!mafiaState.narratorUid;
       const meIsInRoom = !!mafiaMe.myId || mafiaState.narratorUid === sid;
-      const ready = isHost && playerCount >= 5 && playerCount <= 8 && narratorSet && meIsInRoom;
+      const ready = isHost && playerCount >= 5 && playerCount <= 20 && narratorSet && meIsInRoom;
       if (ready) btn.removeAttribute('aria-disabled');
       else       btn.setAttribute('aria-disabled', 'true');
       // Subtle hint on the button text when host but not ready (helps host
@@ -1530,7 +1533,7 @@
         const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
         if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
         const _playerCount = (typeof mafiaPlayerSeats === 'function') ? mafiaPlayerSeats().length : 0;
-        if (!mafiaState.narratorUid && _playerCount >= 5 && _playerCount <= 8) {
+        if (!mafiaState.narratorUid && _playerCount >= 5 && _playerCount <= 20) {
           const _card = document.getElementById('mafia-narrator-card');
           if (_card) { try { _card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_){} }
         }
@@ -2062,7 +2065,7 @@
     function liarRenderSeats(){
       const el = document.getElementById('liar-seats');
       if (el && huddleLobbyHydrating(liarState && liarState.code)) {
-        el.innerHTML = huddleLobbySkeletonHTML(6);
+        el.innerHTML = huddleLobbySkeletonHTML(20);
         return;
       }
       if (!el) return;

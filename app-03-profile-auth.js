@@ -1533,7 +1533,7 @@
       // "everyone left!" flash that would otherwise show default invite
       // tiles for ~500ms after a hard refresh on a lobby URL.
       if (huddleLobbyHydrating(state.code)) {
-        grid.innerHTML = huddleLobbySkeletonHTML(6);
+        grid.innerHTML = huddleLobbySkeletonHTML(20);
         return;
       }
       const sessionId = hotGetSessionId();

@@ -2,6 +2,9 @@
 // All fragments share ONE global scope and MUST load in numeric order — do not reorder.
 
     // ---------- Demo data ----------
+    // 20 default seat identities (shared by Hot Seat, Chameleon, Liar's Cup).
+    // Real players override the name via their profile/guest name; these are the
+    // fallback labels. Count = the max players per room. All ids/initials unique.
     const PLAYERS = [
       { id:'jordan', name:'Jordan', initial:'J', wins:0, bestTimeMs:null },
       { id:'alex',   name:'Alex',   initial:'A', wins:0, bestTimeMs:null },
@@ -11,6 +14,18 @@
       { id:'lily',   name:'Lily',   initial:'L', wins:0, bestTimeMs:null },
       { id:'theo',   name:'Theo',   initial:'T', wins:0, bestTimeMs:null },
       { id:'nina',   name:'Nina',   initial:'N', wins:0, bestTimeMs:null },
+      { id:'olivia', name:'Olivia', initial:'O', wins:0, bestTimeMs:null },
+      { id:'ravi',   name:'Ravi',   initial:'R', wins:0, bestTimeMs:null },
+      { id:'priya',  name:'Priya',  initial:'P', wins:0, bestTimeMs:null },
+      { id:'diego',  name:'Diego',  initial:'D', wins:0, bestTimeMs:null },
+      { id:'emma',   name:'Emma',   initial:'E', wins:0, bestTimeMs:null },
+      { id:'felix',  name:'Felix',  initial:'F', wins:0, bestTimeMs:null },
+      { id:'grace',  name:'Grace',  initial:'G', wins:0, bestTimeMs:null },
+      { id:'hana',   name:'Hana',   initial:'H', wins:0, bestTimeMs:null },
+      { id:'ivan',   name:'Ivan',   initial:'I', wins:0, bestTimeMs:null },
+      { id:'bella',  name:'Bella',  initial:'B', wins:0, bestTimeMs:null },
+      { id:'chloe',  name:'Chloe',  initial:'C', wins:0, bestTimeMs:null },
+      { id:'quinn',  name:'Quinn',  initial:'Q', wins:0, bestTimeMs:null },
     ];
 
     // Word pools for Hot Seat. Each list is curated to be globally recognizable,

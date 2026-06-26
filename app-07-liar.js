@@ -17,11 +17,14 @@
     // Jokers are wild — count as any rank during a LIAR reveal. Same composition as
     // the source video game by Curve Animation (Steam, 2024).
     const LIAR_DECK_SPEC = { A: 6, K: 6, Q: 6, J: 2 };
-    // Build the deck, scaling with player count so 5+ players have enough cards.
-    // 2-4 players → 20 cards (6A + 6K + 6Q + 2J)
-    // 5-8 players → 40 cards (12A + 12K + 12Q + 4J), keeping the same A:K:Q:J ratio
+    // Build the deck, scaling with player count so larger groups have enough cards.
+    // multiplier = ceil(playerCount / 4): every block of up to 4 players adds one
+    // 20-card unit, keeping the same A:K:Q:J ratio. So 2-4 → 20, 5-8 → 40,
+    // 9-12 → 60, 13-16 → 80, 17-20 → 100 cards. Every player always gets 5 cards,
+    // and the deck always holds at least playerCount × 5. MUST match the SQL
+    // multiplier in 06_liar_rpcs.sql (CEIL(alive / 4.0)).
     function liarBuildDeck(playerCount){
-      const multiplier = (playerCount && playerCount > 4) ? 2 : 1;
+      const multiplier = Math.max(1, Math.ceil((playerCount || 0) / 4));
       const deck = [];
       let n = 0;
       for (let i = 0; i < LIAR_DECK_SPEC.A * multiplier; i++) deck.push({ rank: 'A', id: 'a' + (++n) });
@@ -47,8 +50,9 @@
       return deck;
     }
 
-    // Hand size — Liar's Cup is locked to 3-4 players (4 lobby seats, 3 min to start).
-    // Both counts get 5 cards; the 20-card deck (6A + 6K + 6Q + 2J) easily covers it.
+    // Hand size — every player gets 5 cards regardless of group size. The deck
+    // (built by liarBuildDeck) scales with player count so it always covers
+    // playerCount × 5 cards, up to 20 players (100 cards).
     function liarHandSize(_playerCount){
       return 5;
     }

@@ -1026,24 +1026,17 @@ BEGIN
   WHERE value <> v_narrator_uid;
 
   v_player_count := COALESCE(array_length(v_player_seats, 1), 0);
-  IF v_player_count < 5 OR v_player_count > 8 THEN
+  IF v_player_count < 5 OR v_player_count > 20 THEN
     RAISE EXCEPTION 'invalid_player_count: %', v_player_count USING ERRCODE = '42501';
   END IF;
 
-  -- Base role mix.
-  IF v_player_count = 5 THEN
-    v_mafia_count := 1;
-    v_villager_count := 2;
-  ELSIF v_player_count = 6 THEN
-    v_mafia_count := 1;
-    v_villager_count := 3;
-  ELSIF v_player_count = 7 THEN
-    v_mafia_count := 2;
-    v_villager_count := 3;
-  ELSE  -- 8
-    v_mafia_count := 2;
-    v_villager_count := 4;
-  END IF;
+  -- Base role mix — scales 5..20: ~1 Mafia per ~3 players (floor((n-1)/3)), with
+  -- 1 Doctor and (when toggled on) 1 Detective; the rest Villagers. Reproduces the
+  -- original 5-8 table exactly (5:1/2 6:1/3 7:2/3 8:2/4 ... 20:6/12, mafia/villager).
+  -- MUST match the client mafiaRoleMixFor base mix in app-08-mafia.js or the
+  -- role_count_mismatch guard below fires.
+  v_mafia_count    := (v_player_count - 1) / 3;            -- integer division = floor
+  v_villager_count := v_player_count - v_mafia_count - 2;  -- minus Doctor + Detective
 
   -- Detective slot → extra Villager when toggle is off.
   IF NOT v_include_det THEN
