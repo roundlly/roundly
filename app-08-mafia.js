@@ -510,15 +510,34 @@
       for (let n = 1; n <= 20; n++) {
         const seatId = 'p' + n;
         if (!mafiaState.claimedBy[seatId]) {
+          // Seat the player OPTIMISTICALLY — same as Hot Seat / Chameleon /
+          // Liar's Cup (hotClaimSeat et al.), so an invitee sees their seat the
+          // instant the lobby opens. The realtime echo from the server delivers
+          // the authoritative claimedBy moments later and overwrites this; if
+          // the server truly rejected the claim, the echo simply won't contain
+          // our seat and the UI corrects itself — exactly like the other games.
+          //
+          // We do NOT gate `mafiaMe.myId` on the RPC succeeding. Doing so left a
+          // signed-in invitee stranded with no seat whenever the claim hit any
+          // transient hiccup — the "can't join Mafia" bug — while Hot Seat (which
+          // never gated) kept working. Login is REQUIRED now, so every joiner has
+          // a real auth.uid(); huddleCallRPC still surfaces a sync toast + retries
+          // transient errors on its own.
+          mafiaState.claimedBy[seatId] = sid;
+          mafiaMe.myId = seatId;
           try {
-            const newState = await huddleCallRPC('huddle_claim_seat', {
+            const res = await huddleCallRPC('huddle_claim_seat', {
               p_table: 'mafia_rooms',
               p_code: mafiaState.code,
               p_player_id: seatId,
             });
-            if (newState) {
-              Object.assign(mafiaState, newState);
-              mafiaMe.myId = seatId;
+            // On success, adopt the server's authoritative state (revision,
+            // host, canonical claimedBy). On error, keep the optimistic seat;
+            // the realtime echo is the source of truth either way.
+            if (res && res.data) {
+              Object.assign(mafiaState, res.data);
+            } else if (res && res.error) {
+              console.warn('[Mafia] auto-claim rejected:', res.error.message || res.error);
             }
           } catch(e){
             console.warn('[Mafia] auto-claim failed:', e && e.message);
