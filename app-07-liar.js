@@ -39,6 +39,22 @@
       return deck;
     }
 
+    // ===========================================================================
+    // ⚠  SHARED "CARD-LOBBY ENGINE" — used by LIAR'S CUP *and* MAFIA.
+    //
+    //    Despite the `liar*` names, the room / seat / sync machinery below is NOT
+    //    Liar-only. MAFIA has no state object of its own — it reuses `liarState`,
+    //    `liarMe`, and the `liar*` lobby/sync functions wholesale (see
+    //    `openLiarLobby` in app-08-mafia.js). So editing `liarState`, `liarMe`, or
+    //    any `liar*` lobby/room/seat/sync function can break the MAFIA lobby too —
+    //    even though nothing here mentions "mafia".
+    //
+    //    The `liar` name is historical (Liar's Cup was the first game built on this
+    //    engine). Genuinely Liar-only logic — card scoring, cup, reveal — rightly
+    //    stays `liar*`. Only the lobby/room/seat/sync parts are the shared engine.
+    //    (Someday this should be renamed `cardLobby*`; until then, tread carefully.)
+    // ===========================================================================
+
     // liarState is the SYNCED ROOM STATE — same shape on every connected device.
     // Today: persisted to localStorage, broadcast across browser tabs via 'storage' events.
     // Tomorrow: persisted to Supabase (Postgres row), broadcast via Supabase Realtime.
