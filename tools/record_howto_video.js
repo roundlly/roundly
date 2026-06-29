@@ -14,7 +14,7 @@
 //
 // Output: assets/howto/mafia-en-walkthrough.mp4
 //
-// Run: node tmp/record_howto_video.js
+// Run: node tools/record_howto_video.js
 
 const puppeteer = require('puppeteer');
 const path = require('path');

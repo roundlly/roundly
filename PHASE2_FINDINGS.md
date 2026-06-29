@@ -1,7 +1,7 @@
 # Phase 2 — Findings & Why the Naive Plan Is Unsafe
 
 > Date: 2026-06-22 · Analysis only. **No game code changed.**
-> Tool: `tmp/analyze-dup.js` (extracts all 4 game copies of each duplicated
+> Tool: `tools/analyze-dup.js` (extracts all 4 game copies of each duplicated
 > function family, normalizes away game-specific names, diffs them).
 
 ## The original Phase 2 idea

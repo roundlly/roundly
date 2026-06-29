@@ -31,7 +31,7 @@ Shared helpers all live in `app-01-core-hotseat.js` near the top:
 - All 4 `<game>Bootstrap`/`<game>GetSessionId` now delegate to the shared pair. Each game passes its own `me` object (kept separate because each holds extra per-game fields). The `tab_` fallback was **KEPT** (deliberate safety net for offline / 429 anon rate-limit — it is NOT dead code).
 - **Mafia normalized**: added a `bootstrapped` flag to `mafiaMe` (it previously guarded on `sessionId` and could return `null`); now identical behavior to the other 3.
 - **Latent bug fixed**: `huddleAfterSignIn` (app-03) rebound hot/cham/liar to the new auth id after Google/password sign-in but **never `mafiaMe`** → "claimed seat mismatch" for Mafia on anon→account sign-in mid-lobby. Now rebinds all 4 in lockstep; sign-out resets `mafiaMe.bootstrapped` too. Confirmed on real phones.
-- Regression tool added: `tmp/check-sessionid.js` (proves all 4 resolve to a real UUID, ~1 anon sign-in).
+- Regression tool added: `tools/check-sessionid.js` (proves all 4 resolve to a real UUID, ~1 anon sign-in).
 - Identity-convergence verified: every game's mp `distinct identities` line shows real auth UUIDs, no `tab_`.
 
 **Plus (not part of the 17, but related fixes this effort produced):**

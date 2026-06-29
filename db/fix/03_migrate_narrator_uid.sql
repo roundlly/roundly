@@ -16,7 +16,7 @@
 --   • huddle_mafia_start_game can no longer exclude the narrator (their old uid
 --     is gone from claimedBy), so the narrator's seat is dealt a role and the
 --     role cards / counts are wrong.
--- Reproduced live in tmp/repro-mafia-signin.js (get_narrator_state → 42501).
+-- Reproduced live in tools/repro-mafia-signin.js (get_narrator_state → 42501).
 --
 -- FIX: when the migrating session was the narrator, move narratorUid to the new
 -- auth.uid() too — exactly mirroring the hostId transfer right below it. This is

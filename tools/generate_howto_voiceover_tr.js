@@ -12,7 +12,7 @@
 //     command form — matches the friendly, conversational tone of the EN
 //     voiceover rather than the formal "siz" plural).
 //
-// Run: node tmp/generate_howto_voiceover_tr.js
+// Run: node tools/generate_howto_voiceover_tr.js
 // Output: assets/howto/mafia-tr.mp3 + mafia-tr.alignment.json
 
 const fs = require('fs');
@@ -25,7 +25,17 @@ const env = Object.fromEntries(
     .map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; })
 );
 const API_KEY = env.ELEVENLABS_API_KEY;
-const VOICE_ID = 'IuRRIAcbQK5AQk1XevPj'; // Doga - Upbeat and Rich
+// Voice selection. The native-Turkish "Doga" voice (IuRRIAcbQK5AQk1XevPj) is a
+// community/library voice that requires ElevenLabs Creator tier or above —
+// a free-tier key returns HTTP 400 "free_users_not_allowed". So we default to
+// George (JBFqnCBsd6RMkjVDRZzb), the SAME premade voice used by the English
+// video, which free tier can use and eleven_multilingual_v2 reads in Turkish
+// (mild non-native accent). To use Doga after upgrading, set HOWTO_VOICE_ID in
+// .env (or flip the default below) and re-run — the alignment + scene cues
+// regenerate automatically.
+const DOGA_VOICE_ID = 'IuRRIAcbQK5AQk1XevPj';   // native Turkish, Creator tier+
+const GEORGE_VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb'; // free-tier premade (EN video voice)
+const VOICE_ID = env.HOWTO_VOICE_ID || GEORGE_VOICE_ID;
 
 const SCENES = [
   { id: 1, text: "Mafya, gizli rollü bir parti oyunudur. Beş arkadaşını bir araya getir ve aranızdan birini anlatıcı seç — o oyunu yönetir ama oynamaz." },
@@ -88,7 +98,9 @@ function tts() {
       }
     }
     const out = {
-      voice: 'Doga - Upbeat and Rich',
+      voice: VOICE_ID === DOGA_VOICE_ID ? 'Doga - Upbeat and Rich (TR native)'
+           : VOICE_ID === GEORGE_VOICE_ID ? 'George (premade, multilingual TR)'
+           : VOICE_ID,
       voice_id: VOICE_ID,
       total_duration_sec: align.character_end_times_seconds[align.character_end_times_seconds.length - 1],
       sceneCues,

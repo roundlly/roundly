@@ -1,4 +1,4 @@
-const v = JSON.parse(require('fs').readFileSync('tmp/voices.json','utf8'));
+const v = JSON.parse(require('fs').readFileSync('tools/voices.json','utf8'));
 const rows = v.voices.map(x => ({
   name: x.name.split(' - ')[0],
   id: x.voice_id,

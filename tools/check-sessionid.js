@@ -17,7 +17,7 @@
  *   `npm run mp` heavily in the last ~hour, wait for the quota to refresh or
  *   this will report tab_ fallbacks (a rate-limit symptom, NOT a code bug).
  *
- * Run:  node tmp/check-sessionid.js
+ * Run:  node tools/check-sessionid.js
  * Exit: 0 = all four are real UUIDs, 1 = something fell back / errored.
  */
 

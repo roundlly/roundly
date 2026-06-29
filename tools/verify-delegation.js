@@ -3,7 +3,7 @@
  * smoke only proves functions EXIST; it never navigates to a screen or clicks a
  * delegated button. This drives REAL clicks through the data-action engine for
  * every converted screen. Grows one section per converted screen.
- * Local-only, no Supabase. Run: node tmp/verify-delegation.js
+ * Local-only, no Supabase. Run: node tools/verify-delegation.js
  */
 const http = require('http'), fs = require('fs'), path = require('path'), puppeteer = require('puppeteer');
 const ROOT = path.join(__dirname, '..'), HOST = '127.0.0.1', PORT = 4199;

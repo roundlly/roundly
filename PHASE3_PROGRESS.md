@@ -12,7 +12,7 @@
 >   left as OPTIONAL future cleanup — no live bug; CSP payoff only lands once *all* are converted.
 > - **Concern 3 — Contain state: ⬜ intentionally NOT started.** Riskiest, least urgent; pinned by
 >   mp-test names. A future decision.
-> - 13 Phase 3 commits, each verified: `smoke` 9/9 + `mp` 28/28 + `tmp/verify-delegation.js` (40 checks,
+> - 13 Phase 3 commits, each verified: `smoke` 9/9 + `mp` 28/28 + `tools/verify-delegation.js` (40 checks,
 >   the only automated catch for button wiring since smoke/mp never click buttons).
 > - **To resume the DOM tail or start state:** follow the pattern + the `grep \[onclick` lesson below.
 
@@ -114,7 +114,7 @@ empty-seat **invite tile**. **Gotchas found (apply to the other lobbies):**
 - The QR `onerror="handleQrError()"` is left inline (load error, not a click — delegation N/A).
 - **DEFERRED:** the shared Mode/Category sheets (`pickMode`/`pickCategory`) still use inline onclick
   (work via coexistence). Convert in a later sheets pass.
-- Verify tool renamed `verify-admin-delegation.js` → **`tmp/verify-delegation.js`** (one section per
+- Verify tool renamed `verify-admin-delegation.js` → **`tools/verify-delegation.js`** (one section per
   screen; now 15 checks). Run it after each conversion.
 
 ## ✅ DONE — DOM delegation steps 3–5: CHAMELEON, LIAR, MAFIA lobbies (commits `refactor(dom): convert <game> lobby…`)
@@ -136,7 +136,7 @@ refresh spin. Converting the button to `data-action` broke those selectors → s
 (code still regenerated; cosmetic only). **Before converting ANY button, grep `\[onclick` / `querySelector.*onclick`.**
 Fixed all to `[data-action*="..."]`; the verifier now asserts each refresh button resolves.
 
-**Verify tool:** `tmp/verify-delegation.js` now 40 checks (admin + 4 lobbies). Offline can't render
+**Verify tool:** `tools/verify-delegation.js` now 40 checks (admin + 4 lobbies). Offline can't render
 invite tiles for cham/liar/mafia (no default players) → those clicks are skip-verified (source converted +
 engine proven via the hot invite tile).
 
@@ -145,7 +145,7 @@ engine proven via the hot invite tile).
   splash/play/vote/result, liar play/cup, mafia cards-game/cards-role) → the **deferred sheets**
   (Mode/Category/Topic/narrator-picker/invite-sheet — note the invite sheet args carry `friendsEscape`'d
   user ids) → `screen-wheel-test` + liar-lab chips → misc global-chrome (howto modals, etc.).
-  Use the `data-action`/`data-action-self` pattern; extend `tmp/verify-delegation.js` per screen.
+  Use the `data-action`/`data-action-self` pattern; extend `tools/verify-delegation.js` per screen.
   **Grep `\[onclick` before converting buttons** (see the regression above).
 - **XSS Step 1c follow-on** none — XSS concern is fully closed.
 - **State containment (concern 3)** — not started; riskiest, least urgent; pinned by mp-test names.

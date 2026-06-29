@@ -2,7 +2,7 @@
 // them side-by-side in the voice-lab UI. Uses the same script chunk across
 // all voices for a fair comparison.
 //
-// Run: node tmp/generate_voice_samples.js
+// Run: node tools/generate_voice_samples.js
 // Requires .env at repo root with ELEVENLABS_API_KEY
 
 const fs = require('fs');

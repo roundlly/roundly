@@ -2,7 +2,7 @@
 // Voice: George (JBFqnCBsd6RMkjVDRZzb). Uses break tags between scenes
 // so the visuals can sync to a natural pause cue between beats.
 //
-// Run: node tmp/generate_howto_voiceover.js
+// Run: node tools/generate_howto_voiceover.js
 // Output: assets/howto/mafia-en.mp3  +  mafia-en.alignment.json (per-character timing)
 
 const fs = require('fs');

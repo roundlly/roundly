@@ -5,7 +5,7 @@
 // fake state with no real Supabase round-trips. Lab debug bar is hidden
 // before each capture so the screenshots feel like production UI.
 //
-// Run: node tmp/capture_howto_screens.js
+// Run: node tools/capture_howto_screens.js
 // Output: assets/howto-screens/*.png
 
 const puppeteer = require('puppeteer');

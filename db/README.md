@@ -31,7 +31,7 @@ See [`../PHASE4_FINDINGS.md`](../PHASE4_FINDINGS.md) for the full audit.
   — `huddle_migrate_seat` now also moves `narratorUid` (not just `claimedBy` + `hostId`) when the
   migrating session was the narrator. Without it, a host signing in with Google mid-lobby leaves
   `narratorUid` on the dead anon id → the narrator dashboard is stuck on "Loading roles…" and
-  `start_game` mis-deals roles. Reproduced in `tmp/repro-mafia-signin.js`. Idempotent, server-only.
+  `start_game` mis-deals roles. Reproduced in `tools/repro-mafia-signin.js`. Idempotent, server-only.
 
 - **To rebuild from scratch** (new project / disaster recovery): run `migrations/*.sql` in
   filename order, then `fix/00`.
@@ -80,7 +80,7 @@ against each other at create time, so `03–08` can be applied in any order amon
 
 ## Regenerating
 
-The function files are produced by `tmp/build-migration-set.js` from the two CSV dumps
-(`tmp/live-functions.csv`, `tmp/live-policies.csv`). To refresh after future live changes:
+The function files are produced by `tools/build-migration-set.js` from the two CSV dumps
+(`tools/live-functions.csv`, `tools/live-policies.csv`). To refresh after future live changes:
 re-run the dump queries (in `../PHASE4_FINDINGS.md` §5), re-export the CSVs, and
-`node tmp/build-migration-set.js`.
+`node tools/build-migration-set.js`.

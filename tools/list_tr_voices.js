@@ -1,4 +1,4 @@
-const v = JSON.parse(require('fs').readFileSync('tmp/tr_voices.json', 'utf8'));
+const v = JSON.parse(require('fs').readFileSync('tools/tr_voices.json', 'utf8'));
 const rows = v.voices.map(x => ({
   name: x.name,
   id: x.voice_id,

@@ -2,7 +2,7 @@
 // flow) and we check whether the narrator can still load roles afterwards.
 // Simulates the identity change with a SECOND anonymous sign-in (new auth.uid)
 // + the same huddle_migrate_seat call the app makes on sign-in.
-// Run:  node tmp/repro-mafia-signin.js
+// Run:  node tools/repro-mafia-signin.js
 // Throwaway diagnostic. Safe to delete.
 
 const { chromium } = require('@playwright/test');
