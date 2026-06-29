@@ -824,7 +824,7 @@
         const incomingRoom   = incomingParams.get('room');
         const incomingGame   = incomingParams.get('game');
         const ROOM_CODE_RE   = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
-        const ALLOWED_GAMES  = new Set(['liar', 'hotseat', 'chameleon']);
+        const ALLOWED_GAMES  = new Set(['liar', 'hotseat', 'chameleon', 'mafia']);
         const safeParams = new URLSearchParams();
         if (incomingRoom && ROOM_CODE_RE.test(incomingRoom)) safeParams.set('room', incomingRoom);
         if (incomingGame && ALLOWED_GAMES.has(incomingGame)) safeParams.set('game', incomingGame);
@@ -832,7 +832,16 @@
         const redirectTo = window.location.origin + '/' + (safeQuery ? '?' + safeQuery : '');
         const { error } = await window.sb.auth.signInWithOAuth({
           provider: 'google',
-          options: { redirectTo },
+          options: {
+            redirectTo,
+            // Force Google's account chooser every time (2026-06-27). Without
+            // this, Google silently reuses whatever account is already signed in
+            // on the device, so after signing out a user can't switch to a
+            // different account — the chooser never appears. `prompt` is a raw
+            // Google OAuth param forwarded verbatim; use 'consent select_account'
+            // if we ever also want to re-show the permissions screen.
+            queryParams: { prompt: 'select_account' },
+          },
         });
         if (error) throw error;
         // Full-page redirect to Google is in flight — nothing more to do.
@@ -862,6 +871,24 @@
     // Routes the user: missing username → username-setup screen, otherwise → games.
     async function huddleAfterSignIn(user){
       if (!user || user.is_anonymous) return;
+      // Account-switch hygiene (M3, 2026-06-27): wipe any in-memory lists left
+      // from a PREVIOUS identity before we load this user's data, so the new
+      // account never briefly shows the old account's friends / invites /
+      // feedback. The loaders below (and on screen-open) then repopulate for the
+      // current user. Safe on a normal same-account sign-in too (they reload).
+      try {
+        if (typeof friendsState !== 'undefined' && friendsState) {
+          friendsState.friends = []; friendsState.incoming = []; friendsState.outgoing = [];
+        }
+        if (typeof invitesState !== 'undefined' && invitesState) {
+          invitesState.incoming = []; invitesState.outgoing = [];
+          invitesState.bannerQueue = []; invitesState.bannerActive = null;
+        }
+        if (typeof feedbackState !== 'undefined' && feedbackState) {
+          feedbackState.posts = []; feedbackState.voteCounts = Object.create(null);
+          feedbackState.myVotes = new Set(); feedbackState.loaded = false;
+        }
+      } catch(e){}
       // Capture the previous (anon) session ids BEFORE rebinding, so we can
       // ask the server to migrate any seat claims that are still tied to them.
       // The seat-migration RPC requires both the new auth.uid() (implicit
@@ -1101,20 +1128,6 @@
       }
     }
 
-    // "Continue as guest" — uses the existing anonymous auth path.
-    async function huddleContinueAsGuest(){
-      huddleSetAuthStatus(t('login.signingIn'), 'saving');
-      try {
-        if (typeof liarBootstrap === 'function') await liarBootstrap();
-        huddleSyncProfileFromSupabase().catch(() => {});
-        huddleClearAuthStatus();
-        goTo('games');
-      } catch(e) {
-        // Even if Supabase fails, let the user in — they can play single-device games
-        goTo('games');
-      }
-    }
-
     // Translate Supabase auth error codes/messages to friendly strings.
     // Researched 2026-05-15: Supabase's rate-limit error string is
     // "For security purposes, you can only request this after X seconds."
@@ -1260,10 +1273,26 @@
         invitesState.bannerActive = null;
         invitesState.seenIncomingIds = new Set();
       }
+      // Tear down the admin UI immediately (don't wait for the SIGNED_OUT
+      // event) so switching from an admin account to a normal one can't briefly
+      // show admin controls under the new account.
+      try { if (typeof setHuddleAdmin === 'function') setHuddleAdmin(false); } catch(e){}
       try {
-        if (window.sb) await window.sb.auth.signOut();
+        // scope:'local' clears ONLY this device's session. The default ('global')
+        // would also sign the previous player out on their OTHER devices —
+        // wrong for a shared-phone party game (2026-06-27).
+        if (window.sb) await window.sb.auth.signOut({ scope: 'local' });
       } catch(e){}
-      // Clear local cache so a fresh anonymous user starts cleanly next time
+      // Belt-and-suspenders: if signOut() threw above, the Supabase token could
+      // survive and the next boot would silently restore the old account. Remove
+      // the token key directly (derived the same way as the index.html boot
+      // pre-paint: sb-<project-ref>-auth-token).
+      try {
+        const _u = window.SUPABASE_URL || '';
+        const _ref = ((_u.split('//')[1] || '').split('.')[0]) || '';
+        if (_ref) localStorage.removeItem('sb-' + _ref + '-auth-token');
+      } catch(e){}
+      // Clear local cache so the next user starts cleanly
       try { localStorage.removeItem('huddle.profile'); } catch(e){}
       try { huddleClearLastRoom('hotseat'); } catch(e){}
       try { huddleClearLastRoom('cham'); } catch(e){}
@@ -1582,17 +1611,24 @@
           statusText = isHostSeat ? t('lobby.host') : t('lobby.seatTaken');
           avatarData = (claimProfile && claimProfile.avatar) ? claimProfile.avatar : avatarForPlayer(p);
         }
-        const avatar = avatarHTML(avatarData, 32, { online: true, fallback: p.initial });
+        // Presence-driven dot + "Away" label (Batch 2): a claimed seat whose
+        // player has backgrounded/locked their phone shows 💤 Away instead of a
+        // green dot — so the host can see who to keep waiting for or remove.
+        const isPresent = claimedByMe || (typeof hotIsPlayerPresent === 'function' && hotIsPlayerPresent(p.id));
+        const avatar = avatarHTML(avatarData, 32, { online: isPresent, fallback: p.initial });
+        const kick = (claimedByOther && typeof hotIsHost === 'function' && hotIsHost()) ? huddleKickBtnHTML('hot', p.id) : '';
         return `
           <div class="${cls}">
             ${avatar}
             <div class="player-tile-name">${escapeHTML(nameText)}</div>
-            <div class="player-tile-status">${escapeHTML(statusText)}</div>
+            <div class="player-tile-status">${escapeHTML(isPresent ? statusText : t('lobby.away'))}</div>
+            ${kick}
           </div>
         `;
       }).join('');
       parseEmoji(grid);
       if (typeof applyLang === 'function') applyLang();
+      try { huddleUpdateLockBtn('hot-lock-btn', 'hot', (typeof hotIsHost === 'function' && hotIsHost())); } catch(e){}
 
       const playersTitle = document.getElementById('lobby-players-title');
       if (playersTitle) playersTitle.textContent = t('lobby.playersCount', { count: claimedCount });

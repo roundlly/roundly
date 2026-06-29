@@ -362,6 +362,82 @@
       }
     }
 
+    // ===== Host controls: Kick + Lobby Lock (Batch 2, 2026-06-27) =====
+    // Shared by all 4 games' lobbies. Server-enforced in db/fix/06
+    // (huddle_<game>_kick / huddle_set_room_lock); these confirm + call the RPC,
+    // then the realtime echo re-renders. gameToken in {hot, cham, liar, mafia}.
+    const HUDDLE_ROOM_TABLES = { hot:'hotseat_rooms', cham:'chameleon_rooms', liar:'liar_rooms', mafia:'mafia_rooms' };
+    function huddleGameStateFor(gameToken){
+      if (gameToken === 'hot')   return (typeof state      !== 'undefined') ? state      : null;
+      if (gameToken === 'cham')  return (typeof chamState  !== 'undefined') ? chamState  : null;
+      if (gameToken === 'liar')  return (typeof liarState  !== 'undefined') ? liarState  : null;
+      if (gameToken === 'mafia') return (typeof mafiaState !== 'undefined') ? mafiaState : null;
+      return null;
+    }
+    function huddleSeatDisplayName(gameToken, playerId){
+      const st = huddleGameStateFor(gameToken);
+      if (!st) return '';
+      try {
+        const sid = st.claimedBy && st.claimedBy[playerId];
+        if (sid && typeof profileForClaim === 'function') {
+          const prof = profileForClaim(sid);
+          if (prof && typeof claimDisplayName === 'function') { const n = claimDisplayName(prof, ''); if (n) return n; }
+        }
+      } catch(e){}
+      try { const p = (st.players || []).find(x => x.id === playerId); if (p && p.name) return p.name; } catch(e){}
+      return '';
+    }
+    // Host removes a seated player. Confirms, then calls the per-game kick RPC.
+    async function huddleHostKick(gameToken, playerId){
+      const st = huddleGameStateFor(gameToken);
+      if (!st || !st.code || !playerId) return;
+      const name = huddleSeatDisplayName(gameToken, playerId) || (t('common.otherPlayer') || 'this player');
+      const ok = await huddleConfirm({
+        title: t('lobby.kickTitle', { name: name }),
+        body: t('lobby.kickBody'),
+        confirmLabel: t('lobby.kickConfirm'),
+        cancelLabel: t('common.cancel'),
+        danger: true,
+      });
+      if (!ok) return;
+      const res = await huddleCallRPC('huddle_' + gameToken + '_kick', { p_code: st.code, p_player_id: playerId });
+      if (res && res.error) {
+        console.warn('[Huddle] kick failed:', res.error.message || res.error);
+        try { showLobbyToast(t('common.syncFailed'), 3000); } catch(e){}
+      }
+    }
+    // Host toggles whether new players can join the room.
+    async function huddleToggleLock(gameToken){
+      const st = huddleGameStateFor(gameToken);
+      if (!st || !st.code) return;
+      const table = HUDDLE_ROOM_TABLES[gameToken];
+      if (!table) return;
+      const res = await huddleCallRPC('huddle_set_room_lock', { p_table: table, p_code: st.code, p_locked: !st.locked });
+      if (res && res.error) {
+        console.warn('[Huddle] lock toggle failed:', res.error.message || res.error);
+        try { showLobbyToast(t('common.syncFailed'), 3000); } catch(e){}
+      }
+    }
+    // Each game's lobby render calls this to refresh its lock button (host-only;
+    // label reflects state.locked). btnId is the per-game button element id.
+    function huddleUpdateLockBtn(btnId, gameToken, amHost){
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      const st = huddleGameStateFor(gameToken);
+      if (!amHost || !st || !st.code) { btn.style.display = 'none'; return; }
+      btn.style.display = '';
+      btn.textContent = st.locked ? t('lobby.unlockRoom') : t('lobby.lockRoom');
+      btn.classList.toggle('is-locked', !!st.locked);
+    }
+    // Kick "×" button HTML for a claimed-by-other seat. The host-only caller
+    // decides whether to include it. playerId is a safe slot id ('p3'); the
+    // gameToken is a literal — no user input in the onclick, so no XSS risk.
+    function huddleKickBtnHTML(gameToken, playerId){
+      return '<button class="lobby-kick-btn" type="button" aria-label="' + escapeHTML(t('lobby.kick')) +
+             '" title="' + escapeHTML(t('lobby.kick')) + '" onclick="event.stopPropagation(); huddleHostKick(\'' +
+             gameToken + '\',\'' + playerId + '\')">×</button>';
+    }
+
     // ---------- Global "Join with code" sheet (Games tab) ----------
     // Opened from the prominent tile at the top of the Games tab. Probes all
     // three game tables in parallel, finds the match, and routes the user into
@@ -517,66 +593,6 @@
     }
 
     // ---------- Guest name prompt (scanned-QR / shared-link joins) ----------
-    // Shown when a guest arrives via a room link with no name yet, so they never
-    // join as "...". Ensures a non-empty, room-unique name is stored before they
-    // take a seat. Resolves true once a name is accepted, false if they back out.
-    let _guestNameCtx = null;
-    function huddleSetGuestNameStatus(text, kind){
-      const el = document.getElementById('guest-name-status');
-      if (!el) return;
-      el.textContent = text || '';
-      el.className = 'login-status' + (kind ? ' ' + kind : '');
-    }
-    function huddleAskGuestNameForRoom(table, code){
-      return new Promise(async (resolve) => {
-        // Need an (anonymous) session so the name-write RPC is authenticated.
-        try { if (typeof liarBootstrap === 'function') await liarBootstrap(); } catch(e){}
-        let prefill = '';
-        try { prefill = (sessionStorage.getItem('huddle.guestName') || '').trim(); } catch(e){}
-        _guestNameCtx = { table: table, code: code, resolve: resolve };
-        const bd = document.getElementById('guest-name-backdrop');
-        const input = document.getElementById('guest-name-input');
-        if (input) input.value = prefill;
-        huddleSetGuestNameStatus('', '');
-        if (bd) bd.classList.add('active');
-        setTimeout(() => { try { if (input) input.focus(); } catch(e){} }, 80);
-      });
-    }
-    async function huddleGuestNameSubmit(){
-      if (!_guestNameCtx) return;
-      const input = document.getElementById('guest-name-input');
-      const val = ((input && input.value) || '').trim().slice(0, 24);
-      if (!val) {
-        huddleSetGuestNameStatus(t('login.needName'), 'error');
-        if (input) { try { input.focus(); } catch(e){} }
-        return;
-      }
-      const btn = document.querySelector('#guest-name-backdrop .btn-primary');
-      if (btn) btn.disabled = true;
-      const res = await huddleCallRPC('huddle_set_guest_name', { p_table: _guestNameCtx.table, p_code: _guestNameCtx.code, p_name: val });
-      if (btn) btn.disabled = false;
-      const err = res && res.error;
-      if (err && /name_taken/.test(String((err.message) || '') + String((err.code) || ''))) {
-        huddleSetGuestNameStatus(t('login.nameTaken'), 'error');
-        if (input) { try { input.focus(); if (input.select) input.select(); } catch(e){} }
-        return;
-      }
-      if (err) {
-        // Transient (e.g. network) — let them retry rather than join nameless.
-        huddleSetGuestNameStatus(t('joinCode.networkError'), 'error');
-        return;
-      }
-      try { sessionStorage.setItem('huddle.guestName', val); } catch(e){}
-      huddleFinishNameModal(true);
-    }
-    function huddleFinishNameModal(ok){
-      const bd = document.getElementById('guest-name-backdrop');
-      if (bd) bd.classList.remove('active');
-      const ctx = _guestNameCtx;
-      _guestNameCtx = null;
-      if (ctx && ctx.resolve) ctx.resolve(!!ok);
-    }
-    function huddleCancelNameModal(){ huddleFinishNameModal(false); }
     async function huddleLandingJoin(){
       const codeEl = document.getElementById('login-join-code');
       if (!codeEl) return;
@@ -2070,6 +2086,26 @@
           const authEmail = document.getElementById('profile-auth-email');
           if (authRow) authRow.hidden = true;
           if (authEmail) authEmail.textContent = '';
+          // M2 (2026-06-27): full local teardown so a SIGNED_OUT fired by ANOTHER
+          // tab (or a server-side session end) doesn't leave THIS tab still
+          // showing the old account. Guard against a TRANSIENT SIGNED_OUT (e.g. a
+          // token-refresh blip): confirm there's really no session before the
+          // disruptive part (clearing profile + routing to login), so we never
+          // eject a still-valid user. Idempotent with huddleSignOut.
+          (async () => {
+            try {
+              if (window.sb && window.sb.auth) {
+                const { data } = await window.sb.auth.getSession();
+                if (data && data.session && data.session.user) return; // false alarm — still signed in
+              }
+              myProfile = null;
+              if (typeof renderProfileScreen === 'function') renderProfileScreen();
+              const _cur = document.querySelector('.screen.active');
+              const _id = _cur && _cur.id ? _cur.id.replace(/^screen-/, '') : '';
+              const _authed = { 'games':1,'profile':1,'friends':1,'edit-profile':1,'feedback-board':1,'admin':1,'admin-feedback':1,'admin-stats':1 };
+              if (_authed[_id] && typeof goTo === 'function') goTo('login');
+            } catch(e){}
+          })();
         }
       });
     }
@@ -2114,13 +2150,13 @@
               if (cb && Object.values(cb).indexOf(user.id) !== -1) { await openFn(); return; }
             }
           } catch(e){}
-          // Fresh guest join (scanned a QR / opened a shared link, no seat yet) →
-          // drop the veil so the name sheet is visible, then pick a name first so
-          // they never join as "..." (same rules as the start screen).
+          // Login required (2026-06-27): a visitor who isn't signed in can no
+          // longer join as a guest. Drop the veil and send them to sign in. The
+          // ?room=&game= params stay in the URL, so after Google sign-in the
+          // OAuth redirect brings them back here and the signed-in branch above
+          // joins them straight into the room.
           hideVeil();
-          const ok = await huddleAskGuestNameForRoom(tbl, upperCode);
-          if (ok) await openFn();
-          else if (typeof goTo === 'function') goTo('login');
+          if (typeof goTo === 'function') goTo('login');
         } catch(e){ try { await openFn(); } catch(_){} }
         finally { hideVeil(); }
       }, 0);
@@ -2147,5 +2183,10 @@
         if (typeof invitesState !== 'undefined' && invitesState.me &&
             typeof invitesLoad === 'function') invitesLoad();
       } catch(e){}
+      // Phone-lock / app-switch reconnect: while the tab was hidden the realtime
+      // socket was likely killed by the OS. Re-pull + force-rebuild the active
+      // game room's channel so we re-announce presence (which holds our seat
+      // within the 60s grace) and resume live updates. No-op outside a game room.
+      try { if (typeof huddleResumeActiveRoom === 'function') huddleResumeActiveRoom(); } catch(e){}
     });
 

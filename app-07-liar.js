@@ -39,24 +39,6 @@
       return deck;
     }
 
-    // Fisher-Yates (Knuth) shuffle — the standard unbiased shuffle. Every permutation
-    // of the deck has equal probability. Used at the start of every round so each
-    // hand and the table-card revealing order are unpredictable.
-    function liarShuffleDeck(deck){
-      for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-      }
-      return deck;
-    }
-
-    // Hand size — every player gets 5 cards regardless of group size. The deck
-    // (built by liarBuildDeck) scales with player count so it always covers
-    // playerCount × 5 cards, up to 20 players (100 cards).
-    function liarHandSize(_playerCount){
-      return 5;
-    }
-
     // liarState is the SYNCED ROOM STATE — same shape on every connected device.
     // Today: persisted to localStorage, broadcast across browser tabs via 'storage' events.
     // Tomorrow: persisted to Supabase (Postgres row), broadcast via Supabase Realtime.
@@ -151,8 +133,9 @@
     // legitimate refreshes (auth user ID is stable across reload).
     let _liarPresentSessions = new Set(); // sessionIds currently connected
     let _liarLeaveGraceTimers = new Map(); // sessionId → grace timer id
-    // 60s grace — see CHAM_LEAVE_GRACE_MS for the reasoning. Was 5s.
-    const LIAR_LEAVE_GRACE_MS = 60000;
+    // 5-min grace (2026-06-27, RECONNECTION_PLAN.md Phase 1) — see
+    // CHAM_LEAVE_GRACE_MS for the reasoning.
+    const LIAR_LEAVE_GRACE_MS = 300000;
 
     // Is the player at seat `playerId` actually connected right now?
     function liarIsPlayerPresent(playerId){
@@ -211,8 +194,9 @@
     let _liarChannel = null;
     let _liarChannelCode = null;
     let _liarChannelSessionId = null;
-    function liarWireSync(){
+    function liarWireSync(force){
       huddleWireSync({
+        force: force,
         gameState: liarState, meObj: liarMe, getSessionId: liarGetSessionId,
         channelName: 'liar_room:', table: 'liar_rooms',
         presenceKey: liarMe.sessionId, getTrackUserId: () => liarMe.sessionId,
@@ -342,7 +326,14 @@
     //   - Requires lowestSeatConnectedPlayer === me (only one peer writes).
     let _liarSoloPollTimer = null;
     let _liarSoloPollStartedAt = 0;
-    const LIAR_SOLO_POLL_GRACE_MS = 8000;   // wait 8s after entering play before declaring solo
+    // 5-min (2026-06-27): raised from 8s to match LIAR_LEAVE_GRACE_MS. The
+    // sole-survivor poll declares a winner when only ONE player is present in
+    // the realtime channel — but a briefly-locked phone is absent from presence
+    // while its seat is still intact, so the old 8s could crown a "winner" ~11s
+    // after two players locked their phones, ending the game out from under a
+    // table that's still sitting there. Deferring to the seat-removal path
+    // (which only fires after the full grace) makes this a harmless backstop.
+    const LIAR_SOLO_POLL_GRACE_MS = 300000;
     const LIAR_SOLO_POLL_INTERVAL = 3000;   // check every 3s after grace
     function liarStartSoloPoll(){
       if (_liarSoloPollTimer) return;

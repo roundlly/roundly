@@ -213,14 +213,16 @@
     // (seat removal, host transfer, round abort if the chameleon left mid-game).
     let _chamPresentSessions = new Set();
     let _chamLeaveGraceTimers = new Map();
-    // 60s grace — long enough to cover a player locking their phone briefly,
-    // switching to another app, or hitting a transient network drop. Was
-    // originally 5s which freed seats so aggressively that legitimate
-    // "I'll be right back" moments dropped players from the lobby.
-    // Matches industry default for soft-disconnect windows (Colyseus
-    // documents 30s; we go slightly higher since Huddle is in-person and
-    // hosts/friends can verbally call a kick if it drags on).
-    const CHAM_LEAVE_GRACE_MS = 60000;
+    // 5-min grace (2026-06-27, RECONNECTION_PLAN.md Phase 1) — covers a player
+    // locking their phone, switching to another app, or a transient network
+    // drop without losing their seat. On mobile the socket freezes within
+    // seconds of backgrounding, so the old 60s dropped players for a glance.
+    // The wake-resume re-announces presence and cancels this timer; for a
+    // genuinely-gone player the host can kick (Batch 2). NOTE: Chameleon's
+    // huddle_cham_handle_disconnect re-resolves a pending vote when it removes
+    // the seat (05_chameleon_rpcs.sql:165-177), so a mid-vote departure
+    // auto-proceeds when this fires — it waits longer now, it does NOT freeze.
+    const CHAM_LEAVE_GRACE_MS = 300000;
 
     function chamIsPlayerPresent(playerId){
       if (!playerId) return false;
@@ -254,8 +256,9 @@
     let _chamChannel = null;
     let _chamChannelCode = null;
     let _chamChannelSessionId = null;
-    function chamWireSync(){
+    function chamWireSync(force){
       huddleWireSync({
+        force: force,
         gameState: chamState, meObj: chamMe, getSessionId: chamGetSessionId,
         channelName: 'chameleon_room:', table: 'chameleon_rooms',
         presenceKey: chamMe.sessionId, getTrackUserId: () => chamMe.sessionId,
@@ -577,17 +580,22 @@
           statusText = isHostSeat ? t('lobby.host') : t('lobby.seatTaken');
           avatarData = (claimProfile && claimProfile.avatar) ? claimProfile.avatar : avatarForPlayer(p);
         }
-        const avatar = avatarHTML(avatarData, 32, { online: true, fallback: p.initial });
+        // Presence-driven dot + "Away" label + host kick button (Batch 2).
+        const isPresent = claimedByMe || (typeof chamIsPlayerPresent === 'function' && chamIsPlayerPresent(p.id));
+        const avatar = avatarHTML(avatarData, 32, { online: isPresent, fallback: p.initial });
+        const kick = (claimedByOther && typeof chamIsHost === 'function' && chamIsHost()) ? huddleKickBtnHTML('cham', p.id) : '';
         return `
           <div class="${cls}">
             ${avatar}
             <div class="player-tile-name">${escapeHTML(nameText)}</div>
-            <div class="player-tile-status">${escapeHTML(statusText)}</div>
+            <div class="player-tile-status">${escapeHTML(isPresent ? statusText : t('lobby.away'))}</div>
+            ${kick}
           </div>
         `;
       }).join('');
       parseEmoji(grid);
       if (typeof applyLang === 'function') applyLang();
+      try { huddleUpdateLockBtn('cham-lock-btn', 'cham', (typeof chamIsHost === 'function' && chamIsHost())); } catch(e){}
 
       const title = document.getElementById('cham-players-title');
       if (title) title.textContent = t('lobby.playersCount', { count: claimedCount });

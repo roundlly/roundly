@@ -1,0 +1,37 @@
+{
+  "voice": "George (premade, multilingual TR)",
+  "voice_id": "JBFqnCBsd6RMkjVDRZzb",
+  "total_duration_sec": 61.579,
+  "sceneCues": [
+    {
+      "scene": 1,
+      "startSec": 0,
+      "text": "Mafya, gizli rollü bir parti oyunudur. Beş arkadaşını bir araya getir ve aranızdan birini anlatıcı seç — o oyunu yönetir ama oynamaz."
+    },
+    {
+      "scene": 2,
+      "startSec": 9.927,
+      "text": "Uygulama her oyuncuya gizlice bir rol verir. Çoğu Köylüdür. Birkaçı Mafyadır ve gizlice öldürürler. Hayat kurtaran bir Doktor ve araştırma yapan bir Dedektif vardır."
+    },
+    {
+      "scene": 3,
+      "startSec": 21.432,
+      "text": "Gece olur, herkes gözlerini kapatır. Anlatıcı her rolü tek tek uyandırır. Mafya sessizce kimi öldüreceğini seçer. Doktor kimi koruyacağını seçer. Dedektif birini gösterir — eğer o kişi Mafyaysa anlatıcı sessizce baş parmağını yukarı kaldırır."
+    },
+    {
+      "scene": 4,
+      "startSec": 38.846,
+      "text": "Sabah olur ve anlatıcı kimin öldüğünü duyurur. Kasaba konuşur. Yalanı yakalamaya çalış."
+    },
+    {
+      "scene": 5,
+      "startSec": 45.093,
+      "text": "Sonra herkes oy verir. En çok oy alan oyuncu elenir. Eğer Mafyaysa, kasaba zafere bir adım daha yaklaşır."
+    },
+    {
+      "scene": 6,
+      "startSec": 52.534,
+      "text": "Tüm Mafya yakalanırsa kasaba kazanır. Mafya sayıca üstün gelirse Mafya kazanır. Kimseye güvenme. İyi blöf yap. İyi eğlenceler."
+    }
+  ]
+}

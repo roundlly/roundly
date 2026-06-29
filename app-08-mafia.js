@@ -111,18 +111,17 @@
 
     // ----- Transport: subscribe to room updates via Realtime -----
     // ───── Presence tracking (Phase 2b) ─────────────────────────────────
-    // Same pattern as Chameleon/Hot Seat — 60s grace timer covers refresh
-    // and brief app-switches; after grace, the NARRATOR fires the cleanup
-    // RPC (huddle_mafia_handle_disconnect requires narrator-or-self authz).
-    // The function expects the gone player's SEAT KEY (e.g. 'p3'), not a
-    // session UUID, so we look it up from claimedBy before the call.
+    // Same pattern as Chameleon/Hot Seat — 5-min grace (2026-06-27) covers
+    // refresh, phone-lock, and app-switches; after grace, the NARRATOR fires
+    // the cleanup RPC (huddle_mafia_handle_disconnect requires narrator-or-self
+    // authz). The function expects the gone player's SEAT KEY (e.g. 'p3'), not
+    // a session UUID, so we look it up from claimedBy before the call. Mafia is
+    // narrator-driven (verbal), so an away player never stalls the game — the
+    // longer grace simply keeps their seat while they're briefly away.
     let _mafiaPresentSessions = new Set();
     let _mafiaLeaveGraceTimers = new Map();
-    const MAFIA_LEAVE_GRACE_MS = 60000;
+    const MAFIA_LEAVE_GRACE_MS = 300000;
 
-    function mafiaIsSessionPresent(sid){
-      return !!(sid && _mafiaPresentSessions.has(sid));
-    }
     function mafiaConfirmUserGone(sessionId){
       _mafiaPresentSessions.delete(sessionId);
       _mafiaLeaveGraceTimers.delete(sessionId);
@@ -674,7 +673,24 @@
       // Back to lobby (new round or End game) → clear so the next round
       // starts fresh without a stale "ended" overlay if narrator refreshes
       // before tapping Start.
-      if (cur === 'lobby') _mafiaCardsGameOwnedInThisTab = false;
+      if (cur === 'lobby') {
+        _mafiaCardsGameOwnedInThisTab = false;
+        // Invalidate this device's cached role at the lobby boundary. A new
+        // game re-deals every role server-side (start_game does DELETE + fresh
+        // INSERT), and the server forces phase='lobby' before it will start —
+        // so the lobby is the one gate every replay passes through. The HOST
+        // (mafiaStartGame) and NARRATOR (mafiaCardsEndGame) already drop their
+        // caches on replay, but a regular player had NO reset: mafiaFetchMyRole
+        // short-circuits on a non-null mafiaMe.myRole, so on the next game they
+        // kept seeing their role from the PREVIOUS game. Across replays that
+        // surfaced as impossible spreads ("2 doctors, no mafia" with 5 players).
+        // Clearing here forces a fresh fetch for the new deal. Safe to run on
+        // every lobby render — role cards never show in the lobby.
+        mafiaMe.myRole = null;
+        mafiaMe.myTeammates = [];
+        mafiaMe.narratorRoles = null;
+        mafiaCardsRoleRevealed = false;
+      }
       _mafiaCardsPrevPhase = cur;
     }
 
@@ -769,21 +785,22 @@
     }
 
     // The narrator's script, grouped by the beat it belongs to. The screen
-    // shows ONLY the current beat (opening / night / day); the whole thing is
-    // also viewable via "See the whole script". Each line is something to SAY
-    // (key, shown big and quoted) and/or a stage direction to DO (hintKey,
-    // shown small and muted). requiresRole hides a line unless that optional
-    // role is in the game. endgame (win conditions) is reference-only.
+    // shows ONLY the current beat (opening / night / day). Each line is
+    // something to SAY (key, shown big and quoted) and/or a stage direction to
+    // DO (hintKey, shown small and muted). requiresRole hides a line unless
+    // that optional role is in the game. Win conditions are NOT in the script —
+    // they live in the Rules sheet (MAFIA_CARDS_NARRATOR_RULES) so the day
+    // teleprompter stays focused on what to say next.
     const MAFIA_CARDS_SCRIPT = {
       opening: [
         { key: 'mafia.script.opening.night1Open.text',      hintKey: 'mafia.script.opening.night1Open.stageDir' },
-        { key: 'mafia.script.opening.night1MafiaMeet.text', hintKey: 'mafia.script.opening.night1MafiaMeet.stageDir' },
+        { key: 'mafia.script.opening.night1MafiaMeet.text', hintKey: 'mafia.script.opening.night1MafiaMeet.stageDir', dynamic: 'mafiaMeet' },
         { key: 'mafia.script.opening.night1MafiaSleep.text' },
         { key: 'mafia.script.opening.day0Morning.text' },
       ],
       night: [
         { key: 'mafia.script.middle.nightOpen.text' },
-        { key: 'mafia.script.middle.mafiaWake.text',      hintKey: 'mafia.script.middle.mafiaWake.stageDir' },
+        { key: 'mafia.script.middle.mafiaWake.text',      hintKey: 'mafia.script.middle.mafiaWake.stageDir', dynamic: 'mafiaWakeNote' },
         { key: 'mafia.script.middle.mafiaSleep.text' },
         { key: 'mafia.script.middle.detectiveWake.text',  hintKey: 'mafiaCards.script.detectiveHint', requiresRole: 'detective' },
         { hintKey: 'mafia.script.middle.leaderHint.text', requiresRole: 'mafiaLeader' },
@@ -794,13 +811,9 @@
       ],
       day: [
         { key: 'mafia.script.middle.dayReveal.text',  hintKey: 'mafiaCards.script.dayRevealHint' },
-        { key: 'mafia.script.middle.dayDiscuss.text' },
-        { key: 'mafiaCards.script.voteCardsLine' },
+        { key: 'mafia.script.middle.dayDiscuss.text', hintKey: 'mafiaCards.script.dayDiscussNote' },
+        { key: 'mafiaCards.script.voteCardsLine',     hintKey: 'mafiaCards.script.voteNote', dynamic: 'voteLine' },
         { hintKey: 'mafia.script.middle.childVoteDeath.text', requiresRole: 'child' },
-      ],
-      endgame: [
-        { key: 'mafiaCards.script.endgameTownWins' },
-        { key: 'mafiaCards.script.endgameMafiaWins' },
       ],
     };
 
@@ -816,16 +829,19 @@
       villager:     { emoji:'👤',  nameKey:'mafia.rules.role.villager.name' },
     };
 
-    // Narrator-only rules — three focused rules, each an emoji + title you tap
-    // open. r2 (the Detective) carries its Mafia-Leader exception as a separate
-    // highlighted callout so the longest rule still reads calmly.
+    // Narrator-only rules — focused rules, each an emoji + title you tap open.
+    // r2 (the Detective) carries its Mafia-Leader exception as a separate
+    // highlighted callout so the longest rule still reads calmly. The win
+    // conditions live here too (moved out of the script) so the narrator can
+    // check the finish line between rounds without cluttering the day beat.
     const MAFIA_CARDS_NARRATOR_RULES = [
       { emoji: '👁',  titleKey: 'mafiaCards.rules.r1.title', bodyKey: 'mafiaCards.rules.r1.body' },
       { emoji: '🕵️', titleKey: 'mafiaCards.rules.r2.title', bodyKey: 'mafiaCards.rules.r2.body', exceptionKey: 'mafiaCards.rules.r2.exception' },
       { emoji: '⚖️', titleKey: 'mafiaCards.rules.r3.title', bodyKey: 'mafiaCards.rules.r3.body' },
+      { emoji: '🏆', titleKey: 'mafiaCards.rules.win.title', bodyKey: 'mafiaCards.rules.win.body' },
     ];
 
-    // ---- Script rendering (teleprompter + overview) ----
+    // ---- Script rendering (teleprompter) ----
     // A line shows if its optional-role gate passes (or it has no gate).
     function mafiaCardsLineActive(line){
       if (line.requiresRole === 'detective')   return mafiaIsDetectiveActive();
@@ -833,16 +849,78 @@
       if (line.requiresRole === 'mafiaLeader') return mafiaIsLeaderActive();
       return true;
     }
+    // How many players are on the Mafia team tonight (regular Mafia + the
+    // optional Mafia Leader). Drives solo-vs-team script wording. Returns 0 if
+    // the narrator's role map hasn't loaded yet.
+    function mafiaCardsMafiaTeamCount(){
+      const rm = mafiaMe.narratorRoles;
+      if (!rm) return 0;
+      let n = 0;
+      for (const seat in rm) { if (rm[seat] === 'mafia' || rm[seat] === 'mafia_leader') n++; }
+      return n;
+    }
+    // Resolve a line to its final {say, hint}, applying count-aware variants:
+    //  - a solo Mafia (5–6 player games) has no team to "memorize" on opening;
+    //  - the Mafia wake note tells the narrator exactly how many eyes to expect.
+    function mafiaCardsResolveLine(line){
+      let say  = line.key     ? t(line.key)     : '';
+      let hint = line.hintKey ? t(line.hintKey) : '';
+      if (line.dynamic === 'mafiaMeet' && mafiaCardsMafiaTeamCount() === 1) {
+        say  = t('mafia.script.opening.night1MafiaMeet.solo');
+        hint = t('mafia.script.opening.night1MafiaMeet.soloDir');
+      } else if (line.dynamic === 'mafiaWakeNote') {
+        const n = mafiaCardsMafiaTeamCount();
+        hint = (n >= 2) ? t('mafiaCards.script.mafiaWakeNote', { n: n })
+                        : t('mafiaCards.script.mafiaWakeNoteSolo');
+      } else if (line.dynamic === 'voteLine' && mafiaCardsRound <= 1) {
+        // First day only (round 1): there's little to go on, so voting is
+        // optional. Later days keep the plain "vote someone out" line.
+        say = t('mafiaCards.script.voteCardsLineDay1');
+      }
+      return { say: say, hint: hint };
+    }
     // One script line → a SAY paragraph (big, quoted) and/or a DO note (muted).
     function mafiaCardsRenderStageLine(line){
+      const r = mafiaCardsResolveLine(line);
       let html = '';
-      if (line.key)     html += '<p class="mafia-narr-say">' + t(line.key) + '</p>';
-      if (line.hintKey) html += '<p class="mafia-narr-do"><span class="mafia-narr-do-mark" aria-hidden="true">›</span>' + t(line.hintKey) + '</p>';
+      if (r.say)  html += '<p class="mafia-narr-say">' + r.say + '</p>';
+      if (r.hint) html += '<p class="mafia-narr-do"><span class="mafia-narr-do-mark" aria-hidden="true">›</span>' + r.hint + '</p>';
       return '<div class="mafia-narr-line">' + html + '</div>';
     }
 
     // Small chevron used on every tap-to-expand row.
     const MAFIA_NARR_CHEVRON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>';
+
+    // One tap-to-expand row. Custom (not <details>) so we can animate the
+    // height smoothly and keep only one row open per sheet. Collapsed by default.
+    function mafiaCardsAccItem(emoji, title, bodyHtml){
+      return '<div class="mafia-narr-acc" data-open="false">'
+        + '<button type="button" class="mafia-narr-acc-summary" aria-expanded="false" onclick="mafiaCardsAccToggle(this)">'
+          + '<span class="mafia-narr-acc-emoji" aria-hidden="true">' + emoji + '</span>'
+          + '<span class="mafia-narr-acc-title">' + title + '</span>'
+          + '<span class="mafia-narr-acc-chev" aria-hidden="true">' + MAFIA_NARR_CHEVRON + '</span>'
+        + '</button>'
+        + '<div class="mafia-narr-acc-wrap"><div class="mafia-narr-acc-inner"><div class="mafia-narr-acc-body">' + bodyHtml + '</div></div></div>'
+      + '</div>';
+    }
+    // Toggle a row, closing any other open row in the same sheet (one at a time).
+    function mafiaCardsAccToggle(btn){
+      const acc = btn.parentElement;
+      if (!acc) return;
+      const willOpen = acc.getAttribute('data-open') !== 'true';
+      const group = acc.parentElement;
+      if (group) {
+        group.querySelectorAll('.mafia-narr-acc[data-open="true"]').forEach(el => {
+          if (el !== acc) {
+            el.setAttribute('data-open', 'false');
+            const s = el.querySelector('.mafia-narr-acc-summary');
+            if (s) s.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+      acc.setAttribute('data-open', willOpen ? 'true' : 'false');
+      btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    }
 
     // ---- Who's who bottom sheet (the narrator's secret cheat sheet) ----
     function mafiaCardsOpenWho(){
@@ -899,57 +977,13 @@
       if (!body) return;
       body.innerHTML =
         '<p class="mafia-narr-sheet-intro">' + t('mafiaCards.rules.intro') + '</p>'
-        + MAFIA_CARDS_NARRATOR_RULES.map(r =>
-          '<details class="mafia-narr-acc">'
-            + '<summary class="mafia-narr-acc-summary">'
-              + '<span class="mafia-narr-acc-emoji" aria-hidden="true">' + r.emoji + '</span>'
-              + '<span class="mafia-narr-acc-title">' + t(r.titleKey) + '</span>'
-              + '<span class="mafia-narr-acc-chev" aria-hidden="true">' + MAFIA_NARR_CHEVRON + '</span>'
-            + '</summary>'
-            + '<div class="mafia-narr-acc-body">'
-              + '<p class="mafia-narr-acc-p">' + t(r.bodyKey) + '</p>'
-              + (r.exceptionKey
-                  ? '<div class="mafia-narr-callout"><span class="mafia-narr-callout-icon" aria-hidden="true">⚠️</span>'
-                    + '<span class="mafia-narr-callout-text">' + t(r.exceptionKey) + '</span></div>'
-                  : '')
-            + '</div>'
-          + '</details>'
-        ).join('');
-    }
-
-    // ---- Whole-script overview bottom sheet ----
-    function mafiaCardsOpenOverview(){
-      mafiaCardsRenderOverviewSheet();
-      const bd = document.getElementById('mafia-cards-overview-backdrop');
-      if (bd) bd.classList.add('active');
-    }
-    function mafiaCardsCloseOverview(ev){
-      if (ev && ev.target && ev.target.id && ev.target.id !== 'mafia-cards-overview-backdrop') return;
-      const bd = document.getElementById('mafia-cards-overview-backdrop');
-      if (bd) bd.classList.remove('active');
-    }
-    function mafiaCardsRenderOverviewSheet(){
-      const body = document.getElementById('mafia-cards-overview-sheet-body');
-      if (!body) return;
-      const groups = [
-        { emoji: '🎬', headKey: 'mafiaCards.script.openingTitle', lines: MAFIA_CARDS_SCRIPT.opening },
-        { emoji: '🌙', headKey: 'mafiaCards.overview.nightHead',  lines: MAFIA_CARDS_SCRIPT.night },
-        { emoji: '☀️', headKey: 'mafiaCards.overview.dayHead',    lines: MAFIA_CARDS_SCRIPT.day },
-        { emoji: '🏆', headKey: 'mafiaCards.script.endgameTitle', lines: MAFIA_CARDS_SCRIPT.endgame },
-      ];
-      body.innerHTML =
-        '<p class="mafia-narr-sheet-intro">' + t('mafiaCards.overview.intro') + '</p>'
-        + groups.map(g => {
-          const linesHtml = g.lines.filter(mafiaCardsLineActive).map(mafiaCardsRenderStageLine).join('');
-          if (!linesHtml) return '';
-          return '<details class="mafia-narr-acc">'
-            + '<summary class="mafia-narr-acc-summary">'
-              + '<span class="mafia-narr-acc-emoji" aria-hidden="true">' + g.emoji + '</span>'
-              + '<span class="mafia-narr-acc-title">' + t(g.headKey) + '</span>'
-              + '<span class="mafia-narr-acc-chev" aria-hidden="true">' + MAFIA_NARR_CHEVRON + '</span>'
-            + '</summary>'
-            + '<div class="mafia-narr-acc-body"><div class="mafia-narr-lines mafia-narr-lines-compact">' + linesHtml + '</div></div>'
-          + '</details>';
+        + MAFIA_CARDS_NARRATOR_RULES.map(r => {
+          const inner = '<p class="mafia-narr-acc-p">' + t(r.bodyKey) + '</p>'
+            + (r.exceptionKey
+                ? '<div class="mafia-narr-callout"><span class="mafia-narr-callout-icon" aria-hidden="true">⚠️</span>'
+                  + '<span class="mafia-narr-callout-text">' + t(r.exceptionKey) + '</span></div>'
+                : '');
+          return mafiaCardsAccItem(r.emoji, t(r.titleKey), inner);
         }).join('');
     }
 
@@ -1006,6 +1040,16 @@
         nextLabel.textContent = t(key);
       }
 
+      // The "How to play" toolbar shortcut opens the same video as the lobby,
+      // which only exists for languages in MAFIA_HOWTO_LANGS. Hide it otherwise
+      // so the narrator never taps a button that does nothing — the toolbar is
+      // flex, so it cleanly falls back to two buttons (Who's who · Rules).
+      const howtoTool = document.getElementById('mafia-narr-howto-tool');
+      if (howtoTool) {
+        const lang = (typeof getLang === 'function') ? getLang() : 'en';
+        howtoTool.hidden = !MAFIA_HOWTO_LANGS.has(lang);
+      }
+
       // Prime profile names so "who's who" shows real names ("Ahmed") when the
       // narrator opens Rules. No-op in lab mode (synthetic UIDs).
       mafiaPrimeClaimantProfiles();
@@ -1028,6 +1072,16 @@
     }
 
     function mafiaCardsRenderRole(){
+      // "How to play" on the player's role screen opens the same lobby video.
+      // Gate it on language (same rule as the lobby trigger + narrator toolbar)
+      // so it never shows when there's no video. Done before the role-loaded
+      // early-return so it's correct even while the role is still fetching.
+      const roleHowto = document.getElementById('mafia-role-howto-trigger');
+      if (roleHowto) {
+        const lang = (typeof getLang === 'function') ? getLang() : 'en';
+        roleHowto.hidden = !MAFIA_HOWTO_LANGS.has(lang);
+      }
+
       const role = mafiaMe.myRole;
       if (!role) {
         // Role not loaded yet — kick a fetch; render again when it lands
@@ -1601,28 +1655,53 @@
     }
 
     // ===== How To Play — animated video player with ElevenLabs voiceover ====
-    // The 6 scenes are sequenced by audio.currentTime. Each entry's startSec
-    // matches the per-scene cue exported from generate_howto_voiceover.js
-    // (see assets/howto/mafia-en.alignment.json). End card fires after the
-    // last scene finishes — that's the natural "outro" before the user closes.
-    const MAFIA_HOWTO_SCENE_CUES = [
-      { scene: '1', startSec: 0     },
-      { scene: '2', startSec: 8.86  },
-      { scene: '3', startSec: 20.48 },
-      { scene: '4', startSec: 37.04 },
-      { scene: '5', startSec: 43.34 },
-      { scene: '6', startSec: 50.77 },
-      { scene: 'end', startSec: 58.7 },
-    ];
-    const MAFIA_HOWTO_AUDIO_SRC = 'assets/howto/mafia-en.mp3';
+    // Per-language media: the voiceover file + the scene cue points that
+    // sequence the animation against audio.currentTime. Each startSec comes
+    // straight from the alignment JSON the voiceover exports
+    // (assets/howto/mafia-<lang>.alignment.json, written by
+    // tools/generate_howto_voiceover[_tr].js); the trailing 'end' cue is the
+    // total audio duration, which pins the outro card after the last scene.
+    // TR uses the same premade voice as EN (George via eleven_multilingual_v2)
+    // because the native Doga voice needs ElevenLabs Creator tier.
+    const MAFIA_HOWTO_MEDIA = {
+      en: {
+        audio: 'assets/howto/mafia-en.mp3',
+        cues: [
+          { scene: '1', startSec: 0     },
+          { scene: '2', startSec: 8.86  },
+          { scene: '3', startSec: 20.48 },
+          { scene: '4', startSec: 37.04 },
+          { scene: '5', startSec: 43.34 },
+          { scene: '6', startSec: 50.77 },
+          { scene: 'end', startSec: 58.7 },
+        ],
+      },
+      tr: {
+        audio: 'assets/howto/mafia-tr.mp3',
+        cues: [
+          { scene: '1', startSec: 0     },
+          { scene: '2', startSec: 9.93  },
+          { scene: '3', startSec: 21.43 },
+          { scene: '4', startSec: 38.85 },
+          { scene: '5', startSec: 45.09 },
+          { scene: '6', startSec: 52.53 },
+          { scene: 'end', startSec: 61.58 },
+        ],
+      },
+    };
+    // Resolve the media bundle for the active language, falling back to English.
+    function mafiaHowToMedia(){
+      const lang = (typeof getLang === 'function') ? getLang() : 'en';
+      return MAFIA_HOWTO_MEDIA[lang] || MAFIA_HOWTO_MEDIA.en;
+    }
     let mafiaHowToReturnScreen = 'mafia-lobby';
     let mafiaHowToRafId = null;
 
     // Languages we have a finished how-to video for. When the active language
     // isn't in this set, the "How to play" trigger is hidden entirely so we
-    // don't promise something we can't deliver. (Turkish video pending — needs
-    // Creator-tier ElevenLabs for the native Doga voice.)
-    const MAFIA_HOWTO_LANGS = new Set(['en']);
+    // don't promise something we can't deliver. Each entry needs both a
+    // voiceover file in MAFIA_HOWTO_MEDIA and scene captions (mafia.howto.*).
+    const MAFIA_HOWTO_LANGS = new Set(['en', 'tr']);
 
     function mafiaUpdateHowToTrigger(){
       const trig = document.getElementById('mafia-howto-trigger');
@@ -1665,8 +1744,11 @@
 
       const audio = document.getElementById('mh-audio');
       if (audio) {
-        if (audio.src !== window.location.origin + '/' + MAFIA_HOWTO_AUDIO_SRC && !audio.src.endsWith(MAFIA_HOWTO_AUDIO_SRC)) {
-          audio.src = MAFIA_HOWTO_AUDIO_SRC;
+        // Pick the voiceover for the active language. If the language changed
+        // since the last open (or it's the first open), swap the src.
+        const audioSrc = mafiaHowToMedia().audio;
+        if (!audio.src.endsWith(audioSrc)) {
+          audio.src = audioSrc;
         }
         audio.currentTime = 0;
       }
@@ -1735,12 +1817,14 @@
     function mafiaHowToTick(){
       const audio = document.getElementById('mh-audio');
       if (!audio) { mafiaHowToStopTicker(); return; }
+      const cues = mafiaHowToMedia().cues;
       const t = audio.currentTime || 0;
-      const dur = audio.duration || 58.7;
+      // Fall back to the 'end' cue (= total duration) until metadata loads.
+      const dur = audio.duration || cues[cues.length - 1].startSec;
 
       // Decide which scene should be active based on currentTime.
-      let activeSceneId = MAFIA_HOWTO_SCENE_CUES[0].scene;
-      for (const cue of MAFIA_HOWTO_SCENE_CUES) {
+      let activeSceneId = cues[0].scene;
+      for (const cue of cues) {
         if (t >= cue.startSec - 0.05) activeSceneId = cue.scene;
       }
       const currentlyActive = document.querySelector('#screen-mafia-howto .mh-scene.is-active');
@@ -2130,20 +2214,26 @@
           nameText = claimDisplayName(claimProfile, '…');
           avatarData = (claimProfile && claimProfile.avatar) ? claimProfile.avatar : avatarForPlayer(p);
         }
+        // Presence-driven dot + "Away" label + host kick button (Batch 2).
+        const _liarAmHost = (typeof liarGetSessionId === 'function' && liarState && liarGetSessionId() === liarState.hostId);
+        const isPresent = claimedByMe || (typeof liarIsPlayerPresent === 'function' && liarIsPlayerPresent(p.id));
+        const kick = (claimedByOther && _liarAmHost) ? huddleKickBtnHTML('liar', p.id) : '';
         return `
           <div class="${cls}" data-seat-id="${p.id}">
-            ${avatarHTML(avatarData, 32, { fallback: p.initial })}
+            ${avatarHTML(avatarData, 32, { online: isPresent, fallback: p.initial })}
             <div class="liar-seat-info">
               <div class="liar-seat-name">${escapeHTML(nameText)}</div>
-              <div class="liar-seat-status">${status}</div>
+              <div class="liar-seat-status">${isPresent ? status : escapeHTML(t('lobby.away'))}</div>
             </div>
             ${claimedByMe ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--success);flex-shrink:0"><path d="M20 6 9 17l-5-5"></path></svg>' : ''}
+            ${kick}
           </div>
         `;
       }).join('');
       parseEmoji(el);
       // Apply translations to any new data-i18n nodes inside the freshly-rendered seats
       if (typeof applyLang === 'function') applyLang(el);
+      try { huddleUpdateLockBtn('liar-lock-btn', 'liar', (typeof liarGetSessionId === 'function' && liarState && liarGetSessionId() === liarState.hostId)); } catch(e){}
 
       // Update start-button state — need at least 2 seats claimed AND I have a seat
       const startBtn = document.getElementById('liar-start-btn');

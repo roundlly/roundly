@@ -2,6 +2,43 @@
 // All fragments share ONE global scope and MUST load in numeric order — do not reorder.
 
     // -------------------------------------------------------------------
+    // Resume an in-progress game room after the app returns to the foreground,
+    // the network comes back, or the page is restored from BFCache. On mobile
+    // the realtime WebSocket is silently killed while the tab is backgrounded
+    // (phone lock, app-switch), so re-pulling state is NOT enough — we also
+    // FORCE a channel rebuild (force=true) which re-subscribes and re-announces
+    // our presence. Re-announcing within the 5-minute leave-grace window is what
+    // makes the other players' clients cancel our pending "disconnect", so our
+    // seat is held and we drop straight back into the live game. Mafia's
+    // wireSync always rebuilds, so it takes no force flag. Shared by the
+    // pageshow (BFCache), online, and visibilitychange handlers.
+    // -------------------------------------------------------------------
+    async function huddleResumeActiveRoom(){
+      try {
+        // A long-backgrounded phone returns with a possibly-expired auth token
+        // and a dead socket; refresh the session BEFORE we re-subscribe, or the
+        // forced channel rebuild can silently fail to authenticate. getSession()
+        // refreshes when needed and is a cheap no-op when the token is valid.
+        if (window.sb && window.sb.auth) { try { await window.sb.auth.getSession(); } catch(e){} }
+        const active = document.querySelector('.screen.active');
+        const id = active ? active.id : '';
+        if ((id === 'screen-lobby' || id === 'screen-splash' || id === 'screen-play' || id === 'screen-result')
+            && typeof hotLoadRoom === 'function' && typeof state !== 'undefined' && state && state.code) {
+          hotLoadRoom(state.code).then(ok => { if (ok) { try { hotWireSync(true); } catch(e){} try { hotRerender(); } catch(e){} } });
+        } else if (id.startsWith('screen-cham')
+            && typeof chamLoadRoom === 'function' && typeof chamState !== 'undefined' && chamState && chamState.code) {
+          chamLoadRoom(chamState.code).then(ok => { if (ok) { try { chamWireSync(true); } catch(e){} try { chamRerender(); } catch(e){} } });
+        } else if (id.startsWith('screen-liar')
+            && typeof liarLoadRoom === 'function' && typeof liarState !== 'undefined' && liarState && liarState.code) {
+          liarLoadRoom(liarState.code).then(ok => { if (ok) { try { liarWireSync(true); } catch(e){} try { liarRerender(); } catch(e){} } });
+        } else if (id.startsWith('screen-mafia')
+            && typeof mafiaLoadRoom === 'function' && typeof mafiaState !== 'undefined' && mafiaState && mafiaState.code) {
+          mafiaLoadRoom(mafiaState.code).then(ok => { if (ok) { try { mafiaWireSync(); } catch(e){} try { mafiaRerender(); } catch(e){} } });
+        }
+      } catch(e){}
+    }
+
+    // -------------------------------------------------------------------
     // BFCache rehydration — per web.dev/bfcache. When the page is restored
     // from the back/forward cache, JS state IS preserved but realtime
     // WebSocket connections were closed when the page went into the frozen
@@ -18,20 +55,8 @@
       if (!event.persisted) return; // normal fresh load — boot already handled it
       try { if (typeof friendsState !== 'undefined' && friendsState.me && typeof friendsLoad === 'function') friendsLoad(); } catch(e){}
       try { if (typeof invitesState !== 'undefined' && invitesState.me && typeof invitesLoad === 'function') invitesLoad(); } catch(e){}
-      // Refresh active game-room state for whichever game is on-screen
-      try {
-        const active = document.querySelector('.screen.active');
-        const id = active ? active.id : '';
-        if (id === 'screen-lobby' || id === 'screen-splash' || id === 'screen-play' || id === 'screen-result') {
-          if (typeof hotLoadRoom === 'function' && typeof state !== 'undefined' && state && state.code) hotLoadRoom(state.code);
-        } else if (id.startsWith('screen-cham')) {
-          if (typeof chamLoadRoom === 'function' && typeof chamState !== 'undefined' && chamState && chamState.code) chamLoadRoom(chamState.code);
-        } else if (id.startsWith('screen-liar')) {
-          if (typeof liarLoadRoom === 'function' && typeof liarState !== 'undefined' && liarState && liarState.code) liarLoadRoom(liarState.code);
-        } else if (id.startsWith('screen-mafia')) {
-          if (typeof mafiaLoadRoom === 'function' && typeof mafiaState !== 'undefined' && mafiaState && mafiaState.code) mafiaLoadRoom(mafiaState.code);
-        }
-      } catch(e){}
+      // Re-pull + re-subscribe (force channel rebuild) the active game room.
+      huddleResumeActiveRoom();
     });
 
     // -------------------------------------------------------------------
@@ -66,20 +91,8 @@
       // for the same reason: realtime sockets may have died while offline.
       try { if (typeof friendsState !== 'undefined' && friendsState.me && typeof friendsLoad === 'function') friendsLoad(); } catch(e){}
       try { if (typeof invitesState !== 'undefined' && invitesState.me && typeof invitesLoad === 'function') invitesLoad(); } catch(e){}
-      // Refresh active room state for whichever game is currently on-screen.
-      try {
-        const active = document.querySelector('.screen.active');
-        const id = active ? active.id : '';
-        if (id === 'screen-lobby' || id === 'screen-splash' || id === 'screen-play' || id === 'screen-result') {
-          if (typeof hotLoadRoom === 'function' && typeof state !== 'undefined' && state && state.code) hotLoadRoom(state.code);
-        } else if (id.startsWith('screen-cham')) {
-          if (typeof chamLoadRoom === 'function' && typeof chamState !== 'undefined' && chamState && chamState.code) chamLoadRoom(chamState.code);
-        } else if (id.startsWith('screen-liar')) {
-          if (typeof liarLoadRoom === 'function' && typeof liarState !== 'undefined' && liarState && liarState.code) liarLoadRoom(liarState.code);
-        } else if (id.startsWith('screen-mafia')) {
-          if (typeof mafiaLoadRoom === 'function' && typeof mafiaState !== 'undefined' && mafiaState && mafiaState.code) mafiaLoadRoom(mafiaState.code);
-        }
-      } catch(e){}
+      // Re-pull + re-subscribe (force channel rebuild) the active game room.
+      huddleResumeActiveRoom();
     });
 
     /* ===== WHEEL TEST DEMO — Lab-only =====

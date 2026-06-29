@@ -1095,6 +1095,14 @@
     .player-tile .avatar{width:32px;height:32px;font-size:13px}
     .player-tile-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
     .player-tile .host-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary)}
+    /* Host controls (Batch 2): per-seat kick "×" button + lobby lock toggle.
+       The kick button is a flex child appended to a claimed-by-other seat tile
+       (.player-tile / .liar-seat are display:flex rows), so it sits at the right
+       edge with no positioning hacks. Shown only to the host (server-enforced). */
+    .lobby-kick-btn{flex-shrink:0;width:26px;height:26px;border:none;border-radius:50%;background:var(--bg-subtle);color:var(--text-secondary);font-size:18px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;margin-left:6px;transition:background .15s ease,color .15s ease}
+    .lobby-kick-btn:hover,.lobby-kick-btn:active{background:#e5484d;color:#fff}
+    .lobby-lock-btn{margin-bottom:8px}
+    .lobby-lock-btn.is-locked{color:#e5484d;border-color:#e5484d}
     /* Hot Seat — seat claim tiles */
     .hot-seat-tile{cursor:default;transition:all .15s ease;border:1.5px solid var(--border-strong)}
     .hot-seat-tile.unclaimed{cursor:pointer;opacity:.85;background:var(--bg-subtle)}
@@ -3840,32 +3848,44 @@
     .mafia-cards-narrator-end:hover{background:var(--bg-hover);color:var(--text-secondary)}
 
     /* ===== Mafia Cards — narrator bottom-sheet content (redesign) =======
-       Three sheets reached from the top toolbar: Who's who (cheat sheet),
-       Rules (tap-to-expand accordion), and the whole-script overview
-       (tap-to-expand by part). All render into the app-wide .sheet shell.
-       Calm by design — generous size + spacing, hierarchy via the sheet
-       title + a one-line intro, no shouty all-caps. Monochrome. */
+       Two sheets reached from the top toolbar: Who's who (cheat sheet) and
+       Rules (tap-to-expand accordion). The third toolbar button (How to play)
+       opens the lobby walkthrough video, not a sheet. Both sheets render into
+       the app-wide .sheet shell. Calm by design — generous size + spacing,
+       hierarchy via the sheet title + a one-line intro, no shouty all-caps.
+       Monochrome. */
     .mafia-narr-sheet-intro{
       font-size:14px;line-height:1.55;color:var(--text-secondary);margin:-4px 0 16px;
     }
-    /* Tap-to-expand row (native <details>) — Rules + script overview.
+    /* Tap-to-expand row (custom div-based accordion) — used by the Rules sheet.
        Collapsed by default so the sheet opens short and calm. */
     .mafia-narr-acc{
       background:var(--bg-subtle);border:1px solid var(--border);
       border-radius:var(--radius-md);overflow:hidden;margin-bottom:10px;
     }
     .mafia-narr-acc-summary{
-      list-style:none;cursor:pointer;display:flex;align-items:center;gap:13px;
+      width:100%;background:none;border:none;font-family:inherit;text-align:left;
+      cursor:pointer;display:flex;align-items:center;gap:13px;
       padding:15px 16px;-webkit-tap-highlight-color:transparent;
     }
-    .mafia-narr-acc-summary::-webkit-details-marker{display:none}
-    .mafia-narr-acc-summary::marker{content:""}
     .mafia-narr-acc-emoji{font-size:21px;line-height:1;flex-shrink:0}
     .mafia-narr-acc-title{flex:1;font-size:15.5px;font-weight:700;color:var(--text);letter-spacing:-.01em}
-    .mafia-narr-acc-chev{flex-shrink:0;color:var(--text-tertiary);display:inline-flex;transition:transform .2s ease}
-    .mafia-narr-acc[open] > .mafia-narr-acc-summary .mafia-narr-acc-chev{transform:rotate(180deg)}
+    .mafia-narr-acc-chev{flex-shrink:0;color:var(--text-tertiary);display:inline-flex;transition:transform .28s cubic-bezier(.4,0,.2,1)}
+    .mafia-narr-acc[data-open="true"] .mafia-narr-acc-chev{transform:rotate(180deg)}
+    /* Smooth height animation via the grid 0fr→1fr trick (widely supported).
+       The inner wrapper clips so the body's border/padding stay hidden while
+       collapsed. JS keeps only one row open per sheet. */
+    .mafia-narr-acc-wrap{
+      display:grid;grid-template-rows:0fr;
+      transition:grid-template-rows .28s cubic-bezier(.4,0,.2,1);
+    }
+    .mafia-narr-acc[data-open="true"] .mafia-narr-acc-wrap{grid-template-rows:1fr}
+    .mafia-narr-acc-inner{overflow:hidden;min-height:0}
     .mafia-narr-acc-body{
       padding:12px 16px 16px;border-top:1px solid var(--border);
+    }
+    @media (prefers-reduced-motion: reduce){
+      .mafia-narr-acc-wrap,.mafia-narr-acc-chev{transition:none}
     }
     .mafia-narr-acc-p{margin:0;font-size:14px;line-height:1.65;color:var(--text-secondary)}
     .mafia-narr-acc-p strong{color:var(--text);font-weight:600}
@@ -3972,6 +3992,11 @@
     .mafia-cards-role-win-row::before{
       content:"";position:absolute;left:5px;top:8px;
       width:4px;height:4px;border-radius:50%;background:var(--text-tertiary);
+    }
+    /* How-to-play trigger on the player role screen — constrained to the same
+       width as the win card above it (the lobby .howto-trigger is full-width). */
+    .mafia-cards-role-screen .howto-trigger{
+      max-width:340px;width:100%;margin:14px auto 0;
     }
     .mafia-cards-role-status{
       font-size:13px;color:var(--text-tertiary);font-style:italic;

@@ -542,9 +542,16 @@
     async function feedbackEnsureUser(){
       if (!window.sb) return null;
       let { data: { user } } = await window.sb.auth.getUser();
+      // Login is REQUIRED now (no anonymous play) and the feedback board sits
+      // behind the signed-in app, so a real user is expected. Don't mint an
+      // anonymous identity in production; callers already handle a null return.
+      // (Localhost/preview keeps anon so the board still works without real OAuth.)
       if (!user){
-        const res = await window.sb.auth.signInAnonymously();
-        user = res && res.data && res.data.user;
+        const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname);
+        if (isLocal){
+          const res = await window.sb.auth.signInAnonymously();
+          user = res && res.data && res.data.user;
+        }
       }
       return user || null;
     }

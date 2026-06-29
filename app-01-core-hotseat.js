@@ -197,11 +197,28 @@
       try {
         const { data: { user } } = await window.sb.auth.getUser();
         if (user && user.id) { me.sessionId = user.id; return; }
-        const { data, error } = await window.sb.auth.signInAnonymously();
-        if (error) throw error;
-        me.sessionId = data.user.id;
+        // Login is REQUIRED in production (2026-06-27 — guest/anonymous play was
+        // removed). A missing session here means the user isn't signed in, or a
+        // long-idle session expired. We must NOT silently mint a throwaway
+        // anonymous identity — that would drop the player into a game as a
+        // nameless "ghost" and orphan their real profile/seat. Send them to
+        // sign in instead, and allow a re-bootstrap once they do.
+        // EXCEPTION: localhost/preview has no real Google OAuth, so anonymous
+        // sessions are kept there ONLY for local multiplayer testing. (The
+        // tmp/repro test scripts call signInAnonymously directly, unaffected.)
+        const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname);
+        if (isLocal) {
+          const { data, error } = await window.sb.auth.signInAnonymously();
+          if (error) throw error;
+          me.sessionId = data.user.id;
+          return;
+        }
+        me.bootstrapped = false;
+        me.sessionId = null;
+        if (typeof goTo === 'function') { try { goTo('login'); } catch(_){} }
+        return;
       } catch(e) {
-        if (logLabel) console.warn('[Huddle] Anonymous sign-in failed — using random session id.', e);
+        if (logLabel) console.warn('[Huddle] auth bootstrap failed — using offline session id.', e);
         me.sessionId = huddleNewTabId();
       }
     }
@@ -265,10 +282,6 @@
     function hotGetSessionId(){ return huddleGetSessionId(hotMe); }
     function hotIsHost(){ return hotGetSessionId() === state.hostId; }
     function hotUsedHas(idx){ return (state.playersUsedThisRound || []).indexOf(idx) !== -1; }
-    function hotUsedAdd(idx){
-      if (!state.playersUsedThisRound) state.playersUsedThisRound = [];
-      if (state.playersUsedThisRound.indexOf(idx) === -1) state.playersUsedThisRound.push(idx);
-    }
 
     // ---------- C2: server-side RPC helper (per-action security) ----------
     // huddleCallRPC wraps window.sb.rpc(...) with consistent error handling.
@@ -382,7 +395,7 @@
     // ───── Presence tracking (Phase 2b) ─────────────────────────────────
     // Mirrors Chameleon's pattern. When a tab dies (OS kill, wifi drop, app
     // switch-away), the WebSocket eventually drops and Supabase emits a
-    // `presence.leave` event for that session. A 60-second grace timer
+    // `presence.leave` event for that session. A 5-minute grace timer
     // covers legitimate refreshes (Supabase anon UID is stable across
     // reload), then the lowest-connected peer fires the server cleanup
     // (huddle_hot_handle_disconnect) which removes the seat and transfers
@@ -390,7 +403,14 @@
     // the postgres_changes broadcast.
     let _hotPresentSessions = new Set();
     let _hotLeaveGraceTimers = new Map();
-    const HOT_LEAVE_GRACE_MS = 60000;
+    // 5-min grace (2026-06-27, RECONNECTION_PLAN.md Phase 1): a locked/
+    // backgrounded phone freezes its socket within seconds; the old 60s kicked
+    // players for merely glancing at their phone. 5 min covers a lock, a
+    // TikTok detour, or a bathroom trip — and the wake-resume re-announces
+    // presence (cancelling this timer) long before it fires. Hot Seat is a
+    // verbal same-room game (host drives "next turn"), so a longer wait on an
+    // away player never stalls play.
+    const HOT_LEAVE_GRACE_MS = 300000;
 
     function hotIsPlayerPresent(playerId){
       if (!playerId) return false;
@@ -535,7 +555,10 @@
       // is part of the key because presence is captured at channel-creation time,
       // so an identity change (anon → Google) needs a rebuild or our presence
       // keeps echoing the stale anon id.
-      if (opts.refs.getChannel() && opts.refs.getChannelCode() === gameState.code && opts.refs.getChannelSessionId() === sid) return;
+      // `force` (set on resume after a phone-lock / app-switch / network drop)
+      // bypasses this no-op guard so we tear down the possibly-dead socket and
+      // re-subscribe + re-announce presence even when code + session match.
+      if (!opts.force && opts.refs.getChannel() && opts.refs.getChannelCode() === gameState.code && opts.refs.getChannelSessionId() === sid) return;
       if (opts.refs.getChannel()) {
         try { window.sb.removeChannel(opts.refs.getChannel()); } catch(e){}
         opts.refs.setChannel(null); opts.refs.setChannelCode(null); opts.refs.setChannelSessionId(null);
@@ -645,9 +668,10 @@
     let _hotChannel = null;
     let _hotChannelCode = null;
     let _hotChannelSessionId = null;
-    function hotWireSync(){
+    function hotWireSync(force){
       const mySid = hotGetSessionId();
       huddleWireSync({
+        force: force,
         gameState: state, meObj: hotMe, getSessionId: hotGetSessionId,
         channelName: 'hotseat_room:', table: 'hotseat_rooms',
         presenceKey: mySid, getTrackUserId: () => mySid,
@@ -1744,11 +1768,6 @@
         splashEl.style.animation = '';
       }
     }
-    function showSplash() {
-      applySplashContent();
-      goTo('splash');
-    }
-
     function dismissSplash() {
       // Any claimant can advance. Server records used-this-round + sets
       // turnStartTime + phase='play' (C2 turn 4b). Echo updates local.
@@ -1769,12 +1788,6 @@
       document.getElementById('play-wins').textContent = (getMe() && getMe().wins) || 0;
       renderPlay();
     }
-    function startTurn() {
-      // Legacy entry — keep for safety; just re-apply content if we're in play phase.
-      applyPlayContent();
-      goTo('play');
-    }
-
     function pickWord() {
       const list = WORDS[state.category] || WORDS.mixed;
       // Track used words for THIS game so the same word never repeats in a
