@@ -104,7 +104,7 @@
     // Subsequent loads on same device: restores the same uuid.
     // Failure: falls back to a random per-tab id (game still works, just less stable).
     async function liarBootstrap(){ return huddleBootstrap(liarMe, "Liar's Cup"); }
-    function liarGetSessionId(){ return huddleGetSessionId(liarMe); }
+    function cardLobbyGetSessionId(){ return huddleGetSessionId(liarMe); }
 
     // ---------- Sync transport (Supabase Realtime + Postgres) ----------
     // Each game room is one row in the `liar_rooms` table with a JSONB `state` column.
@@ -213,7 +213,7 @@
     function liarWireSync(force){
       huddleWireSync({
         force: force,
-        gameState: liarState, meObj: liarMe, getSessionId: liarGetSessionId,
+        gameState: liarState, meObj: liarMe, getSessionId: cardLobbyGetSessionId,
         channelName: 'liar_room:', table: 'liar_rooms',
         presenceKey: liarMe.sessionId, getTrackUserId: () => liarMe.sessionId,
         toastLeftKey: 'liar.toastPlayerLeft', restoreMeId: false,

@@ -30,7 +30,7 @@ const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.j
 const GAMES = [
   { key:'hotseat',   urlGame:'hotseat',   open:"openLobby('classic')", state:'state',      sid:'hotGetSessionId',   presence:'_hotPresentSessions',   table:'hotseat_rooms',   seatMin:2 },
   { key:'chameleon', urlGame:'chameleon', open:'openChamLobby()',      state:'chamState',  sid:'chamGetSessionId',  presence:'_chamPresentSessions',  table:'chameleon_rooms', seatMin:2 },
-  { key:'liar',      urlGame:'liar',      open:'openLiarLobby()',      state:'liarState',  sid:'liarGetSessionId',  presence:'_liarPresentSessions',  table:'liar_rooms',      seatMin:2 },
+  { key:'liar',      urlGame:'liar',      open:'openLiarLobby()',      state:'liarState',  sid:'cardLobbyGetSessionId',  presence:'_liarPresentSessions',  table:'liar_rooms',      seatMin:2 },
   { key:'mafia',     urlGame:'mafia',     open:'openMafiaLobby()',     state:'mafiaState', sid:'mafiaGetSessionId', presence:'_mafiaPresentSessions', table:'mafia_rooms',     seatMin:0 },
 ];
 

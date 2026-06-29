@@ -1975,7 +1975,7 @@
       const authPromise = liarBootstrap();
       const loadPromise = existingCode ? liarLoadRoom(existingCode) : Promise.resolve(false);
       await authPromise;
-      const sessionId = liarGetSessionId();
+      const sessionId = cardLobbyGetSessionId();
       const loaded = await loadPromise;
 
       // Invitee arrived via URL but the room load failed — surface it and
@@ -2068,7 +2068,7 @@
       // immediately so the first persist is a single atomic write — an invitee
       // can never load a partial state and grab the host role or seat 0.
       const playersCopy = JSON.parse(JSON.stringify(PLAYERS));
-      const sid = liarGetSessionId();
+      const sid = cardLobbyGetSessionId();
       const firstSeat = playersCopy[0] && playersCopy[0].id;
       Object.keys(liarState).forEach(k => delete liarState[k]);
       Object.assign(liarState, {
@@ -2139,7 +2139,7 @@
     }
 
     async function liarClaimSeat(playerId){
-      const sessionId = liarGetSessionId();
+      const sessionId = cardLobbyGetSessionId();
       const currentClaim = liarState.claimedBy[playerId];
       // If someone else holds this seat, ignore
       if (currentClaim && currentClaim !== sessionId) return;
@@ -2173,7 +2173,7 @@
         return;
       }
       if (!el) return;
-      const sessionId = liarGetSessionId();
+      const sessionId = cardLobbyGetSessionId();
       const claimedCount = Object.keys(liarState.claimedBy || {}).length;
       const claimedSessionIds = Object.values(liarState.claimedBy || {});
       ensureClaimantProfiles(claimedSessionIds, liarRenderSeats);
@@ -2220,7 +2220,7 @@
           avatarData = (claimProfile && claimProfile.avatar) ? claimProfile.avatar : avatarForPlayer(p);
         }
         // Presence-driven dot + "Away" label + host kick button (Batch 2).
-        const _liarAmHost = (typeof liarGetSessionId === 'function' && liarState && liarGetSessionId() === liarState.hostId);
+        const _liarAmHost = (typeof cardLobbyGetSessionId === 'function' && liarState && cardLobbyGetSessionId() === liarState.hostId);
         const isPresent = claimedByMe || (typeof liarIsPlayerPresent === 'function' && liarIsPlayerPresent(p.id));
         const kick = (claimedByOther && _liarAmHost) ? huddleKickBtnHTML('liar', p.id) : '';
         return `
@@ -2238,7 +2238,7 @@
       parseEmoji(el);
       // Apply translations to any new data-i18n nodes inside the freshly-rendered seats
       if (typeof applyLang === 'function') applyLang(el);
-      try { huddleUpdateLockBtn('liar-lock-btn', 'liar', (typeof liarGetSessionId === 'function' && liarState && liarGetSessionId() === liarState.hostId)); } catch(e){}
+      try { huddleUpdateLockBtn('liar-lock-btn', 'liar', (typeof cardLobbyGetSessionId === 'function' && liarState && cardLobbyGetSessionId() === liarState.hostId)); } catch(e){}
 
       // Update start-button state — need at least 2 seats claimed AND I have a seat
       const startBtn = document.getElementById('liar-start-btn');

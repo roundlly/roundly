@@ -183,7 +183,7 @@
 
     async function liarLeaveRoom(context){
       return huddleLeaveRoom({
-        meObj: liarMe, gameState: liarState, sidFn: liarGetSessionId,
+        meObj: liarMe, gameState: liarState, sidFn: cardLobbyGetSessionId,
         table: 'liar_rooms', gameToken: 'liar', lastRoomKey: 'liar', context,
         // Cancel pending auto-advance timers + kill queued/in-flight SFX so
         // leaving mid-animation doesn't push state into a room we left or leave
@@ -219,7 +219,7 @@
     // Host taps "Leave" on the game-over screen → close the whole room so
     // every other player auto-leaves too via Realtime.
     function liarCloseRoom(){
-      const amHost = liarGetSessionId() === liarState.hostId;
+      const amHost = cardLobbyGetSessionId() === liarState.hostId;
       if (!amHost) { liarLeaveGameOver(); return; }
       const closingCode = liarState.code;
       // Optimistic local change so the UI reflects "closed" immediately.
@@ -235,7 +235,7 @@
     function liarLeaveGameOver(){
       liarClearAllAutoAdvance();
       liarStopAllSfx();
-      const mySid = liarGetSessionId();
+      const mySid = cardLobbyGetSessionId();
       const myPlayerId = liarMe.myId;
       const leavingCode = liarState.code;
       // Optimistic local update before the RPC (mirrors liarLeaveRoom path).
@@ -654,7 +654,7 @@
       // Local guard: only host with enough claimants can start.
       const claimedCount = Object.keys(liarState.claimedBy || {}).length;
       if (claimedCount < 2 || !liarMe.myId) return;
-      if (liarGetSessionId() !== liarState.hostId) return;
+      if (cardLobbyGetSessionId() !== liarState.hostId) return;
       // Disable the start button while the RPC is in flight so a frustrated
       // double-tap doesn't try to start the game twice.
       const btn = (ev && ev.currentTarget) || document.getElementById('liar-start-btn');
@@ -1809,7 +1809,7 @@
       // Configure the Play again / Leave buttons by role:
       //   • Host  → "Play again" (primary, enabled) + "Leave" (outline, closes room for everyone)
       //   • Other → "Waiting for host to start new game…" (primary, disabled) + "Leave" (outline, just me)
-      const amHostResult = liarGetSessionId() === liarState.hostId;
+      const amHostResult = cardLobbyGetSessionId() === liarState.hostId;
       const playAgainBtn = document.getElementById('liar-result-playagain-btn');
       const leaveResultBtn = document.getElementById('liar-result-leave-btn');
       if (playAgainBtn) {
@@ -1832,7 +1832,7 @@
     function liarPlayAgain(){
       if (liarState.phase !== 'result') return; // double-tap safety
       // Host-only — non-host sees "Waiting for host…" on the disabled button.
-      const amHost = liarGetSessionId() === liarState.hostId;
+      const amHost = cardLobbyGetSessionId() === liarState.hostId;
       if (!amHost) return;
       // Server-validated reset (C2 turn 3). Server returns to phase='lobby'
       // with wins preserved; the realtime echo updates this device.
