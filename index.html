@@ -2636,21 +2636,6 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
 
   <!-- app.js was split into ordered fragments (Phase 1). They share one global
        scope and MUST stay in this numeric order — do not reorder or add defer/module. -->
-  <!-- In-app QR scanner overlay (Step 3). Opened from the login screen's QR
-       button; reads a Roundlly room QR and feeds the code into the normal join
-       flow (so the guest's typed name is still saved). -->
-  <div class="qr-scan-backdrop" id="qr-scan-backdrop" aria-hidden="true">
-    <div class="qr-scan-panel">
-      <button class="qr-scan-close" type="button" onclick="huddleStopScanQr()" aria-label="Close">&#10005;</button>
-      <div class="qr-scan-title" data-i18n="login.scanTitle">Scan the room QR</div>
-      <div class="qr-scan-video-wrap"><video id="qr-scan-video" playsinline muted></video></div>
-      <div class="qr-scan-hint" id="qr-scan-hint" data-i18n="login.scanHint">Point your camera at the room's QR code.</div>
-    </div>
-  </div>
-
-  <!-- Lightweight QR scanner (nimiq/qr-scanner). Lazy-used by the login screen;
-       deferred so it never blocks app boot, and guarded if it fails to load. -->
-  <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js" defer></script>
   <script src="app-01-core-hotseat.js"></script>
   <script src="app-02-i18n.js"></script>
   <script src="app-03-profile-auth.js"></script>

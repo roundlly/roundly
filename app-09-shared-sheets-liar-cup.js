@@ -465,10 +465,10 @@
       el.textContent = text || '';
       el.className = 'join-code-status' + (kind ? ' ' + kind : '');
     }
-    // Shared core for join-by-code, used by BOTH the Games-tab sheet
-    // (attemptJoinByCode) and the login screen (huddleLandingJoin). Probes all
-    // four game tables in parallel — first match wins — then routes into the
-    // matching lobby. opts: { setStatus(text,kind), btn, onEmpty(), onMatch(game,code) }
+    // Shared core for join-by-code, used by the Games-tab join sheet
+    // (attemptJoinByCode). Probes all four game tables in parallel — first match
+    // wins — then routes into the matching lobby.
+    // opts: { setStatus(text,kind), btn, onEmpty(), onMatch(game,code) }
     async function huddleJoinByCodeCore(rawCode, opts){
       opts = opts || {};
       const setStatus = opts.setStatus || function(){};
@@ -582,117 +582,6 @@
         onEmpty: function(){ try { input.focus(); } catch(_){} },
         onMatch: function(){ closeJoinCodeSheet(); },
       });
-    }
-
-    // ---------- Login-screen guest join (name + room code, no Google login) ----------
-    function setLoginJoinStatus(text, kind){
-      const el = document.getElementById('login-join-status');
-      if (!el) return;
-      el.textContent = text || '';
-      el.className = 'login-status' + (kind ? ' ' + kind : '');
-    }
-
-    // ---------- Guest name prompt (scanned-QR / shared-link joins) ----------
-    async function huddleLandingJoin(){
-      const codeEl = document.getElementById('login-join-code');
-      if (!codeEl) return;
-      const nameEl = document.getElementById('login-guest-name');
-      const btn = document.getElementById('login-join-btn');
-      // A name is required to join — no nameless "..." seats.
-      const nameVal = ((nameEl && nameEl.value) || '').trim();
-      if (!nameVal) {
-        setLoginJoinStatus(t('login.needName'), 'error');
-        if (nameEl) { try { nameEl.focus(); } catch(_){} }
-        return;
-      }
-      try { sessionStorage.setItem('huddle.guestName', nameVal.slice(0, 24)); } catch(e){}
-      // A fresh guest on the login screen has no session yet, and the seat-claim
-      // RPC requires one. Establish the anonymous session up front (the lobby
-      // bootstraps too, but doing it here keeps the very first join reliable).
-      try { if (typeof liarBootstrap === 'function') await liarBootstrap(); } catch(e){}
-      await huddleJoinByCodeCore(codeEl.value, {
-        setStatus: setLoginJoinStatus,
-        btn: btn,
-        onEmpty: function(){ try { codeEl.focus(); } catch(_){} },
-      });
-    }
-    // ---------- In-app QR scanner (Step 3 — nimiq/qr-scanner) ----------
-    let _qrScanner = null;
-    function huddleLandingScanQr(){
-      // A name is required before joining by any method, including scanning.
-      const nameEl = document.getElementById('login-guest-name');
-      if (!((nameEl && nameEl.value) || '').trim()) {
-        setLoginJoinStatus(t('login.needName'), 'error');
-        if (nameEl) { try { nameEl.focus(); } catch(e){} }
-        return;
-      }
-      // Library didn't load (offline / CDN blocked) → fall back to typing.
-      if (typeof QrScanner === 'undefined') {
-        setLoginJoinStatus(t('login.scanUnavailable'), 'error');
-        const codeEl = document.getElementById('login-join-code');
-        if (codeEl) { try { codeEl.focus(); } catch(e){} }
-        return;
-      }
-      huddleStartScanQr();
-    }
-    async function huddleStartScanQr(){
-      const backdrop = document.getElementById('qr-scan-backdrop');
-      const video = document.getElementById('qr-scan-video');
-      const hint = document.getElementById('qr-scan-hint');
-      if (!backdrop || !video) return;
-      backdrop.classList.add('active');
-      backdrop.setAttribute('aria-hidden', 'false');
-      if (hint) hint.textContent = t('login.scanHint');
-      try {
-        _qrScanner = new QrScanner(video, function(result){ huddleOnQrDecoded(result); }, {
-          preferredCamera: 'environment',
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
-          returnDetailedScanResult: true,
-          maxScansPerSecond: 5,
-        });
-        await _qrScanner.start();
-      } catch(e){
-        // Most common on phones: camera denied, or opened inside an in-app
-        // browser (Instagram/WhatsApp) that forbids the camera. Fall back to
-        // the code field rather than leaving the user stuck on a black screen.
-        console.warn('[Huddle] QR camera failed to start:', e);
-        if (hint) hint.textContent = t('login.scanNoCamera');
-        setTimeout(function(){
-          huddleStopScanQr();
-          setLoginJoinStatus(t('login.scanNoCamera'), 'error');
-          const codeEl = document.getElementById('login-join-code');
-          if (codeEl) { try { codeEl.focus(); } catch(_){} }
-        }, 1600);
-      }
-    }
-    function huddleStopScanQr(){
-      try { if (_qrScanner) { _qrScanner.stop(); _qrScanner.destroy(); } } catch(e){}
-      _qrScanner = null;
-      const backdrop = document.getElementById('qr-scan-backdrop');
-      if (backdrop) { backdrop.classList.remove('active'); backdrop.setAttribute('aria-hidden', 'true'); }
-    }
-    function huddleOnQrDecoded(result){
-      const text = String((result && result.data != null) ? result.data : (result || ''));
-      let url;
-      try { url = new URL(text, window.location.origin); } catch(e){ return; } // not a URL → keep scanning
-      const ROOM_RE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/;
-      const GAMES = { liar:1, hotseat:1, chameleon:1, mafia:1 };
-      const room = (url.searchParams.get('room') || '').toUpperCase();
-      const game = url.searchParams.get('game') || '';
-      // Security: only accept OUR OWN room links — never navigate to an
-      // arbitrary URL a malicious QR might encode.
-      if (url.origin !== window.location.origin || !ROOM_RE.test(room) || !GAMES[game]) {
-        const hint = document.getElementById('qr-scan-hint');
-        if (hint) hint.textContent = t('login.scanNotRoom');
-        return; // keep scanning
-      }
-      // Valid Roundlly room QR → close the camera, drop the code into the field,
-      // and run the SAME join path so the guest's typed name is still saved.
-      huddleStopScanQr();
-      const codeEl = document.getElementById('login-join-code');
-      if (codeEl) codeEl.value = room;
-      huddleLandingJoin();
     }
 
     function handleLiarQrError(){
