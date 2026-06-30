@@ -646,6 +646,7 @@
         // Lobby — Invite friends (Phase 4)
         'lobby.inviteFriends': 'Invite friends',
         'lobby.inviteNoFriendsYet': 'No friends yet — add some on the Friends tab.',
+        'lobby.inviteLoadingFriends': 'Loading your friends…',
         'invite.invite': 'Invite',
         'invite.invited': 'Invited',
         'invite.joined': 'Joined',
@@ -658,6 +659,7 @@
         'game.hotseat': 'Hot Seat',
         'game.chameleon': 'The Chameleon',
         'game.liar': 'Liar\'s Cup',
+        'game.mafia': 'Mafia',
 
         // Profile
         'profile.title': 'Profile',
@@ -1728,6 +1730,7 @@
         // Lobby — Invite friends (Phase 4)
         'lobby.inviteFriends': 'Arkadaşları davet et',
         'lobby.inviteNoFriendsYet': 'Henüz arkadaşın yok — Arkadaşlar sekmesinden ekle.',
+        'lobby.inviteLoadingFriends': 'Arkadaşların yükleniyor…',
         'invite.invite': 'Davet et',
         'invite.invited': 'Davet edildi',
         'invite.joined': 'Katıldı',
@@ -1740,6 +1743,7 @@
         'game.hotseat': 'Hot Seat',
         'game.chameleon': 'Bukalemun',
         'game.liar': 'Yalancı Kupası',
+        'game.mafia': 'Mafya',
 
         // Profile
         'profile.title': 'Profil',

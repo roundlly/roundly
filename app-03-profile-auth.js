@@ -869,8 +869,23 @@
 
     // Called after SIGNED_IN fires for a non-anonymous user (Google or password).
     // Routes the user: missing username → username-setup screen, otherwise → games.
+    // Tracks the identity huddleAfterSignIn has ALREADY fully set up. Supabase
+    // re-fires SIGNED_IN on every tab focus / token refresh — not just real logins
+    // — and the boot path calls huddleAfterSignIn too. Without this guard the full
+    // setup (which WIPES friendsState/invitesState, rebuilds realtime channels, and
+    // refetches profile/friends/invites) ran on EVERY tab-return, emptying the
+    // friends list for a moment and flashing "Loading…" in an open invite sheet.
+    // Reset to null on a confirmed SIGNED_OUT (app-09) so a re-login still runs.
+    let _huddleSignedInUid = null;
     async function huddleAfterSignIn(user){
       if (!user || user.is_anonymous) return;
+      // Already fully set up for this exact identity → this is a spurious SIGNED_IN
+      // re-fire (tab focus / token refresh) or a duplicate boot call. Do nothing:
+      // re-running would wipe the in-memory lists and flicker the UI. The
+      // visibilitychange backstop (app-09) already refreshes data silently. A real
+      // account switch (different uid) or the first sign-in falls through below.
+      if (user.id === _huddleSignedInUid) return;
+      _huddleSignedInUid = user.id;
       // Account-switch hygiene (M3, 2026-06-27): wipe any in-memory lists left
       // from a PREVIOUS identity before we load this user's data, so the new
       // account never briefly shows the old account's friends / invites /

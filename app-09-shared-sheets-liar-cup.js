@@ -15,6 +15,18 @@
       // surprise the user ("why don't I see anyone?").
       lobbyInviteSearchQuery = '';
       lobbyInviteSearchFocused = false;
+      // If the friends list hasn't been fetched yet this session, kick the load now
+      // and mark loading synchronously so the very first render shows the neutral
+      // "Loading your friends…" placeholder instead of flashing "No friends yet"
+      // (which is wrong for a host who DOES have friends, and whose "Add friend"
+      // button would yank them out of the lobby). friendsLoad() re-renders this
+      // sheet the moment the list lands. See renderLobbyInviteSheetContent.
+      if (window.sb && typeof friendsState !== 'undefined' && friendsState.me
+          && !friendsState.loadedOnce && !friendsState.loading
+          && typeof friendsLoad === 'function') {
+        friendsState.loading = true;
+        try { friendsLoad(); } catch(e){}
+      }
       renderLobbyInviteSheetContent(gameKey);
       bd.classList.add('active');
     }
@@ -50,7 +62,26 @@
         return;
       }
 
-      // Signed in but no friends yet — point at the Friends tab.
+      // Friends list empty but we have NOT confirmed a completed fetch — show a
+      // neutral "Loading your friends…" (plus the room-code share, which works
+      // right away). This covers BOTH the first-load window AND a backstop refresh
+      // on tab-return/online/pageshow that hasn't resolved yet. It must come BEFORE
+      // the "No friends yet" branch so the false empty-state can never flash for a
+      // host who actually has friends — including the open-sheet → switch-tabs →
+      // come-back path. Only loadedOnce && !loading counts as a confirmed fetch.
+      if ((!friendsState.friends || friendsState.friends.length === 0)
+          && !(friendsState.loadedOnce && !friendsState.loading)) {
+        wrap.innerHTML = `
+          <div style="padding:8px 0 4px">
+            <div style="font-size:14px;color:var(--text-secondary);line-height:1.5;margin-bottom:14px">${friendsEscape(t('lobby.inviteLoadingFriends'))}</div>
+            ${code ? `<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text-secondary);text-align:center;line-height:1.5">${friendsEscape(t('lobby.inviteShareInstead'))}<br><strong style="color:var(--text);font-size:16px;letter-spacing:.05em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${friendsEscape(code)}</strong></div>` : ''}
+          </div>`;
+        return;
+      }
+
+      // Signed in, a fetch HAS completed (loadedOnce && !loading), and the user
+      // genuinely has zero friends — only now point at the Friends tab. The
+      // loading guard above guarantees we never reach here mid-load.
       if (!friendsState.friends || friendsState.friends.length === 0) {
         wrap.innerHTML = `
           <div style="padding:8px 0 4px">
@@ -1987,6 +2018,9 @@
                 const { data } = await window.sb.auth.getSession();
                 if (data && data.session && data.session.user) return; // false alarm — still signed in
               }
+              // Confirmed sign-out — let huddleAfterSignIn run fully on the next
+              // (re-)login, even if it's the same account that just signed out.
+              try { _huddleSignedInUid = null; } catch(e){}
               myProfile = null;
               if (typeof renderProfileScreen === 'function') renderProfileScreen();
               const _cur = document.querySelector('.screen.active');

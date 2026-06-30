@@ -14,6 +14,10 @@
       searchStatus: '',  // 'min' | 'searching' | 'empty' | 'ok'
       activeTab: 'all',
       loading: false,
+      // True once a friends fetch has completed at least once (success OR a
+      // signed-out resolution). Lets the lobby invite sheet tell "still loading,
+      // don't flash 'No friends yet'" apart from "loaded, genuinely 0 friends".
+      loadedOnce: false,
     };
     let friendsSearchTimer = null;
 
@@ -43,6 +47,20 @@
         friendsState.loading = true;
         const { data: { user } } = await window.sb.auth.getUser();
         if (!user || user.is_anonymous) {
+          // A BACKSTOP refresh (tab-return / online / pageshow / BFCache) can hit
+          // this momentarily while the JWT is mid-refresh — getUser briefly returns
+          // no user even though we are still signed in. If we ALREADY established a
+          // real signed-in user this session, treat it as a transient blip and KEEP
+          // the last-known-good lists instead of wiping them to the signed-out
+          // empty state — wiping is exactly what made the open invite sheet flash
+          // "No friends yet" / the sign-in nudge after switching tabs and back. A
+          // genuine sign-out is handled by the explicit SIGNED_OUT teardown (app-09),
+          // and the next successful friendsLoad reconciles anyway.
+          if (friendsState.loadedOnce && friendsState.me) {
+            friendsState.loading = false;
+            if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen();
+            return;
+          }
           friendsState.me = null;
           friendsState.friends = [];
           friendsState.incoming = [];
@@ -100,7 +118,13 @@
         friendsState.incoming = incoming;
         friendsState.outgoing = outgoing;
         friendsState.loading = false;
+        friendsState.loadedOnce = true;
         renderFriends();
+        // If a lobby invite sheet is open, flip it from the loading placeholder to
+        // the real friends list the instant the data lands — without waiting for a
+        // presence-sync event (the old path), which was the source of the 1-2s
+        // "No friends yet" flash the host saw.
+        if (typeof refreshLobbyInviteSheetIfOpen === 'function') refreshLobbyInviteSheetIfOpen();
         // Keep the open search panel in sync — e.g. if a request gets cancelled
         // (locally or via realtime), the row should switch from "Request sent"
         // back to the "Add" button without the user having to retype.
@@ -750,6 +774,7 @@
       if (gameKey === 'hotseat')   return t('game.hotseat');
       if (gameKey === 'chameleon') return t('game.chameleon');
       if (gameKey === 'liar')      return t('game.liar');
+      if (gameKey === 'mafia')     return t('game.mafia');
       return gameKey || '';
     }
 
