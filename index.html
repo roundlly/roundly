@@ -1753,6 +1753,139 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
       </div>
     </section>
 
+    <!-- ============ GUESS THE THEME — HOW TO PLAY ============
+         Self-contained, auto-playing animated explainer (Instagram-story style).
+         No audio: timed scenes + on-screen captions, fully bilingual. Opened from
+         the Hot Seat lobby "How to play" trigger when state.mode === 'link'.
+         Controller (openThemeHowTo / themeHowToNext / …) lives in app-01. -->
+    <section class="screen" id="screen-theme-howto">
+      <div class="th-howto" id="th-howto">
+        <div class="th-aura"></div>
+
+        <div class="th-topbar">
+          <div class="th-progress" id="th-progress" aria-hidden="true">
+            <span class="th-seg" data-seg="1"><i></i></span>
+            <span class="th-seg" data-seg="2"><i></i></span>
+            <span class="th-seg" data-seg="3"><i></i></span>
+            <span class="th-seg" data-seg="4"><i></i></span>
+            <span class="th-seg" data-seg="5"><i></i></span>
+          </div>
+          <button class="th-close" type="button" onclick="closeThemeHowTo()" aria-label="Close" data-i18n-aria="common.close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        <div class="th-stage" id="th-stage">
+          <!-- SCENE 1 — same room -->
+          <div class="th-scene" data-scene="1">
+            <div class="th-visual">
+              <div class="th-room">
+                <div class="th-room-glow"></div>
+                <div class="th-phone th-phone--a"><span>🦊</span></div>
+                <div class="th-phone th-phone--b"><span>🐼</span></div>
+                <div class="th-phone th-phone--c"><span>🐵</span></div>
+              </div>
+            </div>
+            <div class="th-caption">
+              <div class="th-eyebrow" data-i18n="th.howto.s1.eyebrow">SAME ROOM</div>
+              <div class="th-line" data-i18n="th.howto.s1.line">You're all together — each on your own phone.</div>
+            </div>
+          </div>
+
+          <!-- SCENE 2 — the secret theme -->
+          <div class="th-scene" data-scene="2">
+            <div class="th-visual">
+              <div class="th-secret">
+                <div class="th-theme-card">
+                  <span class="th-theme-emoji">🍯</span>
+                  <span class="th-theme-text" data-i18n="th.howto.themeExample">Things that are sticky</span>
+                  <span class="th-theme-tag" data-i18n="th.howto.helpersSee">Helpers see this</span>
+                </div>
+                <div class="th-hotseat">
+                  <span class="th-hotseat-fire">🔥</span>
+                  <span class="th-hotseat-q">?</span>
+                  <span class="th-hotseat-tag" data-i18n="th.howto.hotSeatHidden">Hot seat: hidden</span>
+                </div>
+              </div>
+            </div>
+            <div class="th-caption">
+              <div class="th-eyebrow" data-i18n="th.howto.s2.eyebrow">THE SECRET</div>
+              <div class="th-line" data-i18n="th.howto.s2.line">Everyone sees a secret theme — except the hot seat.</div>
+            </div>
+          </div>
+
+          <!-- SCENE 3 — drop clues -->
+          <div class="th-scene" data-scene="3">
+            <div class="th-visual">
+              <div class="th-clues">
+                <div class="th-bubble th-bubble--1"><span class="th-bubble-emoji">🍯</span><span data-i18n="th.howto.clue1">Honey</span></div>
+                <div class="th-bubble th-bubble--2"><span class="th-bubble-emoji">🧴</span><span data-i18n="th.howto.clue2">Glue</span></div>
+                <div class="th-bubble th-bubble--3"><span class="th-bubble-emoji">🩹</span><span data-i18n="th.howto.clue3">Tape</span></div>
+                <div class="th-bubble th-bubble--4"><span class="th-bubble-emoji">🍬</span><span data-i18n="th.howto.clue4">Gum</span></div>
+              </div>
+            </div>
+            <div class="th-caption">
+              <div class="th-eyebrow" data-i18n="th.howto.s3.eyebrow">DROP CLUES</div>
+              <div class="th-line" data-i18n="th.howto.s3.line">Take turns naming real things that fit.</div>
+            </div>
+          </div>
+
+          <!-- SCENE 4 — crack it -->
+          <div class="th-scene" data-scene="4">
+            <div class="th-visual">
+              <div class="th-crack">
+                <div class="th-spark th-spark--1">✨</div>
+                <div class="th-spark th-spark--2">✨</div>
+                <div class="th-spark th-spark--3">✨</div>
+                <div class="th-bulb">💡</div>
+                <div class="th-reveal"><span data-i18n="th.howto.themeExample">Things that are sticky</span>!</div>
+              </div>
+            </div>
+            <div class="th-caption">
+              <div class="th-eyebrow" data-i18n="th.howto.s4.eyebrow">CRACK IT</div>
+              <div class="th-line" data-i18n="th.howto.s4.line">The hot seat works out the theme — and shouts it!</div>
+            </div>
+          </div>
+
+          <!-- SCENE 5 — giver goes next -->
+          <div class="th-scene" data-scene="5">
+            <div class="th-visual">
+              <div class="th-swap">
+                <div class="th-swap-row">
+                  <div class="th-swap-avatar th-swap-avatar--out"><span>😅</span></div>
+                  <div class="th-swap-arrows">→</div>
+                  <div class="th-swap-seat"><span>🔥</span></div>
+                  <div class="th-swap-arrows">←</div>
+                  <div class="th-swap-avatar th-swap-avatar--in"><span>😬</span></div>
+                </div>
+                <div class="th-swap-point">👉</div>
+              </div>
+            </div>
+            <div class="th-caption">
+              <div class="th-eyebrow" data-i18n="th.howto.s5.eyebrow">STAY SNEAKY</div>
+              <div class="th-line" data-i18n="th.howto.s5.line">Give it away and you're next in the hot seat!</div>
+            </div>
+          </div>
+
+          <!-- END card -->
+          <div class="th-scene th-scene-end" data-scene="end">
+            <div class="th-end-icon">🧩</div>
+            <div class="th-end-title" data-i18n="th.howto.end.title">You're ready!</div>
+            <div class="th-end-sub" data-i18n="th.howto.end.sub">Round up your friends and guess the theme.</div>
+            <div class="th-end-actions">
+              <button class="th-end-btn th-end-btn--ghost" type="button" onclick="replayThemeHowTo()" data-i18n="th.howto.end.replay">Watch again</button>
+              <button class="th-end-btn th-end-btn--primary" type="button" onclick="closeThemeHowTo()" data-i18n="th.howto.end.start">Let's play</button>
+            </div>
+            <div class="th-end-credit" data-i18n="th.howto.end.credit">Inspired by the Hot Seat party game.</div>
+          </div>
+        </div>
+
+        <!-- tap zones: left = back, right = next (disabled on the end card) -->
+        <button class="th-tap th-tap--prev" type="button" onclick="themeHowToPrev()" aria-label="Previous" tabindex="-1"></button>
+        <button class="th-tap th-tap--next" type="button" onclick="themeHowToNext()" aria-label="Next" tabindex="-1"></button>
+      </div>
+    </section>
+
     <!-- ============ MAFIA — LOBBY ============
          Mirrors the Liar's Cup lobby chrome. Two claim concepts here:
          (1) Regular player seats — same .mafia-seats grid as Liar's; tap to claim.

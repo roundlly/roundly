@@ -1012,6 +1012,8 @@
     }
 
     function openHowTo() {
+      // Guess the Theme has its own full-screen animated walkthrough.
+      if (state.mode === 'link') { openThemeHowTo(); return; }
       applyHowToContent();
       document.getElementById('howto-modal').classList.add('active');
       document.body.style.overflow = 'hidden';
@@ -1050,6 +1052,68 @@
       const seen = hasSeenHowTo();
       document.querySelectorAll('.howto-trigger').forEach(t => {
         t.classList.toggle('pulse', !seen);
+      });
+    }
+
+    // ---------- Guess the Theme: animated "How to play" walkthrough ----------
+    // Story-style, auto-advancing: scenes 1-5 + an end card. No audio — the
+    // on-screen captions carry the explanation, so it works identically in every
+    // language. Opened from the lobby "How to play" trigger via openHowTo() when
+    // state.mode === 'link'. Tap right = next, tap left = back, or let it play.
+    const TH_SCENES = ['1','2','3','4','5','end'];
+    const TH_SCENE_MS = 4200;
+    let _thIdx = 0;
+    let _thTimer = null;
+    let _thReturnScreen = 'lobby';
+
+    function openThemeHowTo(){
+      try {
+        const active = document.querySelector('.screen.active');
+        if (active && active.id && active.id !== 'screen-theme-howto') {
+          _thReturnScreen = active.id.replace(/^screen-/, '');
+        }
+      } catch(e){}
+      try { markHowToSeen(); } catch(e){}
+      document.querySelectorAll('.howto-trigger').forEach(el => el.classList.remove('pulse'));
+      goTo('theme-howto');
+      if (typeof parseEmoji === 'function') { try { parseEmoji(document.getElementById('screen-theme-howto')); } catch(e){} }
+      themeHowToGo(0);
+    }
+    function closeThemeHowTo(){
+      if (_thTimer) { clearTimeout(_thTimer); _thTimer = null; }
+      goTo(_thReturnScreen || 'lobby');
+    }
+    function replayThemeHowTo(){ themeHowToGo(0); }
+    function themeHowToNext(){ themeHowToGo(_thIdx + 1); }
+    function themeHowToPrev(){ if (_thIdx > 0) themeHowToGo(_thIdx - 1); }
+    function themeHowToGo(i){
+      const maxIdx = TH_SCENES.length - 1;   // index of the 'end' card
+      if (i < 0) i = 0;
+      if (i > maxIdx) { closeThemeHowTo(); return; }
+      _thIdx = i;
+      if (_thTimer) { clearTimeout(_thTimer); _thTimer = null; }
+      const scene = TH_SCENES[i];
+      const player = document.getElementById('th-howto');
+      if (player) player.classList.toggle('is-end', scene === 'end');
+      document.querySelectorAll('#screen-theme-howto .th-scene').forEach(el => {
+        el.classList.toggle('is-active', el.getAttribute('data-scene') === scene);
+      });
+      _thUpdateProgress(i);
+      if (scene !== 'end') {
+        _thTimer = setTimeout(themeHowToNext, TH_SCENE_MS);
+      }
+    }
+    function _thUpdateProgress(i){
+      const segs = document.querySelectorAll('#th-progress .th-seg');
+      segs.forEach((seg, k) => {
+        seg.classList.remove('active', 'done');
+        if (k < i) { seg.classList.add('done'); return; }
+        if (k === i && i < segs.length) {
+          // Restart the fill animation for the current segment.
+          seg.style.setProperty('--th-dur', (TH_SCENE_MS / 1000) + 's');
+          void seg.offsetWidth;            // reflow so the transition replays
+          seg.classList.add('active');
+        }
       });
     }
 
@@ -1835,15 +1899,18 @@
       if (!grid) return;
       ensureClaimantProfiles(Object.values(state.claimedBy || {}), openGiverPicker);
       const guesserIdx = state.currentPlayerIdx;
-      grid.innerHTML = state.players.map((p,i) => {
-        const isClaimed = !!(state.claimedBy && state.claimedBy[p.id]);
-        const isGuesser = i === guesserIdx;
-        const clickable = isClaimed && !isGuesser;
+      // ONLY the players actually in this game (claimed seats), minus the guesser
+      // themselves — they can't have given away their own theme. Empty default
+      // seats / people not in the game are never shown. With 2 players this is
+      // just the one other person (who's automatically next).
+      const candidates = state.players
+        .map((p, i) => ({ p, i }))
+        .filter(({ p, i }) => i !== guesserIdx && state.claimedBy && state.claimedBy[p.id]);
+      grid.innerHTML = candidates.map(({ p, i }) => {
         const tileDisplay = playerDisplayFor(p, state.claimedBy);
-        const dim = (!isClaimed || isGuesser);
-        return `<div class="pick-tile ${dim ? 'unclaimed' : ''}" ${clickable ? `onclick="giverPicked(${i})"` : ''} ${dim ? 'style="opacity:.4"' : ''}>
+        return `<div class="pick-tile" onclick="giverPicked(${i})">
           ${avatarHTML(tileDisplay.avatar, 44, { fallback: p.initial })}
-          <div class="pick-tile-name">${isGuesser ? t('picker.you') : escapeHTML(tileDisplay.name)}</div>
+          <div class="pick-tile-name">${escapeHTML(tileDisplay.name)}</div>
         </div>`;
       }).join('');
       parseEmoji(grid);
