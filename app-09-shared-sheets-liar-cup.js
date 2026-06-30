@@ -183,7 +183,7 @@
 
     async function liarLeaveRoom(context){
       return huddleLeaveRoom({
-        meObj: liarMe, gameState: liarState, sidFn: cardLobbyGetSessionId,
+        meObj: cardLobbyMe, gameState: cardLobbyState, sidFn: cardLobbyGetSessionId,
         table: 'liar_rooms', gameToken: 'liar', lastRoomKey: 'liar', context,
         // Cancel pending auto-advance timers + kill queued/in-flight SFX so
         // leaving mid-animation doesn't push state into a room we left or leave
@@ -204,8 +204,8 @@
     function cardLobbyForceLeaveLocal(){
       liarClearAllAutoAdvance();
       liarStopAllSfx();
-      liarMe.myId = null;
-      if (liarState) liarState.code = null;
+      cardLobbyMe.myId = null;
+      if (cardLobbyState) cardLobbyState.code = null;
       try { huddleClearLastRoom('liar'); } catch(e){}
       if (_cardLobbyChannel) {
         try { _cardLobbyChannel.untrack(); } catch(e){}
@@ -219,12 +219,12 @@
     // Host taps "Leave" on the game-over screen → close the whole room so
     // every other player auto-leaves too via Realtime.
     function liarCloseRoom(){
-      const amHost = cardLobbyGetSessionId() === liarState.hostId;
+      const amHost = cardLobbyGetSessionId() === cardLobbyState.hostId;
       if (!amHost) { liarLeaveGameOver(); return; }
-      const closingCode = liarState.code;
+      const closingCode = cardLobbyState.code;
       // Optimistic local change so the UI reflects "closed" immediately.
-      liarState.closedByHost = true;
-      liarState.hostId = null;
+      cardLobbyState.closedByHost = true;
+      cardLobbyState.hostId = null;
       // Server-validated close (host-only; other claimants reject) — C2 turn 2.
       if (closingCode) {
         huddleCallRPC('huddle_close_room', { p_table: 'liar_rooms', p_code: closingCode });
@@ -236,23 +236,23 @@
       liarClearAllAutoAdvance();
       liarStopAllSfx();
       const mySid = cardLobbyGetSessionId();
-      const myPlayerId = liarMe.myId;
-      const leavingCode = liarState.code;
+      const myPlayerId = cardLobbyMe.myId;
+      const leavingCode = cardLobbyState.code;
       // Optimistic local update before the RPC (mirrors liarLeaveRoom path).
-      if (myPlayerId && liarState.claimedBy && liarState.claimedBy[myPlayerId] === mySid) {
-        delete liarState.claimedBy[myPlayerId];
+      if (myPlayerId && cardLobbyState.claimedBy && cardLobbyState.claimedBy[myPlayerId] === mySid) {
+        delete cardLobbyState.claimedBy[myPlayerId];
       }
-      if (liarState.hostId === mySid) {
-        const remaining = Object.entries(liarState.claimedBy || {})
+      if (cardLobbyState.hostId === mySid) {
+        const remaining = Object.entries(cardLobbyState.claimedBy || {})
           .sort((a, b) => a[0].localeCompare(b[0]));
-        liarState.hostId = remaining.length ? remaining[0][1] : null;
+        cardLobbyState.hostId = remaining.length ? remaining[0][1] : null;
       }
       // Server-validated leave (C2 turn 2).
       if (leavingCode) {
         huddleCallRPC('huddle_leave_seat', { p_table: 'liar_rooms', p_code: leavingCode });
       }
-      liarMe.myId = null;
-      liarState.code = null;
+      cardLobbyMe.myId = null;
+      cardLobbyState.code = null;
       try { huddleClearLastRoom('liar'); } catch(e){}
       if (_cardLobbyChannel) {
         try { _cardLobbyChannel.untrack(); } catch(e){}
@@ -370,7 +370,7 @@
     function huddleGameStateFor(gameToken){
       if (gameToken === 'hot')   return (typeof state      !== 'undefined') ? state      : null;
       if (gameToken === 'cham')  return (typeof chamState  !== 'undefined') ? chamState  : null;
-      if (gameToken === 'liar')  return (typeof liarState  !== 'undefined') ? liarState  : null;
+      if (gameToken === 'liar')  return (typeof cardLobbyState  !== 'undefined') ? cardLobbyState  : null;
       if (gameToken === 'mafia') return (typeof mafiaState !== 'undefined') ? mafiaState : null;
       return null;
     }
@@ -652,9 +652,9 @@
         return;
       }
       // Local guard: only host with enough claimants can start.
-      const claimedCount = Object.keys(liarState.claimedBy || {}).length;
-      if (claimedCount < 2 || !liarMe.myId) return;
-      if (cardLobbyGetSessionId() !== liarState.hostId) return;
+      const claimedCount = Object.keys(cardLobbyState.claimedBy || {}).length;
+      if (claimedCount < 2 || !cardLobbyMe.myId) return;
+      if (cardLobbyGetSessionId() !== cardLobbyState.hostId) return;
       // Disable the start button while the RPC is in flight so a frustrated
       // double-tap doesn't try to start the game twice.
       const btn = (ev && ev.currentTarget) || document.getElementById('liar-start-btn');
@@ -662,7 +662,7 @@
       // Server-authoritative: deal hands, pick tableCard, set phase. The
       // realtime echo will deliver the canonical state to all devices —
       // including this one — so no optimistic local mutation here. (C2 turn 3)
-      const res = await huddleCallRPC('huddle_liar_start_game', { p_code: liarState.code });
+      const res = await huddleCallRPC('huddle_liar_start_game', { p_code: cardLobbyState.code });
       // On error, re-enable so retry works. On success, the realtime echo
       // navigates everyone to the next phase and the button leaves the DOM.
       if (res && res.error && btn && document.body.contains(btn)) {
@@ -674,8 +674,8 @@
     function liarRenderTableCardSplash(){
       const iconEl = document.getElementById('liar-tablecard-icon');
       const nameEl = document.getElementById('liar-tablecard-name');
-      if (iconEl) iconEl.textContent = liarRankEmoji(liarState.tableCard);
-      if (nameEl) nameEl.textContent = t('liar.rank.' + liarState.tableCard);
+      if (iconEl) iconEl.textContent = liarRankEmoji(cardLobbyState.tableCard);
+      if (nameEl) nameEl.textContent = t('liar.rank.' + cardLobbyState.tableCard);
       if (iconEl) parseEmoji(iconEl);
     }
 
@@ -692,10 +692,10 @@
 
     // Tap "Deal the cards" on the table-card splash → transitions everyone to play phase
     function liarStartFirstTurn(){
-      if (liarState.phase !== 'tablecard') return; // prevent double-tap re-firing
-      if (!liarMe.myId) return; // must be a claimant
+      if (cardLobbyState.phase !== 'tablecard') return; // prevent double-tap re-firing
+      if (!cardLobbyMe.myId) return; // must be a claimant
       // Server-validated phase transition (C2 turn 3). Echo updates local state.
-      huddleCallRPC('huddle_liar_start_first_turn', { p_code: liarState.code });
+      huddleCallRPC('huddle_liar_start_first_turn', { p_code: cardLobbyState.code });
     }
 
     // Renders the play screen from THIS device's perspective.
@@ -705,20 +705,20 @@
     // o'clock, opponents fill the rest at 360°/N intervals. Glow ring follows
     // currentPlayerIdx so whoever's actually-on-turn lights up. Centre shows
     // the round's rank as a big white button. Multi-device sync is automatic
-    // via the shared liarState (this fn just reads from it).
+    // via the shared cardLobbyState (this fn just reads from it).
     function liarRenderPlayScreen(){
-      const currentPid = liarState.alivePlayers[liarState.currentPlayerIdx];
-      const currentPlayer = liarState.players.find(p => p.id === currentPid);
-      const isMyTurn = currentPid === liarMe.myId;
+      const currentPid = cardLobbyState.alivePlayers[cardLobbyState.currentPlayerIdx];
+      const currentPlayer = cardLobbyState.players.find(p => p.id === currentPid);
+      const isMyTurn = currentPid === cardLobbyMe.myId;
 
-      ensureClaimantProfiles(Object.values(liarState.claimedBy || {}), liarRenderPlayScreen);
-      const currentDisplay = playerDisplayFor(currentPlayer, liarState.claimedBy);
+      ensureClaimantProfiles(Object.values(cardLobbyState.claimedBy || {}), liarRenderPlayScreen);
+      const currentDisplay = playerDisplayFor(currentPlayer, cardLobbyState.claimedBy);
 
       // Is the current turn-holder actually online? If they've disconnected, the
       // sole-survivor polling will end the game in ~8-11 seconds — but in the
       // meantime show the user a clear "other player left" message instead of
       // pretending they're about to act.
-      const currentSid = liarState.claimedBy && currentPid ? liarState.claimedBy[currentPid] : null;
+      const currentSid = cardLobbyState.claimedBy && currentPid ? cardLobbyState.claimedBy[currentPid] : null;
       const currentPresent = !!currentSid && _cardLobbyPresentSessions && _cardLobbyPresentSessions.has(currentSid);
       const showOtherLeftUi = !isMyTurn && !!currentSid && !currentPresent;
 
@@ -736,7 +736,7 @@
 
       // Centre rank button — the localized rank word in uppercase.
       const rankWordEl = document.getElementById('liar-play-rank-word');
-      if (rankWordEl) rankWordEl.textContent = liarRankLabel(liarState.tableCard);
+      if (rankWordEl) rankWordEl.textContent = liarRankLabel(cardLobbyState.tableCard);
 
       liarRenderTable();
       liarRenderHand();
@@ -765,16 +765,16 @@
       const felt = document.getElementById('liar-play-felt');
       if (!felt) return;
 
-      const currentPid = liarState.alivePlayers[liarState.currentPlayerIdx];
-      const isMyTurn   = currentPid === liarMe.myId;
-      const recent     = liarState.recentPlays || {};
-      const claimedBy  = liarState.claimedBy || {};
+      const currentPid = cardLobbyState.alivePlayers[cardLobbyState.currentPlayerIdx];
+      const isMyTurn   = currentPid === cardLobbyMe.myId;
+      const recent     = cardLobbyState.recentPlays || {};
+      const claimedBy  = cardLobbyState.claimedBy || {};
 
       // Build the seated lists. ME always sits at 6 o'clock; opponents fill
       // the remaining rim. Keep opponent order stable across renders so
       // chairs don't jump as state mutates.
-      const seatedPlayers = liarState.players.filter(p => claimedBy[p.id]);
-      const opponents     = seatedPlayers.filter(p => p.id !== liarMe.myId);
+      const seatedPlayers = cardLobbyState.players.filter(p => claimedBy[p.id]);
+      const opponents     = seatedPlayers.filter(p => p.id !== cardLobbyMe.myId);
       const totalPlayers  = seatedPlayers.length;
 
       // Circle math: ME at angle 180°, others at +360/N intervals.
@@ -804,7 +804,7 @@
         el.style.left = x.toFixed(2) + '%';
         el.style.top  = y.toFixed(2) + '%';
         el.classList.add('active');
-        const isAlive   = liarState.alivePlayers.includes(p.id);
+        const isAlive   = cardLobbyState.alivePlayers.includes(p.id);
         const isCurrent = p.id === currentPid && isAlive;
         if (isCurrent) el.classList.add('current');
         if (!isAlive)  el.classList.add('eliminated');
@@ -814,10 +814,10 @@
       // ME at 6 o'clock — only render if I'm actually seated.
       const meEl = document.getElementById('liar-play-me');
       if (meEl) {
-        const mePlayer = liarMe.myId && liarState.players.find(p => p.id === liarMe.myId);
+        const mePlayer = cardLobbyMe.myId && cardLobbyState.players.find(p => p.id === cardLobbyMe.myId);
         const showMe   = !!(mePlayer && claimedBy[mePlayer.id]);
         if (showMe) {
-          const isAlive = liarState.alivePlayers.includes(liarMe.myId);
+          const isAlive = cardLobbyState.alivePlayers.includes(cardLobbyMe.myId);
           meEl.classList.toggle('current', isMyTurn && isAlive);
           meEl.classList.toggle('eliminated', !isAlive);
           meEl.innerHTML = liarPlaySeatHTML(mePlayer, recent, /*isMe*/true, isMyTurn);
@@ -838,9 +838,9 @@
     //   - MY pending count + table-card rank if I have cards selected (me only)
     //   - Nothing if neither
     function liarPlaySeatHTML(player, recent, isMe, isMyTurn){
-      const isAlive   = liarState.alivePlayers.includes(player.id);
-      const handCount = isAlive ? (liarState.hands[player.id] || []).length : 0;
-      const display   = playerDisplayFor(player, liarState.claimedBy);
+      const isAlive   = cardLobbyState.alivePlayers.includes(player.id);
+      const handCount = isAlive ? (cardLobbyState.hands[player.id] || []).length : 0;
+      const display   = playerDisplayFor(player, cardLobbyState.claimedBy);
       // ME uses 44px avatar + own profile name; opponents use 36px + claimant profile.
       const avSize    = isMe ? 44 : 36;
       const meName    = (isMe && myProfile && myProfile.username) ? '@' + myProfile.username : null;
@@ -856,10 +856,10 @@
         if (played && played.count) {
           // Actual played stack — sits as a white pill under the avatar+name.
           badge = `<div class="liar-play-claim">${played.count} ${escapeHTML(liarRankWord(played.claimedRank, played.count))}</div>`;
-        } else if (isMe && isMyTurn && liarMe.selectedCardIds && liarMe.selectedCardIds.length > 0) {
+        } else if (isMe && isMyTurn && cardLobbyMe.selectedCardIds && cardLobbyMe.selectedCardIds.length > 0) {
           // Pending claim: show MY selection count + the round's table card.
-          const cnt = liarMe.selectedCardIds.length;
-          badge = `<div class="liar-play-claim">${cnt} ${escapeHTML(liarRankWord(liarState.tableCard, cnt))}</div>`;
+          const cnt = cardLobbyMe.selectedCardIds.length;
+          badge = `<div class="liar-play-claim">${cnt} ${escapeHTML(liarRankWord(cardLobbyState.tableCard, cnt))}</div>`;
         }
       }
 
@@ -872,19 +872,19 @@
       `;
     }
 
-    // Renders THIS device's hand only — based on liarMe.myId, not the current player.
+    // Renders THIS device's hand only — based on cardLobbyMe.myId, not the current player.
     // Other players' hands are never sent to other devices in the tomorrow-Supabase
     // architecture; today, they're in localStorage but the render layer hides them.
     function liarRenderHand(){
       const hand = document.getElementById('liar-hand');
       if (!hand) return;
-      if (!liarMe.myId || !liarState.alivePlayers.includes(liarMe.myId)) {
+      if (!cardLobbyMe.myId || !cardLobbyState.alivePlayers.includes(cardLobbyMe.myId)) {
         // I'm not playing this round (eliminated OR no seat claimed). Show empty state.
         hand.classList.add('empty');
-        hand.innerHTML = `<div>${liarMe.myId ? t('liar.youAreOut') : t('liar.noSeatClaimed')}</div>`;
+        hand.innerHTML = `<div>${cardLobbyMe.myId ? t('liar.youAreOut') : t('liar.noSeatClaimed')}</div>`;
         return;
       }
-      const cards = liarState.hands[liarMe.myId] || [];
+      const cards = cardLobbyState.hands[cardLobbyMe.myId] || [];
       if (cards.length === 0) {
         hand.classList.add('empty');
         hand.innerHTML = `<div>${t('liar.handEmpty')}</div>`;
@@ -892,7 +892,7 @@
       }
       hand.classList.remove('empty');
       hand.innerHTML = cards.map(card => {
-        const selected = liarMe.selectedCardIds.includes(card.id);
+        const selected = cardLobbyMe.selectedCardIds.includes(card.id);
         return liarCardHTML(card, { selected, faceDown: false, onclick: `liarToggleCard('${card.id}')` });
       }).join('');
       parseEmoji(hand);
@@ -944,16 +944,16 @@
 
     function liarToggleCard(cardId){
       // Only allow card selection on MY turn — others can look but can't tap
-      const currentPid = liarState.alivePlayers[liarState.currentPlayerIdx];
-      if (currentPid !== liarMe.myId) return;
-      const idx = liarMe.selectedCardIds.indexOf(cardId);
+      const currentPid = cardLobbyState.alivePlayers[cardLobbyState.currentPlayerIdx];
+      if (currentPid !== cardLobbyMe.myId) return;
+      const idx = cardLobbyMe.selectedCardIds.indexOf(cardId);
       if (idx >= 0) {
-        liarMe.selectedCardIds.splice(idx, 1);
+        cardLobbyMe.selectedCardIds.splice(idx, 1);
       } else {
-        if (liarMe.selectedCardIds.length >= 3) {
-          liarMe.selectedCardIds.shift();
+        if (cardLobbyMe.selectedCardIds.length >= 3) {
+          cardLobbyMe.selectedCardIds.shift();
         }
-        liarMe.selectedCardIds.push(cardId);
+        cardLobbyMe.selectedCardIds.push(cardId);
       }
       // Local-only state change — no persist needed
       liarRenderHand();
@@ -969,28 +969,28 @@
       const callBtn  = document.getElementById('liar-call-btn');
       if (!statusEl || !playBtn || !callBtn) return;
 
-      const currentPid    = liarState.alivePlayers[liarState.currentPlayerIdx];
-      const currentPlayer = liarState.players.find(p => p.id === currentPid);
-      const isMyTurn      = currentPid === liarMe.myId;
-      const myCards       = liarState.hands[liarMe.myId] || [];
-      const sel           = liarMe.selectedCardIds.length;
-      const isFirst       = !liarState.lastPlay;
+      const currentPid    = cardLobbyState.alivePlayers[cardLobbyState.currentPlayerIdx];
+      const currentPlayer = cardLobbyState.players.find(p => p.id === currentPid);
+      const isMyTurn      = currentPid === cardLobbyMe.myId;
+      const myCards       = cardLobbyState.hands[cardLobbyMe.myId] || [];
+      const sel           = cardLobbyMe.selectedCardIds.length;
+      const isFirst       = !cardLobbyState.lastPlay;
       const hasCards      = myCards.length > 0;
-      const imAlive       = liarMe.myId && liarState.alivePlayers.includes(liarMe.myId);
+      const imAlive       = cardLobbyMe.myId && cardLobbyState.alivePlayers.includes(cardLobbyMe.myId);
       // Anyone-can-call rule: any alive player except the one who just played
       // may call LIAR. First valid call wins (server serializes).
-      const accusedId     = liarState.lastPlay && liarState.lastPlay.byPlayerId;
-      const canCallLiar   = !isFirst && imAlive && accusedId !== liarMe.myId;
+      const accusedId     = cardLobbyState.lastPlay && cardLobbyState.lastPlay.byPlayerId;
+      const canCallLiar   = !isFirst && imAlive && accusedId !== cardLobbyMe.myId;
 
       // NOT my turn — passive waiting status, BUT Liar button stays available
       // to any alive non-accused watcher so they can challenge the last play.
       if (!isMyTurn) {
-        const curSid = liarState.claimedBy && currentPid ? liarState.claimedBy[currentPid] : null;
+        const curSid = cardLobbyState.claimedBy && currentPid ? cardLobbyState.claimedBy[currentPid] : null;
         const curPresent = !!curSid && _cardLobbyPresentSessions && _cardLobbyPresentSessions.has(curSid);
         if (curSid && !curPresent) {
           statusEl.innerHTML = t('liar.otherPlayerLeftStatus');
         } else {
-          const curDisplay = playerDisplayFor(currentPlayer, liarState.claimedBy);
+          const curDisplay = playerDisplayFor(currentPlayer, cardLobbyState.claimedBy);
           statusEl.innerHTML = t('liar.waitingForToAct', {
             name: '<strong>' + escapeHTML(curDisplay.name) + '</strong>'
           });
@@ -1009,13 +1009,13 @@
         statusEl.innerHTML = t('liar.statusYouEmpty');
       } else if (sel === 0) {
         if (isFirst) {
-          statusEl.innerHTML = t('liar.statusFirstTurn', { tableCard: escapeHTML(liarRankLabel(liarState.tableCard)) });
+          statusEl.innerHTML = t('liar.statusFirstTurn', { tableCard: escapeHTML(liarRankLabel(cardLobbyState.tableCard)) });
         } else {
-          const lastPlayer = liarState.players.find(p => p.id === liarState.lastPlay.byPlayerId);
-          const lastDisp   = playerDisplayFor(lastPlayer, liarState.claimedBy);
+          const lastPlayer = cardLobbyState.players.find(p => p.id === cardLobbyState.lastPlay.byPlayerId);
+          const lastDisp   = playerDisplayFor(lastPlayer, cardLobbyState.claimedBy);
           statusEl.innerHTML = t('liar.statusFollow', {
-            name: escapeHTML(lastPlayer.id === liarMe.myId ? t('picker.you') : lastDisp.name),
-            count: escapeHTML(String(liarState.lastPlay.count)),
+            name: escapeHTML(lastPlayer.id === cardLobbyMe.myId ? t('picker.you') : lastDisp.name),
+            count: escapeHTML(String(cardLobbyState.lastPlay.count)),
           });
         }
       } else {
@@ -1026,24 +1026,24 @@
     }
 
     function liarPlaySelectedCards(){
-      if (liarState.phase !== 'play') return; // ignore if phase moved (rare double-tap)
+      if (cardLobbyState.phase !== 'play') return; // ignore if phase moved (rare double-tap)
       // Local guard: only the current player can play
-      const currentPid = liarState.alivePlayers[liarState.currentPlayerIdx];
-      if (currentPid !== liarMe.myId) return;
-      const cards = liarState.hands[liarMe.myId] || [];
-      const selected = liarMe.selectedCardIds
+      const currentPid = cardLobbyState.alivePlayers[cardLobbyState.currentPlayerIdx];
+      if (currentPid !== cardLobbyMe.myId) return;
+      const cards = cardLobbyState.hands[cardLobbyMe.myId] || [];
+      const selected = cardLobbyMe.selectedCardIds
         .map(id => cards.find(c => c.id === id))
         .filter(c => c);
       if (selected.length < 1 || selected.length > 3) return;
       const cardIds = selected.map(c => c.id);
       // Clear local selection immediately so the UI deselects (UX); the
       // actual hand mutation happens server-side and arrives via echo.
-      liarMe.selectedCardIds = [];
+      cardLobbyMe.selectedCardIds = [];
       // Server-validated play (C2 turn 3) — server confirms caller's identity,
       // turn order, and CARD OWNERSHIP. A malicious client cannot inject
       // cards they don't hold, even via direct REST.
       huddleCallRPC('huddle_liar_play_cards', {
-        p_code: liarState.code,
+        p_code: cardLobbyState.code,
         p_card_ids: cardIds,
       });
       // Re-render so the deselect lands visually without waiting for echo.
@@ -1051,48 +1051,48 @@
     }
 
     function liarAdvanceTurn(){
-      const n = liarState.alivePlayers.length;
-      liarState.currentPlayerIdx = (liarState.currentPlayerIdx + 1) % n;
+      const n = cardLobbyState.alivePlayers.length;
+      cardLobbyState.currentPlayerIdx = (cardLobbyState.currentPlayerIdx + 1) % n;
     }
 
     function liarCallLiar(){
-      if (liarState.phase !== 'play') return; // double-tap safety
-      if (!liarState.lastPlay) return;
+      if (cardLobbyState.phase !== 'play') return; // double-tap safety
+      if (!cardLobbyState.lastPlay) return;
       // Local guard (UX only — server enforces the same rules):
       //   • Caller must be alive in this round
       //   • Caller must NOT be the player who just played (the accused)
       // First valid call wins; subsequent calls fail with 'wrong_phase'.
-      if (!liarMe.myId) return;
-      if (!liarState.alivePlayers || !liarState.alivePlayers.includes(liarMe.myId)) return;
-      if (liarState.lastPlay.byPlayerId === liarMe.myId) return;
+      if (!cardLobbyMe.myId) return;
+      if (!cardLobbyState.alivePlayers || !cardLobbyState.alivePlayers.includes(cardLobbyMe.myId)) return;
+      if (cardLobbyState.lastPlay.byPlayerId === cardLobbyMe.myId) return;
       // Server determines pendingLoser & phase='reveal' (C2 turn 3). The
       // truth-vs-lie computation is done server-side against the canonical
       // lastPlay so the client cannot lie about the verdict.
       // Mark the call button as syncing so the press-pulse affordance fires
       // even though we no longer set phase locally.
       try { liarMarkPhaseStart(document.getElementById('liar-call-btn')); } catch(e){}
-      huddleCallRPC('huddle_liar_call_liar', { p_code: liarState.code });
+      huddleCallRPC('huddle_liar_call_liar', { p_code: cardLobbyState.code });
     }
 
     function liarRenderRevealContent(){
-      const accusedId = liarState.lastPlay.byPlayerId;
-      const accused = liarState.players.find(p => p.id === accusedId);
+      const accusedId = cardLobbyState.lastPlay.byPlayerId;
+      const accused = cardLobbyState.players.find(p => p.id === accusedId);
       // Under the "anyone can call" rule, the accuser is whoever clicked
       // "Liar!" — the server records this in pendingAccuserId. Fall back to
       // the old currentPlayerIdx-derived value only for legacy states
       // written before the rule change.
-      const accuserId = liarState.pendingAccuserId
-        || liarState.alivePlayers[liarState.currentPlayerIdx];
-      const accuser = liarState.players.find(p => p.id === accuserId);
-      const rankLabel = liarRankLabel(liarState.tableCard);
-      const count = liarState.lastPlay.count;
+      const accuserId = cardLobbyState.pendingAccuserId
+        || cardLobbyState.alivePlayers[cardLobbyState.currentPlayerIdx];
+      const accuser = cardLobbyState.players.find(p => p.id === accuserId);
+      const rankLabel = liarRankLabel(cardLobbyState.tableCard);
+      const count = cardLobbyState.lastPlay.count;
       const sCount = count > 1 ? 's' : '';
 
-      ensureClaimantProfiles(Object.values(liarState.claimedBy || {}), liarRenderRevealContent);
-      const accusedDisplay = playerDisplayFor(accused, liarState.claimedBy);
-      const accuserDisplay = playerDisplayFor(accuser, liarState.claimedBy);
-      const accusedName = accused && accused.id === liarMe.myId ? t('picker.you') : accusedDisplay.name;
-      const accuserName = accuser && accuser.id === liarMe.myId ? t('picker.you') : accuserDisplay.name;
+      ensureClaimantProfiles(Object.values(cardLobbyState.claimedBy || {}), liarRenderRevealContent);
+      const accusedDisplay = playerDisplayFor(accused, cardLobbyState.claimedBy);
+      const accuserDisplay = playerDisplayFor(accuser, cardLobbyState.claimedBy);
+      const accusedName = accused && accused.id === cardLobbyMe.myId ? t('picker.you') : accusedDisplay.name;
+      const accuserName = accuser && accuser.id === cardLobbyMe.myId ? t('picker.you') : accuserDisplay.name;
 
       document.getElementById('liar-reveal-label').innerHTML = t('liar.revealLabel', {
         name: escapeHTML(accusedName),
@@ -1105,8 +1105,8 @@
       // Render the revealed cards as 3-D flip cards. Each one starts face-down
       // and animates face-up on a stagger driven by --i (CSS animation-delay).
       const cardsEl = document.getElementById('liar-reveal-cards');
-      cardsEl.innerHTML = liarState.lastPlay.cards.map((c, i) => {
-        const isValid = c.rank === liarState.tableCard || c.rank === 'J';
+      cardsEl.innerHTML = cardLobbyState.lastPlay.cards.map((c, i) => {
+        const isValid = c.rank === cardLobbyState.tableCard || c.rank === 'J';
         return liarFlipCardHTML(c, { revealed: isValid ? 'truth' : 'lie', index: i });
       }).join('');
       parseEmoji(cardsEl);
@@ -1117,7 +1117,7 @@
       const verdictEl = document.getElementById('liar-verdict');
       const verdictEmoji = document.getElementById('liar-verdict-emoji');
       const verdictText = document.getElementById('liar-verdict-text');
-      verdictEl.className = 'liar-verdict ' + liarState.pendingLoserCause;
+      verdictEl.className = 'liar-verdict ' + cardLobbyState.pendingLoserCause;
       // Compact verdict: only the first sentence (e.g. "Jordan was LYING.")
       // The full explanation lived on the old separate reveal page; in the
       // single-page overlay we want a small one-line pill so the BUSTED stamp
@@ -1130,7 +1130,7 @@
         return m ? m[0] : full;
       };
       let stampHtml = '';
-      if (liarState.pendingLoserCause === 'lied') {
+      if (cardLobbyState.pendingLoserCause === 'lied') {
         verdictEmoji.textContent = '🤥';
         const fullText = t('liar.verdictLied', { name: '<strong>' + escapeHTML(accusedName) + '</strong>', tableCard: rankLabel });
         verdictText.innerHTML = firstSentence(fullText);
@@ -1147,25 +1147,25 @@
       parseEmoji(verdictEl);
 
       const stampHost = document.getElementById('liar-reveal-stamp');
-      const revealKey = (liarState.pendingLoserId || '') + ':' + (liarState.pendingLoserCause || '');
+      const revealKey = (cardLobbyState.pendingLoserId || '') + ':' + (cardLobbyState.pendingLoserCause || '');
       const isFreshReveal = __liarLastRevealKey !== revealKey;
       if (isFreshReveal) {
         __liarLastRevealKey = revealKey;
         // Card-flip sounds — staggered to match the new CSS animation-delays
         // (calc(.3s + var(--i) * .6s) — i.e. card1@300ms, card2@900ms, card3@1500ms).
-        liarState.lastPlay.cards.forEach((_, idx) => {
+        cardLobbyState.lastPlay.cards.forEach((_, idx) => {
           liarSchedule(() => liarSfx.cardFlip(), 300 + idx * 600);
         });
         // Mount the stamp + verdict dramatize + stinger + screen flash AFTER all
         // cards have flipped face-up (~2050ms for 3 cards). Defer to liarSchedule
         // so the moment lands AFTER the visual flips, not before them.
-        const allCardsLandedMs = 300 + (liarState.lastPlay.cards.length - 1) * 600 + 550; // last delay + flip duration
+        const allCardsLandedMs = 300 + (cardLobbyState.lastPlay.cards.length - 1) * 600 + 550; // last delay + flip duration
         liarSchedule(() => {
           if (stampHost) stampHost.innerHTML = stampHtml;
           verdictEl.classList.add('dramatize');
-          const flashKind = liarState.pendingLoserCause === 'lied' ? 'busted' : 'wrong';
+          const flashKind = cardLobbyState.pendingLoserCause === 'lied' ? 'busted' : 'wrong';
           liarFullScreenFlash(flashKind);
-          if (liarState.pendingLoserCause === 'lied') liarSfx.bustedStinger();
+          if (cardLobbyState.pendingLoserCause === 'lied') liarSfx.bustedStinger();
           else                                       liarSfx.wrongCallStinger();
         }, allCardsLandedMs);
       } else if (stampHost) {
@@ -1185,10 +1185,10 @@
       // loser by default, or (if they've disconnected mid-dwell) the lowest-
       // seat-connected peer as fallback. The mutator (liarStartSip) re-checks
       // the same guard so a takeover that races a return-from-grace no-ops.
-      const isLoser = liarState.pendingLoserId === liarMe.myId;
+      const isLoser = cardLobbyState.pendingLoserId === cardLobbyMe.myId;
       liarScheduleRevealAdvance(revealKey, () => {
-        if (liarState.phase !== 'reveal') return;
-        if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
+        if (cardLobbyState.phase !== 'reveal') return;
+        if (!cardLobbyShouldITakeAction(cardLobbyState.pendingLoserId)) return;
         liarStartSip();
       }, 4500);
       // Dwell hint — shown to EVERYONE so they know the cup screen is coming.
@@ -1197,8 +1197,8 @@
       const waitingNote = document.getElementById('liar-reveal-waiting');
       if (waitingNote) {
         waitingNote.style.display = '';
-        const loser = liarState.players.find(p => p.id === liarState.pendingLoserId);
-        const loserDisp = playerDisplayFor(loser, liarState.claimedBy);
+        const loser = cardLobbyState.players.find(p => p.id === cardLobbyState.pendingLoserId);
+        const loserDisp = playerDisplayFor(loser, cardLobbyState.claimedBy);
         const hintText = isLoser
           ? t('liar.autoNextTruthYou')
           : t('liar.autoNextTruthOther', { name: '<strong>' + escapeHTML(loserDisp.name) + '</strong>' });
@@ -1211,14 +1211,14 @@
     // ONCE by the loser's tap so all tabs see the same pattern. Sub-actions on the cup
     // screen (tap-to-drink) are gated to the loser only.
     function liarStartSip(){
-      if (liarState.phase !== 'reveal') return; // double-tap safety
+      if (cardLobbyState.phase !== 'reveal') return; // double-tap safety
       // Only the pending loser can advance to the cup. (Was: also lowest-
       // connected fallback; that case currently degrades to "game stalls
       // until loser returns" — to be re-added via presence-aware policy.)
-      if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
+      if (!cardLobbyShouldITakeAction(cardLobbyState.pendingLoserId)) return;
       // Server builds the chamber pattern with server-side randomness (C2
       // turn 3b). A cheating client cannot preview spill positions.
-      huddleCallRPC('huddle_liar_start_sip', { p_code: liarState.code });
+      huddleCallRPC('huddle_liar_start_sip', { p_code: cardLobbyState.code });
     }
 
     // Per-device animation ledgers — keyed so we only play each dramatic moment
@@ -1288,7 +1288,7 @@
     // are poison, sipChamberIdx still picks the landing chamber, sipOutcome still
     // resolves safe/spilled. We just render those as a spinning wheel.
     function liarRenderCupInline(){
-      const spills = liarState.cupSpills || 1;
+      const spills = cardLobbyState.cupSpills || 1;
       const wheelEl = document.getElementById('liar-wheel');
       const stage = document.getElementById('liar-cup-stage');
       const stamp = document.getElementById('liar-wheel-stamp');
@@ -1298,8 +1298,8 @@
 
       // Color the wheel — match wedges to sipChamberIsSpill (so all devices
       // see the same red/green layout) or fall back to first-N-are-red.
-      const chambers = (liarState.sipChamberIsSpill && liarState.sipChamberIsSpill.length === 6)
-        ? liarState.sipChamberIsSpill
+      const chambers = (cardLobbyState.sipChamberIsSpill && cardLobbyState.sipChamberIsSpill.length === 6)
+        ? cardLobbyState.sipChamberIsSpill
         : (() => {
             const arr = new Array(6).fill(false);
             for (let i = 0; i < Math.min(spills, 6); i++) arr[i] = true;
@@ -1318,7 +1318,7 @@
       const sheen = 'radial-gradient(circle at 50% 22%, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 42%), radial-gradient(circle at 50% 88%, rgba(0,0,0,.25) 0%, rgba(0,0,0,0) 58%)';
       wheelEl.style.background = `${sheen}, ${bg}`;
 
-      if (!liarState.sipTaken) {
+      if (!cardLobbyState.sipTaken) {
         // Pre-spin — wheel rendered colored, not spinning yet. The 1.1s brace
         // beat lets the loser see how many red wedges they're up against.
         __liarLastAnimatedSipKey = null;
@@ -1335,7 +1335,7 @@
         liarScheduleAutoSip();
       } else {
         if (resultEl) resultEl.style.display = 'none';
-        const sipKey = String(liarState.sipChamberIdx) + ':' + liarState.sipOutcome;
+        const sipKey = String(cardLobbyState.sipChamberIdx) + ':' + cardLobbyState.sipOutcome;
         if (__liarLastAnimatedSipKey !== sipKey) {
           __liarLastAnimatedSipKey = sipKey;
           liarRunCupAnimation();
@@ -1349,7 +1349,7 @@
     let __liarAutoSipKey = null;
     function liarScheduleAutoSip(){
       // Key by pendingLoserId — one auto-fire per loser, per cup phase entry.
-      const key = String(liarState.pendingLoserId || '') + ':' + (liarState.cupSpills || 0);
+      const key = String(cardLobbyState.pendingLoserId || '') + ':' + (cardLobbyState.cupSpills || 0);
       if (__liarAutoSipKey === key) return; // already scheduled for this sip
       liarClearAutoSip();
       __liarAutoSipKey = key;
@@ -1359,11 +1359,11 @@
           // Re-check ownership at fire time. cardLobbyShouldITakeAction returns
           // true for the loser when present, OR for the lowest-seat-connected
           // peer when the loser has disconnected past the grace window.
-          if (liarState.phase !== 'cup' || liarState.sipTaken) return;
-          if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
+          if (cardLobbyState.phase !== 'cup' || cardLobbyState.sipTaken) return;
+          if (!cardLobbyShouldITakeAction(cardLobbyState.pendingLoserId)) return;
           // Haptic only on the actual loser's device (not the takeover peer —
           // they didn't "lose" anything).
-          if (liarState.pendingLoserId === liarMe.myId) {
+          if (cardLobbyState.pendingLoserId === cardLobbyMe.myId) {
             try { if (navigator.vibrate) navigator.vibrate(60); } catch(e){}
           }
           liarTakeSip();
@@ -1435,8 +1435,8 @@
       const stamp = document.getElementById('liar-wheel-stamp');
       const particles = document.getElementById('liar-cup-particles');
       const resultEl = document.getElementById('liar-cup-result');
-      const outcome = liarState.sipOutcome;
-      const finalIdx = liarState.sipChamberIdx;
+      const outcome = cardLobbyState.sipOutcome;
+      const finalIdx = cardLobbyState.sipChamberIdx;
       if (!stage || !wheelEl) return;
 
       // Reset visuals
@@ -1481,10 +1481,10 @@
       }, 7000);
 
       // Auto-advance to next round
-      const cupKey = String(liarState.sipChamberIdx) + ':' + liarState.sipOutcome + ':post';
+      const cupKey = String(cardLobbyState.sipChamberIdx) + ':' + cardLobbyState.sipOutcome + ':post';
       liarScheduleCupAdvance(cupKey, () => {
-        if (liarState.phase !== 'cup' || !liarState.sipTaken) return;
-        if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
+        if (cardLobbyState.phase !== 'cup' || !cardLobbyState.sipTaken) return;
+        if (!cardLobbyShouldITakeAction(cardLobbyState.pendingLoserId)) return;
         liarAfterSip();
       }, 8500);
     }
@@ -1557,7 +1557,7 @@
     function liarRenderCupChambersSpinning(highlightIdx, landed){
       const wrap = document.getElementById('liar-cup-chambers');
       if (!wrap) return;
-      const pattern = liarState.sipChamberIsSpill || [];
+      const pattern = cardLobbyState.sipChamberIsSpill || [];
       if (!pattern.length) return;
       // Build skeleton once (or rebuild if chamber count changed).
       let chambers = wrap.querySelectorAll('.liar-cup-chamber');
@@ -1667,7 +1667,7 @@
     function liarRenderCupChambers(showResult){
       const wrap = document.getElementById('liar-cup-chambers');
       if (!wrap) return;
-      const pattern = liarState.sipChamberIsSpill || [];
+      const pattern = cardLobbyState.sipChamberIsSpill || [];
       if (!pattern.length) return;
       let chambers = wrap.querySelectorAll('.liar-cup-chamber');
       if (chambers.length !== pattern.length) {
@@ -1677,7 +1677,7 @@
       pattern.forEach((isSpill, i) => {
         const el = chambers[i];
         if (!el) return;
-        const isPicked = i === liarState.sipChamberIdx;
+        const isPicked = i === cardLobbyState.sipChamberIdx;
         // Strip transient classes from the spin phase so the chamber settles
         // into its real post-reveal state cleanly. CSS transitions on
         // background/border carry the colour morph (gold → red/green).
@@ -1695,21 +1695,21 @@
     }
 
     function liarTakeSip(){
-      if (liarState.phase !== 'cup' || liarState.sipTaken) return; // double-fire safety
+      if (cardLobbyState.phase !== 'cup' || cardLobbyState.sipTaken) return; // double-fire safety
       // Only the loser's device fires this. (See note in liarStartSip about
       // the removed lowest-connected fallback.)
-      if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
+      if (!cardLobbyShouldITakeAction(cardLobbyState.pendingLoserId)) return;
       liarClearAutoSip();
       // Server picks the chamber + resolves outcome (C2 turn 3b). A cheating
       // client cannot rig their own cup outcome.
-      huddleCallRPC('huddle_liar_take_sip', { p_code: liarState.code });
+      huddleCallRPC('huddle_liar_take_sip', { p_code: cardLobbyState.code });
     }
 
     // Pure content render — called by the cup animation after sipTaken=true
     // to slide in the result panel. No button-state side effects.
     function liarShowSipResult(){
-      const loser = liarState.players.find(p => p.id === liarState.pendingLoserId);
-      const loserDisp = playerDisplayFor(loser, liarState.claimedBy);
+      const loser = cardLobbyState.players.find(p => p.id === cardLobbyState.pendingLoserId);
+      const loserDisp = playerDisplayFor(loser, cardLobbyState.claimedBy);
       const resultEl = document.getElementById('liar-cup-result');
       const resultEmoji = document.getElementById('liar-cup-result-emoji');
       const resultTitle = document.getElementById('liar-cup-result-title');
@@ -1720,17 +1720,17 @@
       // only one player remains, the next step is the WINNER screen, not another
       // round — so the hint should say "Crowning the winner…" instead.
       let nextHintKey = 'liar.autoNextRound';
-      if (liarState.sipOutcome === 'spilled') {
-        const survivorsAfter = liarState.alivePlayers.filter(id => id !== liarState.pendingLoserId);
+      if (cardLobbyState.sipOutcome === 'spilled') {
+        const survivorsAfter = cardLobbyState.alivePlayers.filter(id => id !== cardLobbyState.pendingLoserId);
         if (survivorsAfter.length <= 1) nextHintKey = 'liar.autoNextWinner';
       }
       const hint = '<div class="liar-cup-autohint"><span class="liar-auto-dot"></span> ' + escapeHTML(t(nextHintKey)) + '</div>';
 
-      if (liarState.sipOutcome === 'safe') {
+      if (cardLobbyState.sipOutcome === 'safe') {
         resultEl.className = 'liar-cup-result safe';
         if (resultEmoji) { resultEmoji.style.display = ''; resultEmoji.textContent = '😅'; }
         if (resultTitle) resultTitle.textContent = t('liar.cupSafeTitle');
-        if (resultText) resultText.innerHTML = t('liar.cupSafeText', { nextSpills: Math.min(6, liarState.cupSpills + 1) }) + hint;
+        if (resultText) resultText.innerHTML = t('liar.cupSafeText', { nextSpills: Math.min(6, cardLobbyState.cupSpills + 1) }) + hint;
       } else {
         // SPILL: hide the small 💧 emoji and replace it with the big OUT
         // stamp. The loser's name in the body text gets a draw-on strikethrough
@@ -1756,24 +1756,24 @@
     }
 
     function liarAfterSip(){
-      if (liarState.phase !== 'cup' || !liarState.sipTaken) return; // double-tap safety
+      if (cardLobbyState.phase !== 'cup' || !cardLobbyState.sipTaken) return; // double-tap safety
       // Only the loser's device fires this. (See note in liarStartSip about
       // the removed lowest-connected fallback.)
-      if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
+      if (!cardLobbyShouldITakeAction(cardLobbyState.pendingLoserId)) return;
       // Server handles: elimination/survival, win detection, next-round deal
       // (winner-of-call leads), or game-end if 1 survivor remains (C2 turn 3b).
       // All the round-starter rule logic and the cascade into the next round
       // are folded into the single huddle_liar_after_sip RPC.
-      huddleCallRPC('huddle_liar_after_sip', { p_code: liarState.code });
+      huddleCallRPC('huddle_liar_after_sip', { p_code: cardLobbyState.code });
     }
 
     // ---------- Result ----------
     function liarRenderResultContent(){
-      const winnerId = liarState.winnerId;
-      const winner = winnerId ? liarState.players.find(p => p.id === winnerId) : null;
-      ensureClaimantProfiles(Object.values(liarState.claimedBy || {}), liarRenderResultContent);
-      const winnerDisplay = winner ? playerDisplayFor(winner, liarState.claimedBy) : null;
-      const winnerName = winner && winner.id === liarMe.myId ? t('picker.you') : (winnerDisplay ? winnerDisplay.name : '');
+      const winnerId = cardLobbyState.winnerId;
+      const winner = winnerId ? cardLobbyState.players.find(p => p.id === winnerId) : null;
+      ensureClaimantProfiles(Object.values(cardLobbyState.claimedBy || {}), liarRenderResultContent);
+      const winnerDisplay = winner ? playerDisplayFor(winner, cardLobbyState.claimedBy) : null;
+      const winnerName = winner && winner.id === cardLobbyMe.myId ? t('picker.you') : (winnerDisplay ? winnerDisplay.name : '');
       const winTitleEl = document.getElementById('liar-win-title');
       if (winTitleEl) winTitleEl.textContent = winner
         ? t('liar.winTitle', { name: winnerName })
@@ -1782,19 +1782,19 @@
       const lb = document.getElementById('liar-leaderboard');
       if (!lb) return;
       // Only show CLAIMED seats — empty seats shouldn't appear on the leaderboard.
-      const claimedSet = new Set(Object.keys(liarState.claimedBy || {}));
-      const sorted = liarState.players.filter(p => claimedSet.has(p.id)).sort((a, b) => {
-        const wa = liarState.wins[a.id] || 0;
-        const wb = liarState.wins[b.id] || 0;
+      const claimedSet = new Set(Object.keys(cardLobbyState.claimedBy || {}));
+      const sorted = cardLobbyState.players.filter(p => claimedSet.has(p.id)).sort((a, b) => {
+        const wa = cardLobbyState.wins[a.id] || 0;
+        const wb = cardLobbyState.wins[b.id] || 0;
         if (wb !== wa) return wb - wa;
         return a.name.localeCompare(b.name);
       });
       lb.innerHTML = sorted.map((p, i) => {
-        const wins = liarState.wins[p.id] || 0;
+        const wins = cardLobbyState.wins[p.id] || 0;
         const isWinner = p.id === winnerId;
-        const isMe = p.id === liarMe.myId;
+        const isMe = p.id === cardLobbyMe.myId;
         const winsKey = wins === 1 ? 'cham.scoreWinsOne' : 'cham.scoreWins';
-        const rowDisplay = playerDisplayFor(p, liarState.claimedBy);
+        const rowDisplay = playerDisplayFor(p, cardLobbyState.claimedBy);
         return `
           <div class="lb-row ${isWinner ? 'winner' : ''}">
             <div class="lb-rank">${i+1}</div>
@@ -1809,7 +1809,7 @@
       // Configure the Play again / Leave buttons by role:
       //   • Host  → "Play again" (primary, enabled) + "Leave" (outline, closes room for everyone)
       //   • Other → "Waiting for host to start new game…" (primary, disabled) + "Leave" (outline, just me)
-      const amHostResult = cardLobbyGetSessionId() === liarState.hostId;
+      const amHostResult = cardLobbyGetSessionId() === cardLobbyState.hostId;
       const playAgainBtn = document.getElementById('liar-result-playagain-btn');
       const leaveResultBtn = document.getElementById('liar-result-leave-btn');
       if (playAgainBtn) {
@@ -1830,13 +1830,13 @@
     }
 
     function liarPlayAgain(){
-      if (liarState.phase !== 'result') return; // double-tap safety
+      if (cardLobbyState.phase !== 'result') return; // double-tap safety
       // Host-only — non-host sees "Waiting for host…" on the disabled button.
-      const amHost = cardLobbyGetSessionId() === liarState.hostId;
+      const amHost = cardLobbyGetSessionId() === cardLobbyState.hostId;
       if (!amHost) return;
       // Server-validated reset (C2 turn 3). Server returns to phase='lobby'
       // with wins preserved; the realtime echo updates this device.
-      huddleCallRPC('huddle_liar_play_again', { p_code: liarState.code });
+      huddleCallRPC('huddle_liar_play_again', { p_code: cardLobbyState.code });
     }
 
     // Sync the pre-paint screen override (set by the bootstrap script in

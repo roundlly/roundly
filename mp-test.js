@@ -30,7 +30,7 @@ const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css','.j
 const GAMES = [
   { key:'hotseat',   urlGame:'hotseat',   open:"openLobby('classic')", state:'state',      sid:'hotGetSessionId',   presence:'_hotPresentSessions',   table:'hotseat_rooms',   seatMin:2 },
   { key:'chameleon', urlGame:'chameleon', open:'openChamLobby()',      state:'chamState',  sid:'chamGetSessionId',  presence:'_chamPresentSessions',  table:'chameleon_rooms', seatMin:2 },
-  { key:'liar',      urlGame:'liar',      open:'openLiarLobby()',      state:'liarState',  sid:'cardLobbyGetSessionId',  presence:'_cardLobbyPresentSessions',  table:'liar_rooms',      seatMin:2 },
+  { key:'liar',      urlGame:'liar',      open:'openLiarLobby()',      state:'cardLobbyState',  sid:'cardLobbyGetSessionId',  presence:'_cardLobbyPresentSessions',  table:'liar_rooms',      seatMin:2 },
   { key:'mafia',     urlGame:'mafia',     open:'openMafiaLobby()',     state:'mafiaState', sid:'mafiaGetSessionId', presence:'_mafiaPresentSessions', table:'mafia_rooms',     seatMin:0 },
 ];
 
@@ -157,15 +157,15 @@ async function testChamLeaveNotice(browser, base, results) {
 // alivePlayers, so a claimedBy vanish only means a real leave).
 async function testLiarLeaveNotice(browser, base, results) {
   const A = await newSession(browser, base);
-  const a = await A.page.evaluate(async () => { await openLiarLobby(); return { code: liarState.code }; });
+  const a = await A.page.evaluate(async () => { await openLiarLobby(); return { code: cardLobbyState.code }; });
   await sleep(2000);
   const B = await newSession(browser, base);
   await B.page.evaluate(async (c) => { history.replaceState({}, '', '/?room=' + c + '&game=liar'); await openLiarLobby(); }, a.code);
   await sleep(3000);
-  await B.page.evaluate(async () => { try { await window.sb.rpc('huddle_leave_seat', { p_table: 'liar_rooms', p_code: liarState.code }); } catch (e) {} });
+  await B.page.evaluate(async () => { try { await window.sb.rpc('huddle_leave_seat', { p_table: 'liar_rooms', p_code: cardLobbyState.code }); } catch (e) {} });
   const out = await until(A.page, () => {
     const tEl = document.querySelector('[class*=toast]');
-    return { seats: Object.keys(liarState.claimedBy || {}).length, toast: (tEl && tEl.textContent || '').trim() };
+    return { seats: Object.keys(cardLobbyState.claimedBy || {}).length, toast: (tEl && tEl.textContent || '').trim() };
   }, null, (v) => v && /left the game/i.test(v.toast || ''), 16000, 1000);
   const v = out.value || {};
   results.push({ name: '[liar] remaining player sees "left" notice on Leave', ok: /left the game/i.test(v.toast || '') && v.seats < 2, detail: `toast="${v.toast}", seats=${v.seats}` });

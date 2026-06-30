@@ -764,8 +764,8 @@
       if (id === 'screen-cham-lobby' && typeof chamState !== 'undefined' && chamState.code) {
         return { gameKey: 'chameleon', code: chamState.code, claimedBy: chamState.claimedBy || {} };
       }
-      if (id === 'screen-liar-lobby' && typeof liarState !== 'undefined' && liarState.code) {
-        return { gameKey: 'liar', code: liarState.code, claimedBy: liarState.claimedBy || {} };
+      if (id === 'screen-liar-lobby' && typeof cardLobbyState !== 'undefined' && cardLobbyState.code) {
+        return { gameKey: 'liar', code: cardLobbyState.code, claimedBy: cardLobbyState.claimedBy || {} };
       }
       if (id === 'screen-mafia-lobby' && typeof mafiaState !== 'undefined' && mafiaState.code) {
         return { gameKey: 'mafia', code: mafiaState.code, claimedBy: mafiaState.claimedBy || {} };
@@ -1095,8 +1095,8 @@
       if (gameKey === 'chameleon' && typeof chamState !== 'undefined') {
         return { code: chamState.code, claimedBy: chamState.claimedBy || {} };
       }
-      if (gameKey === 'liar' && typeof liarState !== 'undefined') {
-        return { code: liarState.code, claimedBy: liarState.claimedBy || {} };
+      if (gameKey === 'liar' && typeof cardLobbyState !== 'undefined') {
+        return { code: cardLobbyState.code, claimedBy: cardLobbyState.claimedBy || {} };
       }
       if (gameKey === 'mafia' && typeof mafiaState !== 'undefined') {
         return { code: mafiaState.code, claimedBy: mafiaState.claimedBy || {} };

@@ -145,7 +145,7 @@
       roundOutcome: null,         // 'won' | 'forfeit'
       turnStartTime: 0,           // ms timestamp when current turn began
       lastTurnDuration: 0,        // ms elapsed on last completed turn
-      // Multiplayer additions (mirror liarState)
+      // Multiplayer additions (mirror cardLobbyState)
       code: null,
       phase: 'lobby',             // 'lobby' | 'splash' | 'play' | 'result'
       hostId: null,
@@ -153,7 +153,7 @@
       revision: 0,
     };
 
-    // Local per-device identity for Hot Seat (mirrors liarMe)
+    // Local per-device identity for Hot Seat (mirrors cardLobbyMe)
     const hotMe = { sessionId: null, myId: null, bootstrapped: false };
     // Dedup key for the render-side bumpWins() in showResult — prevents the
     // re-renders that fire for the same turn (ensureClaimantProfiles callback,
@@ -176,7 +176,7 @@
     // ONE implementation for all 4 games (Hot Seat, Chameleon, Liar, Mafia). Each game
     // passes its own `me` object ({ sessionId, bootstrapped, ... }); we pass the object
     // rather than share it because each game keeps extra per-game fields on it
-    // (liarMe.selectedCardIds, mafiaMe.myRole/myTeammates, …).
+    // (cardLobbyMe.selectedCardIds, mafiaMe.myRole/myTeammates, …).
     //
     // Behavior is the historic hot/cham/liar behavior, preserved intentionally:
     //   - bootstrap: reuse an existing auth user, else sign in anonymously.

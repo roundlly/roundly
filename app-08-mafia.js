@@ -1952,7 +1952,7 @@
     }
 
     // ⚠ MAFIA RUNS ON LIAR'S SHARED CARD-LOBBY ENGINE.
-    //   This is Mafia's lobby, but it drives it with Liar's `liarState` / `liarMe`
+    //   This is Mafia's lobby, but it drives it with Liar's `cardLobbyState` / `cardLobbyMe`
     //   and the `liar*` lobby/seat/sync functions (hence the confusing name). See
     //   the SHARED ENGINE banner at the top of app-07-liar.js. If you change the
     //   shared engine there, exercise the MAFIA lobby too — not just Liar's Cup.
@@ -1960,7 +1960,7 @@
       // Drop any seat we still hold in OTHER game lobbies before claiming
       // one here — invariant: one user, one seat across all games.
       try { huddleLeaveOtherGameSeats('liar'); } catch(e){}
-      liarMe.selectedCardIds = [];
+      cardLobbyMe.selectedCardIds = [];
 
       // Priority order for which room to load:
       //   1) ?room=CODE in the URL bar (QR scan / shared link)
@@ -1992,9 +1992,9 @@
       let cachedRoomGone = !!existingCode && !loaded;
 
       if (loaded) {
-        const claimed = Object.entries(liarState.claimedBy || {}).find(([pid, sid]) => sid === sessionId);
-        liarMe.myId = claimed ? claimed[0] : null;
-        if (liarMe.myId) {
+        const claimed = Object.entries(cardLobbyState.claimedBy || {}).find(([pid, sid]) => sid === sessionId);
+        cardLobbyMe.myId = claimed ? claimed[0] : null;
+        if (cardLobbyMe.myId) {
           // Returning to a room we already own a seat in (refresh / re-open).
           try { huddlePersistLastRoom('liar',existingCode); } catch(e){}
         } else if (urlRoom) {
@@ -2019,10 +2019,10 @@
         //       peer — see liarHandleConfirmedDisconnect's `isMyJobToWrite`).
         // Either way the user can't participate. Bounce to Games with a toast
         // so they see "game is over" instead of phantom players.
-        const inGamePhase = liarState.phase
-          && liarState.phase !== 'lobby'
-          && liarState.phase !== 'result';
-        if (inGamePhase && !liarMe.myId) {
+        const inGamePhase = cardLobbyState.phase
+          && cardLobbyState.phase !== 'lobby'
+          && cardLobbyState.phase !== 'result';
+        if (inGamePhase && !cardLobbyMe.myId) {
           if (typeof showLobbyToast === 'function') {
             try { showLobbyToast(t('liar.toastReconnectStale'), 4500); } catch(e){}
           }
@@ -2043,15 +2043,15 @@
       await cardLobbyAutoClaimIfNeeded();
 
       // Sync the URL bar so the host can share their browser URL directly.
-      cardLobbySyncUrlToRoom(liarState.code);
+      cardLobbySyncUrlToRoom(cardLobbyState.code);
 
       // Update lobby DOM
-      document.getElementById('liar-room-code').textContent = liarState.code;
+      document.getElementById('liar-room-code').textContent = cardLobbyState.code;
       const fb = document.getElementById('liar-room-qr-fallback');
       if (fb) fb.classList.remove('show');
       // QR encodes the full join URL so scanning it on a phone opens
       // roundlly.com/?room=CODE and auto-joins this exact room.
-      setRoomQrSrc(document.getElementById('liar-room-qr'), qrUrl(cardLobbyJoinUrl(liarState.code)));
+      setRoomQrSrc(document.getElementById('liar-room-qr'), qrUrl(cardLobbyJoinUrl(cardLobbyState.code)));
 
       liarUpdateHowToTrigger();
       // Phase may have been advanced by another device — render whatever is current
@@ -2070,8 +2070,8 @@
       const playersCopy = JSON.parse(JSON.stringify(PLAYERS));
       const sid = cardLobbyGetSessionId();
       const firstSeat = playersCopy[0] && playersCopy[0].id;
-      Object.keys(liarState).forEach(k => delete liarState[k]);
-      Object.assign(liarState, {
+      Object.keys(cardLobbyState).forEach(k => delete cardLobbyState[k]);
+      Object.assign(cardLobbyState, {
         code: code,
         phase: 'lobby',
         hostId: sid,
@@ -2095,12 +2095,12 @@
         roundCount: 0,
         revision: 0,
       });
-      liarMe.myId = firstSeat || null;
+      cardLobbyMe.myId = firstSeat || null;
       // Server-validated room creation (C2: closes direct-write hole). The
       // server inserts the row with this initial state under SECURITY DEFINER;
       // the realtime echo delivers canonical state back to this device.
-      if (!liarState.labMode) {
-        const snapshot = JSON.parse(JSON.stringify(liarState));
+      if (!cardLobbyState.labMode) {
+        const snapshot = JSON.parse(JSON.stringify(cardLobbyState));
         huddleCallRPC('huddle_create_room', {
           p_table: 'liar_rooms',
           p_code: code,
@@ -2140,42 +2140,42 @@
 
     async function cardLobbyClaimSeat(playerId){
       const sessionId = cardLobbyGetSessionId();
-      const currentClaim = liarState.claimedBy[playerId];
+      const currentClaim = cardLobbyState.claimedBy[playerId];
       // If someone else holds this seat, ignore
       if (currentClaim && currentClaim !== sessionId) return;
       // Optimistic local update for snappy UI — if the RPC rejects, the next
       // realtime echo will overwrite this with the canonical server state.
-      if (liarMe.myId && liarState.claimedBy[liarMe.myId] === sessionId) {
-        delete liarState.claimedBy[liarMe.myId];
+      if (cardLobbyMe.myId && cardLobbyState.claimedBy[cardLobbyMe.myId] === sessionId) {
+        delete cardLobbyState.claimedBy[cardLobbyMe.myId];
       }
-      liarState.claimedBy[playerId] = sessionId;
-      if (!liarState.hostId) liarState.hostId = sessionId;
-      liarMe.myId = playerId;
+      cardLobbyState.claimedBy[playerId] = sessionId;
+      if (!cardLobbyState.hostId) cardLobbyState.hostId = sessionId;
+      cardLobbyMe.myId = playerId;
       cardLobbyRenderSeats();
       // Server-validated claim. RPC handles seat-switching (releases old seat
       // held by caller) and rejects seat-stealing attempts at the database
       // layer (C2 turn 2).
       await huddleCallRPC('huddle_claim_seat', {
         p_table: 'liar_rooms',
-        p_code: liarState.code,
+        p_code: cardLobbyState.code,
         p_player_id: playerId,
       });
     }
 
     async function cardLobbyAutoClaimIfNeeded(){
-      return huddleAutoClaimIfNeeded(liarMe, liarState, cardLobbyClaimSeat);
+      return huddleAutoClaimIfNeeded(cardLobbyMe, cardLobbyState, cardLobbyClaimSeat);
     }
 
     function cardLobbyRenderSeats(){
       const el = document.getElementById('liar-seats');
-      if (el && huddleLobbyHydrating(liarState && liarState.code)) {
+      if (el && huddleLobbyHydrating(cardLobbyState && cardLobbyState.code)) {
         el.innerHTML = huddleLobbySkeletonHTML(20);
         return;
       }
       if (!el) return;
       const sessionId = cardLobbyGetSessionId();
-      const claimedCount = Object.keys(liarState.claimedBy || {}).length;
-      const claimedSessionIds = Object.values(liarState.claimedBy || {});
+      const claimedCount = Object.keys(cardLobbyState.claimedBy || {}).length;
+      const claimedSessionIds = Object.values(cardLobbyState.claimedBy || {});
       ensureClaimantProfiles(claimedSessionIds, cardLobbyRenderSeats);
       // Prefer @username (globally unique) over display_name first-word so
       // two players with the same first name render distinctly. See
@@ -2184,8 +2184,8 @@
         ? '@' + myProfile.username
         : ((myProfile && myProfile.name && myProfile.name.trim().split(/\s+/)[0]) || 'You');
       const myAvatar = (myProfile && myProfile.avatar) ? myProfile.avatar : null;
-      el.innerHTML = liarState.players.map(p => {
-        const claimedSession = liarState.claimedBy[p.id];
+      el.innerHTML = cardLobbyState.players.map(p => {
+        const claimedSession = cardLobbyState.claimedBy[p.id];
         const claimedByMe = claimedSession === sessionId;
         const claimedByOther = !!claimedSession && !claimedByMe;
         const claimProfile = claimedByOther ? profileForClaim(claimedSession) : null;
@@ -2220,7 +2220,7 @@
           avatarData = (claimProfile && claimProfile.avatar) ? claimProfile.avatar : avatarForPlayer(p);
         }
         // Presence-driven dot + "Away" label + host kick button (Batch 2).
-        const _liarAmHost = (typeof cardLobbyGetSessionId === 'function' && liarState && cardLobbyGetSessionId() === liarState.hostId);
+        const _liarAmHost = (typeof cardLobbyGetSessionId === 'function' && cardLobbyState && cardLobbyGetSessionId() === cardLobbyState.hostId);
         const isPresent = claimedByMe || (typeof cardLobbyIsPlayerPresent === 'function' && cardLobbyIsPlayerPresent(p.id));
         const kick = (claimedByOther && _liarAmHost) ? huddleKickBtnHTML('liar', p.id) : '';
         return `
@@ -2238,25 +2238,25 @@
       parseEmoji(el);
       // Apply translations to any new data-i18n nodes inside the freshly-rendered seats
       if (typeof applyLang === 'function') applyLang(el);
-      try { huddleUpdateLockBtn('liar-lock-btn', 'liar', (typeof cardLobbyGetSessionId === 'function' && liarState && cardLobbyGetSessionId() === liarState.hostId)); } catch(e){}
+      try { huddleUpdateLockBtn('liar-lock-btn', 'liar', (typeof cardLobbyGetSessionId === 'function' && cardLobbyState && cardLobbyGetSessionId() === cardLobbyState.hostId)); } catch(e){}
 
       // Update start-button state — need at least 2 seats claimed AND I have a seat
       const startBtn = document.getElementById('liar-start-btn');
       if (startBtn) {
-        const canStart = claimedCount >= 2 && !!liarMe.myId;
+        const canStart = claimedCount >= 2 && !!cardLobbyMe.myId;
         if (canStart) startBtn.removeAttribute('aria-disabled');
         else          startBtn.setAttribute('aria-disabled', 'true');
       }
       // Update the seats-status hint
       const hint = document.getElementById('liar-seats-hint');
       if (hint) {
-        if (!liarMe.myId) hint.textContent = t('liar.seatsHintNotPicked');
+        if (!cardLobbyMe.myId) hint.textContent = t('liar.seatsHintNotPicked');
         else if (claimedCount < 2) hint.textContent = t('liar.seatsHintNeedMore', { n: 2 - claimedCount });
         else hint.textContent = t('liar.seatsHintReady');
       }
       // Leave / Reset visibility — now in the top-right of the Players header
       const leaveBtn = document.getElementById('liar-leave-btn');
-      const hasSeat = !!liarMe.myId;
+      const hasSeat = !!cardLobbyMe.myId;
       if (leaveBtn) leaveBtn.hidden = !hasSeat;
       // Keep the invite sheet content fresh if it's open (e.g. a friend just
       // joined / accepted / cancelled). Cheap if sheet is closed.

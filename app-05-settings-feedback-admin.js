@@ -108,7 +108,7 @@
 
       // If we have Supabase, push to server with uniqueness check
       if (huddleHasSupabaseAuth()) {
-        const userId = liarMe.sessionId;
+        const userId = cardLobbyMe.sessionId;
         // Uniqueness check only if username changed
         if (userInput && userInput !== (myProfile.username || '').toLowerCase()) {
           huddleSetUsernameStatus(t('editProfile.checkingUsername'), 'saving');

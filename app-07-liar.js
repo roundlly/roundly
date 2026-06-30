@@ -43,9 +43,9 @@
     // ⚠  SHARED "CARD-LOBBY ENGINE" — used by LIAR'S CUP *and* MAFIA.
     //
     //    Despite the `liar*` names, the room / seat / sync machinery below is NOT
-    //    Liar-only. MAFIA has no state object of its own — it reuses `liarState`,
-    //    `liarMe`, and the `liar*` lobby/sync functions wholesale (see
-    //    `openLiarLobby` in app-08-mafia.js). So editing `liarState`, `liarMe`, or
+    //    Liar-only. MAFIA has no state object of its own — it reuses `cardLobbyState`,
+    //    `cardLobbyMe`, and the `liar*` lobby/sync functions wholesale (see
+    //    `openLiarLobby` in app-08-mafia.js). So editing `cardLobbyState`, `cardLobbyMe`, or
     //    any `liar*` lobby/room/seat/sync function can break the MAFIA lobby too —
     //    even though nothing here mentions "mafia".
     //
@@ -55,11 +55,11 @@
     //    (Someday this should be renamed `cardLobby*`; until then, tread carefully.)
     // ===========================================================================
 
-    // liarState is the SYNCED ROOM STATE — same shape on every connected device.
+    // cardLobbyState is the SYNCED ROOM STATE — same shape on every connected device.
     // Today: persisted to localStorage, broadcast across browser tabs via 'storage' events.
     // Tomorrow: persisted to Supabase (Postgres row), broadcast via Supabase Realtime.
     // The transport changes; the state shape stays identical.
-    const liarState = {
+    const cardLobbyState = {
       code: null,              // room code — also the localStorage key suffix
       phase: 'lobby',          // 'lobby' | 'tablecard' | 'play' | 'reveal' | 'cup' | 'result'
       hostId: null,            // playerId who created the room
@@ -89,10 +89,10 @@
       revision: 0,             // increments on every persist — helps debugging
     };
 
-    // liarMe is the LOCAL PER-DEVICE state. Never synced. Lives only on this device.
+    // cardLobbyMe is the LOCAL PER-DEVICE state. Never synced. Lives only on this device.
     // The `sessionId` is the Supabase auth user ID (stable across page reloads).
     // If Supabase is unavailable, we fall back to a random per-tab id (no cross-reload stability).
-    const liarMe = {
+    const cardLobbyMe = {
       sessionId: null,         // Supabase user ID OR fallback random — set by cardLobbyBootstrap()
       myId: null,              // playerId this device claimed
       selectedCardIds: [],     // local UI selection — not synced
@@ -103,8 +103,8 @@
     // First load: signs in anonymously, gets a uuid that persists in localStorage.
     // Subsequent loads on same device: restores the same uuid.
     // Failure: falls back to a random per-tab id (game still works, just less stable).
-    async function cardLobbyBootstrap(){ return huddleBootstrap(liarMe, "Liar's Cup"); }
-    function cardLobbyGetSessionId(){ return huddleGetSessionId(liarMe); }
+    async function cardLobbyBootstrap(){ return huddleBootstrap(cardLobbyMe, "Liar's Cup"); }
+    function cardLobbyGetSessionId(){ return huddleGetSessionId(cardLobbyMe); }
 
     // ---------- Sync transport (Supabase Realtime + Postgres) ----------
     // Each game room is one row in the `liar_rooms` table with a JSONB `state` column.
@@ -122,7 +122,7 @@
       // stray future caller fails loudly in the console instead of silently
       // attempting a write that would be rejected anyway. Lab mode is a no-op
       // too, matching the prior behavior so the lab harness keeps working.
-      if (liarState.labMode) return;
+      if (cardLobbyState.labMode) return;
       console.warn('[Huddle] cardLobbyPersist() called but is a no-op — route this write through a huddle_liar_* RPC instead.');
     }
 
@@ -130,8 +130,8 @@
       const incoming = await huddleFetchRoomState('liar_rooms', code);
       if (!incoming) return false;
       if (incoming.closedByHost) return false;
-      Object.keys(liarState).forEach(k => delete liarState[k]);
-      Object.assign(liarState, incoming);
+      Object.keys(cardLobbyState).forEach(k => delete cardLobbyState[k]);
+      Object.assign(cardLobbyState, incoming);
       return true;
     }
 
@@ -156,7 +156,7 @@
     // Is the player at seat `playerId` actually connected right now?
     function cardLobbyIsPlayerPresent(playerId){
       if (!playerId) return false;
-      const sid = liarState.claimedBy && liarState.claimedBy[playerId];
+      const sid = cardLobbyState.claimedBy && cardLobbyState.claimedBy[playerId];
       return sid ? _cardLobbyPresentSessions.has(sid) : false;
     }
     // Lowest seat in turn order whose claimant is currently connected.
@@ -164,8 +164,8 @@
     // so the "who takes over" choice is consistent across peers without a
     // coordinator. Returns null if nobody is present.
     function cardLobbyLowestSeatConnectedPlayer(){
-      const alive = liarState.alivePlayers || [];
-      const claimedBy = liarState.claimedBy || {};
+      const alive = cardLobbyState.alivePlayers || [];
+      const claimedBy = cardLobbyState.claimedBy || {};
       for (const pid of alive) {
         const sid = claimedBy[pid];
         if (sid && _cardLobbyPresentSessions.has(sid)) return pid;
@@ -177,20 +177,20 @@
     // the lowest-seat-connected fallback. Re-checked at every scheduled
     // fire-time so a mid-flight disconnect can hand the baton over cleanly.
     function cardLobbyShouldITakeAction(expectedActorId){
-      if (!expectedActorId || !liarMe.myId) return false;
+      if (!expectedActorId || !cardLobbyMe.myId) return false;
       // Lab mode: a single device runs all 3 players, so every gated action
       // (auto-advance reveal→cup, take-sip, after-sip, etc.) must fire locally
       // regardless of which perspective is currently active.
-      if (liarState && liarState.labMode) return true;
-      if (expectedActorId === liarMe.myId) return true;
+      if (cardLobbyState && cardLobbyState.labMode) return true;
+      if (expectedActorId === cardLobbyMe.myId) return true;
       // Graceful degradation: if presence isn't initialized yet (channel
       // hasn't sync'd, or our own session is missing from the set), fall
       // back to "only the expected actor fires". Avoids the worst case of
       // stalling the game before presence handlers wire up.
-      const presenceReady = liarMe.sessionId && _cardLobbyPresentSessions.has(liarMe.sessionId);
+      const presenceReady = cardLobbyMe.sessionId && _cardLobbyPresentSessions.has(cardLobbyMe.sessionId);
       if (!presenceReady) return false;
       if (cardLobbyIsPlayerPresent(expectedActorId)) return false;
-      return cardLobbyLowestSeatConnectedPlayer() === liarMe.myId;
+      return cardLobbyLowestSeatConnectedPlayer() === cardLobbyMe.myId;
     }
     // After the 60s grace expires without a rejoin, treat the session as gone.
     // Only the lowest-connected peer fires the cleanup mutation — everyone
@@ -199,8 +199,8 @@
     function cardLobbyConfirmUserGone(sessionId){
       return huddleConfirmUserGone(sessionId, {
         presentSessions: _cardLobbyPresentSessions, graceTimers: _cardLobbyLeaveGraceTimers,
-        gameState: liarState, rerender: cardLobbyRerender, lowestConnected: cardLobbyLowestSeatConnectedPlayer,
-        meObj: liarMe, rpcName: 'huddle_liar_handle_disconnect',
+        gameState: cardLobbyState, rerender: cardLobbyRerender, lowestConnected: cardLobbyLowestSeatConnectedPlayer,
+        meObj: cardLobbyMe, rpcName: 'huddle_liar_handle_disconnect',
       });
     }
     function cardLobbyStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_cardLobbyLeaveGraceTimers, sessionId, LIAR_LEAVE_GRACE_MS, cardLobbyConfirmUserGone); }
@@ -213,9 +213,9 @@
     function cardLobbyWireSync(force){
       huddleWireSync({
         force: force,
-        gameState: liarState, meObj: liarMe, getSessionId: cardLobbyGetSessionId,
+        gameState: cardLobbyState, meObj: cardLobbyMe, getSessionId: cardLobbyGetSessionId,
         channelName: 'liar_room:', table: 'liar_rooms',
-        presenceKey: liarMe.sessionId, getTrackUserId: () => liarMe.sessionId,
+        presenceKey: cardLobbyMe.sessionId, getTrackUserId: () => cardLobbyMe.sessionId,
         toastLeftKey: 'liar.toastPlayerLeft', restoreMeId: false,
         rerender: cardLobbyRerender, loadRoom: cardLobbyLoadRoom, forceLeaveLocal: cardLobbyForceLeaveLocal,
         resetPresenceState: cardLobbyResetPresenceState,
@@ -259,7 +259,7 @@
     // the same wall-clock time, independent of network latency.
     const __cardLobbyRerenderPending = { timer: null };
     function cardLobbyRerender(){
-      huddleSyncGateRerender(liarState, cardLobbyRerenderInner, __cardLobbyRerenderPending);
+      huddleSyncGateRerender(cardLobbyState, cardLobbyRerenderInner, __cardLobbyRerenderPending);
     }
 
     function cardLobbyRerenderInner(){
@@ -273,7 +273,7 @@
         cup: 'play',
         result: 'result',
       };
-      const stage = phaseToStage[liarState.phase];
+      const stage = phaseToStage[cardLobbyState.phase];
       const targetScreen = stage ? 'liar-play' : 'liar-lobby';
       const activeId = document.querySelector('.screen.active');
       const currentId = activeId ? activeId.id.replace('screen-', '') : null;
@@ -289,7 +289,7 @@
       // managed by liarEnterCupMode / liarExitCupMode below.
       const screenEl2 = document.getElementById('screen-liar-play');
       if (screenEl2) {
-        const inReveal = liarState.phase === 'reveal' || liarState.phase === 'cup';
+        const inReveal = cardLobbyState.phase === 'reveal' || cardLobbyState.phase === 'cup';
         screenEl2.classList.toggle('reveal-mode', inReveal);
         if (!inReveal) screenEl2.classList.remove('cup-mode');
       }
@@ -297,24 +297,24 @@
       // it open when the host starts the game, the sheet would otherwise stay
       // covering the play screen until they tap the X — leaving them confused
       // about a hand they can't see. Auto-close on any non-lobby phase.
-      if (liarState.phase !== 'lobby') {
+      if (cardLobbyState.phase !== 'lobby') {
         const bd = document.getElementById('lobby-invite-backdrop');
         if (bd && bd.classList.contains('active') && typeof closeLobbyInviteSheet === 'function') {
           closeLobbyInviteSheet();
         }
       }
       // Always re-render content
-      if (liarState.phase === 'lobby') { cardLobbyRenderSeats(); if (typeof renderLobbyInvites === 'function') renderLobbyInvites('liar'); }
-      else if (liarState.phase === 'tablecard') { liarSetHeaderForStage('tablecard'); liarRenderTableCardSplash(); }
-      else if (liarState.phase === 'play') liarRenderPlayScreen();
-      else if (liarState.phase === 'reveal') { liarExitCupMode(); liarRenderRevealContent(); }
-      else if (liarState.phase === 'cup') { liarRenderRevealContent(); liarEnterCupMode(); liarRenderCupInline(); }
-      else if (liarState.phase === 'result') { liarSetHeaderForStage('result'); liarExitCupMode(); liarRenderResultContent(); }
+      if (cardLobbyState.phase === 'lobby') { cardLobbyRenderSeats(); if (typeof renderLobbyInvites === 'function') renderLobbyInvites('liar'); }
+      else if (cardLobbyState.phase === 'tablecard') { liarSetHeaderForStage('tablecard'); liarRenderTableCardSplash(); }
+      else if (cardLobbyState.phase === 'play') liarRenderPlayScreen();
+      else if (cardLobbyState.phase === 'reveal') { liarExitCupMode(); liarRenderRevealContent(); }
+      else if (cardLobbyState.phase === 'cup') { liarRenderRevealContent(); liarEnterCupMode(); liarRenderCupInline(); }
+      else if (cardLobbyState.phase === 'result') { liarSetHeaderForStage('result'); liarExitCupMode(); liarRenderResultContent(); }
       // Keep lab perspective bar in sync (visibility + current-turn dot + active chip)
       if (typeof liarLabRenderBar === 'function') liarLabRenderBar();
       // Start / stop the sole-survivor polling fallback based on phase. See
       // cardLobbyStartSoloPoll for why this exists.
-      if (liarState.phase === 'play' || liarState.phase === 'reveal' || liarState.phase === 'cup') {
+      if (cardLobbyState.phase === 'play' || cardLobbyState.phase === 'reveal' || cardLobbyState.phase === 'cup') {
         cardLobbyStartSoloPoll();
       } else {
         cardLobbyStopSoloPoll();
@@ -363,29 +363,29 @@
       }
     }
     function cardLobbyCheckIfSoleSurvivor(){
-      if (!liarState.code || !liarMe.myId) { cardLobbyStopSoloPoll(); return; }
-      const phase = liarState.phase;
+      if (!cardLobbyState.code || !cardLobbyMe.myId) { cardLobbyStopSoloPoll(); return; }
+      const phase = cardLobbyState.phase;
       if (phase === 'lobby' || phase === 'result') { cardLobbyStopSoloPoll(); return; }
       if (Date.now() - _cardLobbySoloPollStartedAt < LIAR_SOLO_POLL_GRACE_MS) return;
-      if (!liarMe.sessionId || !_cardLobbyPresentSessions.has(liarMe.sessionId)) return;
-      const alive = liarState.alivePlayers || [];
+      if (!cardLobbyMe.sessionId || !_cardLobbyPresentSessions.has(cardLobbyMe.sessionId)) return;
+      const alive = cardLobbyState.alivePlayers || [];
       if (alive.length <= 1) return;
-      const claimedBy = liarState.claimedBy || {};
+      const claimedBy = cardLobbyState.claimedBy || {};
       const presentAlive = alive.filter(pid => {
         const sid = claimedBy[pid];
         return sid && _cardLobbyPresentSessions.has(sid);
       });
       if (presentAlive.length !== 1) return;
-      if (presentAlive[0] !== liarMe.myId) return;
+      if (presentAlive[0] !== cardLobbyMe.myId) return;
       // Only the lowest-seat-connected peer writes, defensive against races.
       if (typeof cardLobbyLowestSeatConnectedPlayer === 'function'
-          && cardLobbyLowestSeatConnectedPlayer() !== liarMe.myId) return;
+          && cardLobbyLowestSeatConnectedPlayer() !== cardLobbyMe.myId) return;
       // I'm provably the only player still here. Declare sole-survivor win
       // via RPC (C2 turn 3c). Server validates caller is a claimant + alive,
       // bumps wins[], and sets phase='result'. Realtime echo updates local.
       cardLobbyStopSoloPoll();
       liarClearAllAutoAdvance && liarClearAllAutoAdvance();
-      huddleCallRPC('huddle_liar_finish_solo', { p_code: liarState.code });
+      huddleCallRPC('huddle_liar_finish_solo', { p_code: cardLobbyState.code });
     }
 
     // Sets the shared header title for non-play stages. The 'play' stage's title
@@ -402,13 +402,13 @@
     // (no Supabase round-trip, no confirm dialog). During result we exit the
     // game-over flow; any other in-game phase exits a mid-round room.
     function liarHeaderLeave(){
-      if (liarState && liarState.labMode) return liarLabExit();
-      if (liarState && liarState.phase === 'result') return liarLeaveGameOver();
+      if (cardLobbyState && cardLobbyState.labMode) return liarLabExit();
+      if (cardLobbyState && cardLobbyState.phase === 'result') return liarLeaveGameOver();
       return liarLeaveRoom('midround');
     }
 
     // ===== LAB MODE — single-device 3-player test harness =====
-    // Spins up a fully-populated liarState with 3 fake players (Jordan/Alex/Maria)
+    // Spins up a fully-populated cardLobbyState with 3 fake players (Jordan/Alex/Maria)
     // and lets the tester flip "acting as" perspective between them via the lab bar.
     // labMode=true makes cardLobbyPersist() a no-op so we don't pollute the real
     // liar_rooms table. The real game render/action functions are used unchanged.
@@ -419,8 +419,8 @@
     ];
 
     function liarLabResetState(extra){
-      Object.keys(liarState).forEach(k => delete liarState[k]);
-      Object.assign(liarState, {
+      Object.keys(cardLobbyState).forEach(k => delete cardLobbyState[k]);
+      Object.assign(cardLobbyState, {
         code: null,
         phase: 'lobby',
         hostId: null,
@@ -456,22 +456,22 @@
         wins: { jordan:0, alex:0, maria:0 },
         labMode: true,
       });
-      LIAR_LAB_PLAYERS.forEach(p => { liarState.claimedBy[p.id] = 'lab_' + p.id; });
+      LIAR_LAB_PLAYERS.forEach(p => { cardLobbyState.claimedBy[p.id] = 'lab_' + p.id; });
       // Start as Jordan; tester can flip perspective via the lab bar.
-      liarMe.myId = 'jordan';
-      liarMe.sessionId = 'lab_jordan';
-      liarMe.bootstrapped = true;
-      liarMe.selectedCardIds = [];
+      cardLobbyMe.myId = 'jordan';
+      cardLobbyMe.sessionId = 'lab_jordan';
+      cardLobbyMe.bootstrapped = true;
+      cardLobbyMe.selectedCardIds = [];
       // Jump straight into the game (skip lobby).
       liarStartGame();
       liarLabRenderBar();
     }
 
     function liarLabSetPerspective(playerId){
-      if (!liarState.labMode) return;
-      liarMe.myId = playerId;
-      liarMe.sessionId = 'lab_' + playerId;
-      liarMe.selectedCardIds = []; // hand changes — drop any old selection
+      if (!cardLobbyState.labMode) return;
+      cardLobbyMe.myId = playerId;
+      cardLobbyMe.sessionId = 'lab_' + playerId;
+      cardLobbyMe.selectedCardIds = []; // hand changes — drop any old selection
       liarLabRenderBar();
       cardLobbyRerender();
     }
@@ -480,8 +480,8 @@
       liarClearAllAutoAdvance && liarClearAllAutoAdvance();
       liarStopAllSfx && liarStopAllSfx();
       liarLabResetState();
-      liarMe.myId = null;
-      liarMe.selectedCardIds = [];
+      cardLobbyMe.myId = null;
+      cardLobbyMe.selectedCardIds = [];
       const bar = document.getElementById('liar-lab-bar');
       if (bar) bar.setAttribute('hidden', '');
       goTo('profile');
@@ -811,8 +811,8 @@
     // Short, phase-aware label so the overlay doesn't feel like a generic
     // spinner. Falls back to a neutral "Syncing players…" if phase is unknown.
     function liarSyncLabelText(){
-      if (!liarState) return 'Syncing players…';
-      if (liarState.phase === 'cup' && liarState.sipTaken) return 'Spinning the wheel…';
+      if (!cardLobbyState) return 'Syncing players…';
+      if (cardLobbyState.phase === 'cup' && cardLobbyState.sipTaken) return 'Spinning the wheel…';
       const map = {
         tablecard: 'Dealing the round…',
         play:      'Starting the round…',
@@ -820,7 +820,7 @@
         cup:       'Heading to the cup…',
         result:    'Tallying the round…',
       };
-      return map[liarState.phase] || 'Syncing players…';
+      return map[cardLobbyState.phase] || 'Syncing players…';
     }
 
     // Lazily-created overlay container. We don't pre-render it in HTML because
@@ -895,10 +895,10 @@
     // Liar's Cup thin wrappers — delegate to the generic huddleSync* helpers.
     // Kept as-is so existing call sites don't need to be touched.
     function liarMarkPhaseStart(tapTargetEl){
-      huddleSyncMarkPhaseStart(liarState, tapTargetEl);
+      huddleSyncMarkPhaseStart(cardLobbyState, tapTargetEl);
     }
     function liarSyncDelayMs(){
-      return huddleSyncDelayMs(liarState);
+      return huddleSyncDelayMs(cardLobbyState);
     }
 
     function liarLabRenderBackChips(){
@@ -930,13 +930,13 @@
     function liarLabRenderBar(){
       const bar = document.getElementById('liar-lab-bar');
       if (!bar) return;
-      if (!liarState.labMode) { bar.setAttribute('hidden', ''); return; }
+      if (!cardLobbyState.labMode) { bar.setAttribute('hidden', ''); return; }
       bar.removeAttribute('hidden');
       const chips = document.getElementById('liar-lab-bar-chips');
       if (chips) {
-        const currentTurnPid = liarState.alivePlayers && liarState.alivePlayers[liarState.currentPlayerIdx];
+        const currentTurnPid = cardLobbyState.alivePlayers && cardLobbyState.alivePlayers[cardLobbyState.currentPlayerIdx];
         chips.innerHTML = LIAR_LAB_PLAYERS.map(p => {
-          const isMe = liarMe.myId === p.id;
+          const isMe = cardLobbyMe.myId === p.id;
           const isCurrent = currentTurnPid === p.id;
           return '<button class="liar-lab-bar-chip ' + (isMe?'active':'') + ' ' + (isCurrent?'current':'') + '" type="button" onclick="liarLabSetPerspective(\'' + p.id + '\')">' + p.name + '</button>';
         }).join('');

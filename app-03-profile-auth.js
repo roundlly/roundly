@@ -636,8 +636,8 @@
           return;
         }
         // Their session is now active with the new password. Drop into the app.
-        liarMe.sessionId = data.user.id;
-        liarMe.bootstrapped = true;
+        cardLobbyMe.sessionId = data.user.id;
+        cardLobbyMe.bootstrapped = true;
         await huddleSyncProfileFromSupabase();
         huddleClearAuthStatus();
         document.getElementById('password').value = '';
@@ -665,8 +665,8 @@
           return;
         }
         // Update local sessionId to the real auth user
-        liarMe.sessionId = data.user.id;
-        liarMe.bootstrapped = true;
+        cardLobbyMe.sessionId = data.user.id;
+        cardLobbyMe.bootstrapped = true;
         // Pull profile from server
         await huddleSyncProfileFromSupabase();
         huddleClearAuthStatus();
@@ -726,8 +726,8 @@
         }
 
         const userId = data.user.id;
-        liarMe.sessionId = userId;
-        liarMe.bootstrapped = true;
+        cardLobbyMe.sessionId = userId;
+        cardLobbyMe.bootstrapped = true;
 
         // Now safely upsert the profile row — we have a real session, RLS will allow it
         const upsertData = {
@@ -895,15 +895,15 @@
       // from session) and the previous session id (explicit arg).
       const prevHotSid   = (typeof hotMe   !== 'undefined' && hotMe.sessionId)   ? hotMe.sessionId   : null;
       const prevChamSid  = (typeof chamMe  !== 'undefined' && chamMe.sessionId)  ? chamMe.sessionId  : null;
-      const prevLiarSid  = (liarMe && liarMe.sessionId) ? liarMe.sessionId : null;
+      const prevLiarSid  = (cardLobbyMe && cardLobbyMe.sessionId) ? cardLobbyMe.sessionId : null;
       const prevMafiaSid = (typeof mafiaMe !== 'undefined' && mafiaMe.sessionId) ? mafiaMe.sessionId : null;
       // Bind the new auth user as the active session for ALL multiplayer subsystems.
       // Critical: without this, hotMe/chamMe keep their old anon session IDs after Google sign-in,
       // which causes host-transfer + "claimed seat" mismatches across the games.
       if (typeof hotMe  !== 'undefined') { hotMe.sessionId  = user.id; hotMe.bootstrapped  = true; }
       if (typeof chamMe !== 'undefined') { chamMe.sessionId = user.id; chamMe.bootstrapped = true; }
-      liarMe.sessionId = user.id;
-      liarMe.bootstrapped = true;
+      cardLobbyMe.sessionId = user.id;
+      cardLobbyMe.bootstrapped = true;
       // Mafia was previously MISSING here — its session id was never rebound to the
       // new Google/password user, so after an anon→account sign-in mid-lobby the
       // client kept the old anon id while the seat migrated to user.id server-side,
@@ -928,7 +928,7 @@
         await Promise.all([
           (typeof state      !== 'undefined' && state      && state.code)      ? migrateSeat('hotseat_rooms',   state.code,      prevHotSid)   : null,
           (typeof chamState  !== 'undefined' && chamState  && chamState.code)  ? migrateSeat('chameleon_rooms', chamState.code,  prevChamSid)  : null,
-          (typeof liarState  !== 'undefined' && liarState  && liarState.code)  ? migrateSeat('liar_rooms',      liarState.code,  prevLiarSid)  : null,
+          (typeof cardLobbyState  !== 'undefined' && cardLobbyState  && cardLobbyState.code)  ? migrateSeat('liar_rooms',      cardLobbyState.code,  prevLiarSid)  : null,
           (typeof mafiaState !== 'undefined' && mafiaState && mafiaState.code) ? migrateSeat('mafia_rooms',     mafiaState.code, prevMafiaSid) : null,
         ].filter(Boolean));
       } catch(e) { /* quiet — best-effort */ }
@@ -1198,7 +1198,7 @@
         await Promise.all([
           _releaseSeat('hotseat_rooms',   (typeof state      !== 'undefined') ? state      : null, 'hotseat'),
           _releaseSeat('chameleon_rooms', (typeof chamState  !== 'undefined') ? chamState  : null, 'cham'),
-          _releaseSeat('liar_rooms',      (typeof liarState  !== 'undefined') ? liarState  : null, 'liar'),
+          _releaseSeat('liar_rooms',      (typeof cardLobbyState  !== 'undefined') ? cardLobbyState  : null, 'liar'),
           _releaseSeat('mafia_rooms',     (typeof mafiaState !== 'undefined') ? mafiaState : null, 'mafia'),
         ]);
       } catch(e){ /* quiet — best-effort */ }
@@ -1303,8 +1303,8 @@
       // (e.g., Profile / Edit Profile / Feedback board).
       try { sessionStorage.removeItem('huddle.lastScreen'); } catch(e){}
       // Reset in-memory state for every game's multiplayer subsystem
-      liarMe.sessionId = null;
-      liarMe.bootstrapped = false;
+      cardLobbyMe.sessionId = null;
+      cardLobbyMe.bootstrapped = false;
       if (typeof hotMe !== 'undefined') { hotMe.sessionId = null; hotMe.myId = null; hotMe.bootstrapped = false; }
       if (typeof chamMe !== 'undefined') { chamMe.sessionId = null; chamMe.myId = null; chamMe.bootstrapped = false; }
       // defaultProfile() was removed as part of the "Jordan Lee" auth fix —
@@ -1332,7 +1332,7 @@
     // On Edit Profile save we sync from local up to Supabase, with uniqueness check.
 
     function huddleHasSupabaseAuth(){
-      return !!(window.sb && liarMe.sessionId && !liarMe.sessionId.startsWith('tab_'));
+      return !!(window.sb && cardLobbyMe.sessionId && !cardLobbyMe.sessionId.startsWith('tab_'));
     }
 
     function huddleClearUsernameStatus(){
@@ -1351,7 +1351,7 @@
     // had in localStorage carries over to the server on first sync).
     async function huddleSyncProfileFromSupabase(){
       if (!huddleHasSupabaseAuth()) return;
-      const userId = liarMe.sessionId;
+      const userId = cardLobbyMe.sessionId;
       try {
         const { data, error } = await window.sb
           .from('profiles')
@@ -1820,7 +1820,7 @@
       if (!sessionId) return null;
       const states = [
         (typeof state !== 'undefined') ? state : null,
-        (typeof liarState !== 'undefined') ? liarState : null,
+        (typeof cardLobbyState !== 'undefined') ? cardLobbyState : null,
         (typeof chamState !== 'undefined') ? chamState : null,
         (typeof mafiaState !== 'undefined') ? mafiaState : null,
       ];

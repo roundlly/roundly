@@ -10,7 +10,7 @@ const SRC = Object.fromEntries(FILES.map(f => [f, fs.readFileSync(f, 'utf8').rep
 const GAMES = {
   hot:   { state: 'state',      me: 'hotMe' },
   cham:  { state: 'chamState',  me: 'chamMe' },
-  liar:  { state: 'liarState',  me: 'liarMe' },
+  liar:  { state: 'cardLobbyState',  me: 'cardLobbyMe' },
   mafia: { state: 'mafiaState', me: 'mafiaMe' },
 };
 const FAMILIES = ['WireSync','SyncUrlToRoom','StateReset','StartLeaveGrace','ResetPresenceState',
