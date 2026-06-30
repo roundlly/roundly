@@ -1951,11 +1951,11 @@
       });
     }
 
-    // ⚠ MAFIA RUNS ON LIAR'S SHARED CARD-LOBBY ENGINE.
-    //   This is Mafia's lobby, but it drives it with Liar's `cardLobbyState` / `cardLobbyMe`
-    //   and the `liar*` lobby/seat/sync functions (hence the confusing name). See
-    //   the SHARED ENGINE banner at the top of app-07-liar.js. If you change the
-    //   shared engine there, exercise the MAFIA lobby too — not just Liar's Cup.
+    // ⚠ MAFIA RUNS ON THE SHARED CARD-LOBBY ENGINE.
+    //   This is Mafia's lobby, but it drives it with the shared `cardLobbyState` /
+    //   `cardLobbyMe` and the `cardLobby*` lobby/seat/sync functions (defined in
+    //   app-07-liar.js — see the SHARED ENGINE banner there). If you change that
+    //   shared engine, exercise the MAFIA lobby too — not just Liar's Cup.
     async function openLiarLobby(){
       // Drop any seat we still hold in OTHER game lobbies before claiming
       // one here — invariant: one user, one seat across all games.

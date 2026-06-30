@@ -42,17 +42,18 @@
     // ===========================================================================
     // ⚠  SHARED "CARD-LOBBY ENGINE" — used by LIAR'S CUP *and* MAFIA.
     //
-    //    Despite the `liar*` names, the room / seat / sync machinery below is NOT
-    //    Liar-only. MAFIA has no state object of its own — it reuses `cardLobbyState`,
-    //    `cardLobbyMe`, and the `liar*` lobby/sync functions wholesale (see
-    //    `openLiarLobby` in app-08-mafia.js). So editing `cardLobbyState`, `cardLobbyMe`, or
-    //    any `liar*` lobby/room/seat/sync function can break the MAFIA lobby too —
-    //    even though nothing here mentions "mafia".
+    //    The room / seat / sync machinery below — `cardLobbyState`, `cardLobbyMe`,
+    //    and the `cardLobby*` lobby/sync functions — is NOT Liar-only. MAFIA has no
+    //    state object of its own; it reuses this engine wholesale (see
+    //    `openLiarLobby` in app-08-mafia.js). So editing `cardLobbyState`,
+    //    `cardLobbyMe`, or any `cardLobby*` lobby/room/seat/sync function can break
+    //    the MAFIA lobby too — even though this file is named "liar".
     //
-    //    The `liar` name is historical (Liar's Cup was the first game built on this
-    //    engine). Genuinely Liar-only logic — card scoring, cup, reveal — rightly
-    //    stays `liar*`. Only the lobby/room/seat/sync parts are the shared engine.
-    //    (Someday this should be renamed `cardLobby*`; until then, tread carefully.)
+    //    Naming: this engine was renamed `liar*` -> `cardLobby*` so its name tells
+    //    the truth about being shared. Genuinely Liar-only logic — card scoring,
+    //    cup, reveal — keeps its `liar*` name and lives alongside this engine here.
+    //    The DB names (liar_rooms, huddle_liar_*, liar_room:) are deliberately still
+    //    `liar` — renaming live data would break existing rooms.
     // ===========================================================================
 
     // cardLobbyState is the SYNCED ROOM STATE — same shape on every connected device.

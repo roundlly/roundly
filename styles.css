@@ -2849,7 +2849,7 @@
        All seated players sit evenly around a circular felt; ME locks at 6
        o'clock, opponents fill the rest of the rim at 360°/N intervals.
        Glow ring (.current) follows whichever player is on turn — synced
-       across devices via liarState.currentPlayerIdx. */
+       across devices via cardLobbyState.currentPlayerIdx. */
     .liar-play-main{display:flex;flex-direction:column;padding:6px 12px 16px;gap:10px}
     /* Single-screen Liar's Cup — only the .liar-stage matching #screen-liar-play[data-stage] is visible.
        Stage swapping is CSS-only; JS just sets data-stage on the screen element. */
@@ -3061,7 +3061,7 @@
        SYNC OVERLAY — the cross-device "waiting for everyone" moment
        ============================================================
        Every phase transition writes phaseStartAt = now + UPLINK_BUFFER (700ms).
-       liarRerender defers content rendering until phaseStartAt, and shows this
+       cardLobbyRerender defers content rendering until phaseStartAt, and shows this
        overlay during the buffer. The result: writer + watchers see the new phase
        at the same wall-clock moment (within phone clock-skew, ~50ms).
 
