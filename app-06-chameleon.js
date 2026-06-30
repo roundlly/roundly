@@ -840,13 +840,21 @@
 
     async function chamStartGame(ev){
       // Gate: aria-disabled means a Start condition isn't met. Surface the
-      // hint as a toast instead of silently doing nothing.
-      const _gateBtn = document.getElementById('cham-start-btn');
-      if (_gateBtn && _gateBtn.getAttribute('aria-disabled') === 'true') {
-        const _hintEl = document.getElementById('cham-seats-hint');
-        const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
-        if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
-        return;
+      // hint as a toast instead of silently doing nothing. BUT only on the
+      // lobby screen — chamStartGame is also reached from the game-over screen
+      // via chamPlayAgain(), where #cham-start-btn is off-screen and usually
+      // still at its HTML default aria-disabled="true" (it's only updated by the
+      // lobby render). Gating there silently killed "Play again". Correctness is
+      // still enforced by the host / claimant-count guards below + the RPC.
+      const _activeEl = document.querySelector('.screen.active');
+      if (_activeEl && _activeEl.id === 'screen-cham-lobby') {
+        const _gateBtn = document.getElementById('cham-start-btn');
+        if (_gateBtn && _gateBtn.getAttribute('aria-disabled') === 'true') {
+          const _hintEl = document.getElementById('cham-seats-hint');
+          const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
+          if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
+          return;
+        }
       }
       // C2 turn 5: server resets game state + picks chameleon + starting
       // player atomically via huddle_cham_play_again. Client only provides

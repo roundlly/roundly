@@ -129,6 +129,55 @@
       ],
     };
 
+    // "Guess the Theme" mode content (internal key stays 'link'). Each entry is a SECRET THEME the helpers
+    // see (and the hot seat guesses). Helpers take turns naming real things that
+    // fit the theme; the hot seat works out what links them. Stored by KEY in
+    // state.currentWord so every phone renders the theme in its own language
+    // (en/tr) and the result screen can reveal it translated. Curated to be
+    // safe for any group and easy to give honest examples for. emoji = the icon
+    // shown on the helper's card + the result reveal.
+    const LINKS = {
+      sticky:    { en:'Things that are sticky',         tr:'Yapışkan şeyler',                emoji:'🍯' },
+      round:     { en:'Things that are round',          tr:'Yuvarlak şeyler',                emoji:'⚪' },
+      cold:      { en:'Things that are cold',           tr:'Soğuk şeyler',                   emoji:'❄️' },
+      hot:       { en:'Things that are hot',            tr:'Sıcak şeyler',                   emoji:'🔥' },
+      loud:      { en:'Things that are loud',           tr:'Gürültülü şeyler',               emoji:'📢' },
+      soft:      { en:'Things that are soft',           tr:'Yumuşak şeyler',                 emoji:'🧸' },
+      sharp:     { en:'Things that are sharp',          tr:'Keskin şeyler',                  emoji:'🔪' },
+      fast:      { en:'Things that are fast',           tr:'Hızlı şeyler',                   emoji:'⚡' },
+      slow:      { en:'Things that are slow',           tr:'Yavaş şeyler',                   emoji:'🐌' },
+      tiny:      { en:'Things that are tiny',           tr:'Minik şeyler',                   emoji:'🐜' },
+      huge:      { en:'Things that are huge',           tr:'Kocaman şeyler',                 emoji:'🐘' },
+      yellow:    { en:'Yellow things',                  tr:'Sarı şeyler',                    emoji:'🟡' },
+      red:       { en:'Red things',                     tr:'Kırmızı şeyler',                 emoji:'🔴' },
+      green:     { en:'Green things',                   tr:'Yeşil şeyler',                   emoji:'🟢' },
+      fly:       { en:'Things that fly',                tr:'Uçan şeyler',                    emoji:'🕊️' },
+      float:     { en:'Things that float',              tr:'Yüzen şeyler',                   emoji:'🛟' },
+      bounce:    { en:'Things that bounce',             tr:'Zıplayan şeyler',                emoji:'🏀' },
+      spin:      { en:'Things that spin',               tr:'Dönen şeyler',                   emoji:'🌀' },
+      melt:      { en:'Things that melt',               tr:'Eriyen şeyler',                  emoji:'🍦' },
+      grow:      { en:'Things that grow',               tr:'Büyüyen şeyler',                 emoji:'🌱' },
+      shine:     { en:'Things that shine',              tr:'Parlayan şeyler',                emoji:'✨' },
+      wheels:    { en:'Things with wheels',             tr:'Tekerlekli şeyler',              emoji:'🚗' },
+      buttons:   { en:'Things with buttons',            tr:'Düğmeli şeyler',                 emoji:'🎛️' },
+      hold:      { en:'Things you hold in one hand',    tr:'Tek elle tuttuğun şeyler',       emoji:'✋' },
+      wear:      { en:'Things you wear',                tr:'Giydiğin şeyler',                emoji:'🧢' },
+      pocket:    { en:'Things in your pocket',          tr:'Cebindeki şeyler',               emoji:'🔑' },
+      kitchen:   { en:'Things in a kitchen',            tr:'Mutfaktaki şeyler',              emoji:'🍴' },
+      beach:     { en:'Things at the beach',            tr:'Plajdaki şeyler',                emoji:'🏖️' },
+      sky:       { en:'Things in the sky',              tr:'Gökyüzündeki şeyler',            emoji:'☁️' },
+      breakfast: { en:'Things you eat for breakfast',   tr:'Kahvaltıda yediğin şeyler',      emoji:'🍳' },
+      party:     { en:'Things at a birthday party',     tr:'Doğum günü partisindeki şeyler', emoji:'🎂' },
+      pairs:     { en:'Things that come in pairs',      tr:'Çift gelen şeyler',              emoji:'🧦' },
+      blow:      { en:'Things you blow',                tr:'Üflediğin şeyler',               emoji:'🎈' },
+      open:      { en:'Things you open',                tr:'Açtığın şeyler',                 emoji:'🚪' },
+      breakable: { en:'Things that break easily',       tr:'Kolay kırılan şeyler',           emoji:'🥚' },
+      wet:       { en:'Things that are wet',            tr:'Islak şeyler',                   emoji:'💧' },
+      scary:     { en:'Things that are scary',          tr:'Korkutucu şeyler',               emoji:'👻' },
+      smell:     { en:'Things that smell nice',         tr:'Güzel kokan şeyler',             emoji:'🌸' },
+      light:     { en:'Things that light up',           tr:'Işık veren şeyler',              emoji:'💡' },
+    };
+
     // ---------- State ----------
     const state = {
       mode: null,
@@ -850,6 +899,9 @@
       // a helper"); only the body copy diverges so it doesn't contradict the in-play mode pill.
       'role-hotseat-silent': { titleKey:'info.hotSeatTitle', bodyKey:'info.hotSeatBody_silent' },
       'role-helper-silent':  { titleKey:'info.helperTitle',  bodyKey:'info.helperBody_silent' },
+      // Guess the Theme (internal key 'link') — secret-theme variant. Same modal layout as the others.
+      'role-hotseat-link':   { titleKey:'info.hotSeatTitle', bodyKey:'info.hotSeatBody_link' },
+      'role-helper-link':    { titleKey:'info.helperTitle',  bodyKey:'info.helperBody_link' },
       // Liar's Cup — single role for all players (no team/role variants). Used by the
       // help button in liar-play / liar-reveal / liar-cup screen headers.
       'liar-howplay':        { titleKey:'liar.help.title',   bodyKey:'liar.help.body' },
@@ -910,6 +962,9 @@
     // slide 1 = Classic slide 1), the helper falls back to the classic key.
     const HOWTO_MODE_OVERRIDES = {
       silent: { 2: ['Title','Sub'] },
+      // Link mode rewrites slides 2–4 (what you guess, how helpers clue, how you win).
+      // Slide 1 (sit together, same room) is shared with Classic.
+      link: { 2: ['Title','Sub'], 3: ['Title','SubHtml'], 4: ['Title','SubHtml'] },
     };
     function howToText(slideN, field){
       const mode = state.mode || 'classic';
@@ -1502,14 +1557,22 @@
 
       const recActive = state.mode === 'classic' && state.category === 'mixed' && state.rounds === 1 && state.order === 'rotating';
 
-      // Inline mode hint — only shown for Silent mode, explains the rule twist right beneath
-      // the Mode row so the user doesn't have to leave the lobby to learn.
-      const modeHintHTML = state.mode === 'silent' ? `
+      // Inline mode hint — shown for the non-default modes, explains the rule twist
+      // right beneath the Mode row so the user doesn't have to leave the lobby to learn.
+      let modeHintHTML = '';
+      if (state.mode === 'silent') {
+        modeHintHTML = `
         <div class="mode-hint">
           <div class="mode-hint-icon">🤫</div>
           <div>${t('mode.hint_silent')}</div>
-        </div>
-      ` : '';
+        </div>`;
+      } else if (state.mode === 'link') {
+        modeHintHTML = `
+        <div class="mode-hint">
+          <div class="mode-hint-icon">🧩</div>
+          <div>${t('mode.hint_link')}</div>
+        </div>`;
+      }
 
       recWrap.innerHTML = `
         <button class="btn-recommended${recActive ? ' applied' : ''}" id="btn-recommended" data-action="applyRecommended">
@@ -1530,13 +1593,14 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
           </div>
         </div>
+        ${state.mode === 'link' ? '' : `
         <div class="setting-row" data-action="openCategorySheet" style="cursor:pointer">
           <div class="setting-row-label">${t('lobby.category')}</div>
           <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
             <span>${t('cat.' + state.category)}</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
           </div>
-        </div>
+        </div>`}
         <div class="setting-row">
           <div class="setting-row-label">${t('lobby.rounds')} ${infoIcon('rounds')}</div>
           <div class="seg">${roundsSeg}</div>
@@ -1581,6 +1645,7 @@
       const modes = [
         { id: 'classic', emoji: '💬' },
         { id: 'silent',  emoji: '🤫' },
+        { id: 'link',    emoji: '🧩' },
       ];
       wrap.innerHTML = modes.map(m => `
         <button class="theme-option${state.mode === m.id ? ' active' : ''}" onclick="pickMode('${m.id}')">
@@ -1622,16 +1687,23 @@
     }
 
     function startGame() {
-      // If the button is gated (aria-disabled), surface the live hint text
-      // as a toast so the user understands WHY tap did nothing instead of
-      // staring at a dead button. Existing validation guards stay below as
-      // a backstop in case the gate state is stale.
-      const _gateBtn = document.getElementById('hot-start-btn');
-      if (_gateBtn && _gateBtn.getAttribute('aria-disabled') === 'true') {
-        const _hintEl = document.getElementById('hot-seats-hint');
-        const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
-        if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
-        return;
+      // The disabled-button hint is a LOBBY affordance only. startGame is ALSO
+      // reached from the game-over screen via hotPlayAgain() — where #hot-start-btn
+      // is off-screen and usually still at its HTML default aria-disabled="true"
+      // (renderLobbyPlayers only updates that button while the lobby screen is
+      // shown; a mid-game refresh/reconnect lands on result/play, never the
+      // lobby). Gating on it there silently killed "Play again". So ONLY consult
+      // the button when the lobby is the active screen; correctness is still
+      // enforced by the host / seat-count / seated guards below + the server RPC.
+      const _activeEl = document.querySelector('.screen.active');
+      if (_activeEl && _activeEl.id === 'screen-lobby') {
+        const _gateBtn = document.getElementById('hot-start-btn');
+        if (_gateBtn && _gateBtn.getAttribute('aria-disabled') === 'true') {
+          const _hintEl = document.getElementById('hot-seats-hint');
+          const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
+          if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
+          return;
+        }
       }
       if (!hotIsHost()) return;
       if (hotClaimedCount() < 2 || !hotMe.myId) return;
@@ -1651,7 +1723,7 @@
       const idx = (state.order === 'random')
         ? claimed[Math.floor(Math.random() * claimed.length)]
         : claimed[0];
-      const word = pickWord();
+      const word = pickPrompt();
       huddleCallRPC('huddle_hot_play_again', {
         p_code: state.code,
         p_player_idx: idx,
@@ -1675,7 +1747,7 @@
       const idx = (state.order === 'random')
         ? remaining[Math.floor(Math.random() * remaining.length)]
         : remaining[0];
-      const word = pickWord();
+      const word = pickPrompt();
       huddleCallRPC('huddle_hot_next_turn', {
         p_code: state.code,
         p_player_idx: idx,
@@ -1705,7 +1777,7 @@
     function hostPicked(idx) {
       if (!hotIsHost()) return;
       document.getElementById('pick-backdrop').classList.remove('active');
-      const word = pickWord();
+      const word = pickPrompt();
       // Context-aware RPC routing (C2 turn 4b):
       //   • phase='lobby'  → fresh game start (uses play_again RPC which
       //                       also resets wins/round/etc. for the fresh game)
@@ -1755,10 +1827,11 @@
         meIsHotSeat ? t('splash.yourTurn') : t('splash.namesTurn', { name: display.name });
       document.getElementById('splash-role').textContent =
         meIsHotSeat ? t('splash.youAreHotSeat') : t('splash.youAreHelper');
+      const splashIsLink = state.mode === 'link';
       document.getElementById('splash-context').textContent =
         meIsHotSeat
-          ? t('splash.hotSeatContext')
-          : t('splash.helperContext', { name: display.name });
+          ? t(splashIsLink ? 'splash.hotSeatContext_link' : 'splash.hotSeatContext')
+          : t(splashIsLink ? 'splash.helperContext_link' : 'splash.helperContext', { name: display.name });
 
       const splashSection = document.getElementById('screen-splash');
       const splashEl = splashSection && splashSection.querySelector('.splash');
@@ -1801,6 +1874,36 @@
       state.usedWords.push(word);
       return word;
     }
+    // "Guess the Link" picker — mirrors pickWord but draws a secret-theme KEY
+    // from LINKS, reusing state.usedWords so a single game never repeats a theme.
+    function pickLink() {
+      const keys = Object.keys(LINKS);
+      if (!Array.isArray(state.usedWords)) state.usedWords = [];
+      const remaining = keys.filter(k => state.usedWords.indexOf(k) === -1);
+      const pool = remaining.length > 0 ? remaining : keys;
+      if (remaining.length === 0) state.usedWords = [];
+      const key = pool[Math.floor(Math.random() * pool.length)];
+      state.usedWords.push(key);
+      return key;
+    }
+    // One call site for "what goes in the hot seat this turn": a theme key in
+    // Link mode, a word in Classic/Silent. Stored identically in currentWord.
+    function pickPrompt() { return (state.mode === 'link') ? pickLink() : pickWord(); }
+    // Render the current prompt for display. In Link mode currentWord is a LINKS
+    // key → return the theme text in the active language. Otherwise it's already
+    // the literal word. `val` defaults to state.currentWord.
+    function hotLinkText(val) {
+      const key = (val == null) ? state.currentWord : val;
+      const entry = LINKS[key];
+      if (!entry) return key;            // classic word, or unknown key — show as-is
+      const lang = (typeof getLang === 'function') ? getLang() : 'en';
+      return entry[lang] || entry.en;
+    }
+    function hotLinkEmoji(val) {
+      const key = (val == null) ? state.currentWord : val;
+      const entry = LINKS[key];
+      return entry ? entry.emoji : '🧩';
+    }
 
     function renderPlay() {
       const card = document.getElementById('play-content');
@@ -1819,14 +1922,17 @@
       let modePill = '';
       if (state.mode === 'silent') {
         modePill = `<div class="play-mode-pill"><span class="mp-icon">🤫</span>${t('play.modePill.silent')}</div>`;
+      } else if (state.mode === 'link') {
+        modePill = `<div class="play-mode-pill"><span class="mp-icon">🧩</span>${t('play.modePill.link')}</div>`;
       }
 
+      const isLink = state.mode === 'link';
       if (state.view === 'hotseat') {
         card.innerHTML = `
           <div class="role-hero">
             <div class="role-hero-emoji">🔥</div>
             <div class="role-hero-title">${t('play.youreInHotSeat')}</div>
-            <div class="role-hero-sub">${t('play.hotSeatSub')}</div>
+            <div class="role-hero-sub">${isLink ? t('play.hotSeatSub_link') : t('play.hotSeatSub')}</div>
             ${modePill}
             ${helpButton}
           </div>
@@ -1834,6 +1940,25 @@
         actions.innerHTML = `
           <button class="btn btn-give-up" onclick="endRound('forfeit', event)">
             ${t('play.iGiveUp')}
+          </button>
+        `;
+      } else if (isLink) {
+        // Helper in Link mode: show the SECRET THEME (the answer) + the nudge to
+        // give honest-but-sneaky examples. The theme is rendered in the helper's
+        // own language from the LINKS key in currentWord.
+        card.innerHTML = `
+          <div class="role-hero">
+            <div class="role-hero-emoji">${hotLinkEmoji()}</div>
+            <div class="word-label-big">${t('play.makeThemGuess')}</div>
+            <div class="word-text-big">${huddleEscape(hotLinkText())}</div>
+            <div class="role-hero-sub">${t('play.sayThingsThatFit', { name: huddleEscape(playerDisplay.name) })}</div>
+            ${modePill}
+            ${helpButton}
+          </div>
+        `;
+        actions.innerHTML = `
+          <button class="btn btn-got-it" onclick="endRound('won', event)">
+            ${t('play.hotSeatGotIt')}
           </button>
         `;
       } else {
@@ -1921,9 +2046,11 @@
       document.getElementById('result-title').textContent = won
         ? t('result.gotIt', { name: hotSeatName })
         : t('result.gaveUp', { name: hotSeatName });
+      const resultIsLink = state.mode === 'link';
+      const revealText = resultIsLink ? hotLinkText() : (state.currentWord || '').toUpperCase();
       document.getElementById('result-sub').textContent = won
-        ? t('result.wordWasWin', { word: state.currentWord.toUpperCase() })
-        : t('result.wordWasLose', { word: state.currentWord.toUpperCase() });
+        ? t(resultIsLink ? 'result.linkWasWin' : 'result.wordWasWin', { word: revealText })
+        : t(resultIsLink ? 'result.linkWasLose' : 'result.wordWasLose', { word: revealText });
 
       const timeText = formatDuration(state.lastTurnDuration);
       document.getElementById('result-time').textContent =
