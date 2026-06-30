@@ -1966,14 +1966,14 @@
       //   1) ?room=CODE in the URL bar (QR scan / shared link)
       //   2) most-recent room from localStorage (returning visit on same device)
       //   3) fall through → create a fresh room
-      const urlRoom = liarReadUrlRoom();
-      const existingCode = urlRoom || liarFindRecentRoomCode();
+      const urlRoom = cardLobbyReadUrlRoom();
+      const existingCode = urlRoom || cardLobbyFindRecentRoomCode();
 
       // Fire auth + room-load IN PARALLEL. RLS is open on liar_rooms (prototype),
       // so the SELECT doesn't actually need auth to complete — we can overlap them.
       // This roughly halves the perceived load time on first visit.
-      const authPromise = liarBootstrap();
-      const loadPromise = existingCode ? liarLoadRoom(existingCode) : Promise.resolve(false);
+      const authPromise = cardLobbyBootstrap();
+      const loadPromise = existingCode ? cardLobbyLoadRoom(existingCode) : Promise.resolve(false);
       await authPromise;
       const sessionId = cardLobbyGetSessionId();
       const loaded = await loadPromise;
@@ -2003,7 +2003,7 @@
         } else {
           // Cached room but we have no claim and no invite — don't barge in.
           try { huddleClearLastRoom('liar'); } catch(e){}
-          await liarStateReset(generateCode());
+          await cardLobbyStateReset(generateCode());
           cachedRoomGone = true;
         }
 
@@ -2026,24 +2026,24 @@
           if (typeof showLobbyToast === 'function') {
             try { showLobbyToast(t('liar.toastReconnectStale'), 4500); } catch(e){}
           }
-          liarForceLeaveLocal();
+          cardLobbyForceLeaveLocal();
           return;
         }
       } else {
         const code = generateCode();
-        await liarStateReset(code);
+        await cardLobbyStateReset(code);
       }
 
       // Subscribe to Realtime for THIS room (idempotent — no-op if already subscribed).
-      liarWireSync();
+      cardLobbyWireSync();
 
       // Auto-claim first empty seat so the user doesn't have to tap a tile.
       // Awaited so the seat commits before render — see hotAutoClaimIfNeeded
       // for the "joiner had to refresh" race this fixes.
-      await liarAutoClaimIfNeeded();
+      await cardLobbyAutoClaimIfNeeded();
 
       // Sync the URL bar so the host can share their browser URL directly.
-      liarSyncUrlToRoom(liarState.code);
+      cardLobbySyncUrlToRoom(liarState.code);
 
       // Update lobby DOM
       document.getElementById('liar-room-code').textContent = liarState.code;
@@ -2051,18 +2051,18 @@
       if (fb) fb.classList.remove('show');
       // QR encodes the full join URL so scanning it on a phone opens
       // roundlly.com/?room=CODE and auto-joins this exact room.
-      setRoomQrSrc(document.getElementById('liar-room-qr'), qrUrl(liarJoinUrl(liarState.code)));
+      setRoomQrSrc(document.getElementById('liar-room-qr'), qrUrl(cardLobbyJoinUrl(liarState.code)));
 
       liarUpdateHowToTrigger();
       // Phase may have been advanced by another device — render whatever is current
-      liarRerender();
+      cardLobbyRerender();
 
       if (cachedRoomGone && typeof showLobbyToast === 'function') {
         showLobbyToast(t('lobby.previousRoomGone'));
       }
     }
 
-    async function liarStateReset(code){
+    async function cardLobbyStateReset(code){
       // Wipe and seed a fresh room. Called when no existing room is found, or when
       // "Regenerate room code" is tapped. The creator owns host AND seat 0
       // immediately so the first persist is a single atomic write — an invitee
@@ -2111,7 +2111,7 @@
       try { huddlePersistLastRoom('liar',code); } catch(e){}
     }
 
-    function liarFindRecentRoomCode(){
+    function cardLobbyFindRecentRoomCode(){
       try {
         return huddleReadLastRoom('liar');
       } catch(e){ return null; }
@@ -2120,14 +2120,14 @@
     // Generate a fresh room code (anyone can tap; resets the room for everyone)
     async function regenerateLiarRoom_v2(){
       const code = generateCode();
-      await liarStateReset(code);
+      await cardLobbyStateReset(code);
       // Resubscribe to the NEW room code's Realtime channel
-      liarWireSync();
-      liarSyncUrlToRoom(code);
+      cardLobbyWireSync();
+      cardLobbySyncUrlToRoom(code);
       document.getElementById('liar-room-code').textContent = code;
       const fb = document.getElementById('liar-room-qr-fallback');
       if (fb) fb.classList.remove('show');
-      setRoomQrSrc(document.getElementById('liar-room-qr'), qrUrl(liarJoinUrl(code)));
+      setRoomQrSrc(document.getElementById('liar-room-qr'), qrUrl(cardLobbyJoinUrl(code)));
       const btn = document.querySelector('#screen-liar-lobby .room-code-action button[data-action*="regenerateLiarRoom"]');
       if (btn) {
         btn.classList.remove('spinning');
@@ -2135,10 +2135,10 @@
         btn.classList.add('spinning');
         setTimeout(() => btn.classList.remove('spinning'), 520);
       }
-      liarRerender();
+      cardLobbyRerender();
     }
 
-    async function liarClaimSeat(playerId){
+    async function cardLobbyClaimSeat(playerId){
       const sessionId = cardLobbyGetSessionId();
       const currentClaim = liarState.claimedBy[playerId];
       // If someone else holds this seat, ignore
@@ -2151,7 +2151,7 @@
       liarState.claimedBy[playerId] = sessionId;
       if (!liarState.hostId) liarState.hostId = sessionId;
       liarMe.myId = playerId;
-      liarRenderSeats();
+      cardLobbyRenderSeats();
       // Server-validated claim. RPC handles seat-switching (releases old seat
       // held by caller) and rejects seat-stealing attempts at the database
       // layer (C2 turn 2).
@@ -2162,11 +2162,11 @@
       });
     }
 
-    async function liarAutoClaimIfNeeded(){
-      return huddleAutoClaimIfNeeded(liarMe, liarState, liarClaimSeat);
+    async function cardLobbyAutoClaimIfNeeded(){
+      return huddleAutoClaimIfNeeded(liarMe, liarState, cardLobbyClaimSeat);
     }
 
-    function liarRenderSeats(){
+    function cardLobbyRenderSeats(){
       const el = document.getElementById('liar-seats');
       if (el && huddleLobbyHydrating(liarState && liarState.code)) {
         el.innerHTML = huddleLobbySkeletonHTML(20);
@@ -2176,7 +2176,7 @@
       const sessionId = cardLobbyGetSessionId();
       const claimedCount = Object.keys(liarState.claimedBy || {}).length;
       const claimedSessionIds = Object.values(liarState.claimedBy || {});
-      ensureClaimantProfiles(claimedSessionIds, liarRenderSeats);
+      ensureClaimantProfiles(claimedSessionIds, cardLobbyRenderSeats);
       // Prefer @username (globally unique) over display_name first-word so
       // two players with the same first name render distinctly. See
       // claimDisplayName for the matching rule on OTHER players' tiles.
@@ -2221,7 +2221,7 @@
         }
         // Presence-driven dot + "Away" label + host kick button (Batch 2).
         const _liarAmHost = (typeof cardLobbyGetSessionId === 'function' && liarState && cardLobbyGetSessionId() === liarState.hostId);
-        const isPresent = claimedByMe || (typeof liarIsPlayerPresent === 'function' && liarIsPlayerPresent(p.id));
+        const isPresent = claimedByMe || (typeof cardLobbyIsPlayerPresent === 'function' && cardLobbyIsPlayerPresent(p.id));
         const kick = (claimedByOther && _liarAmHost) ? huddleKickBtnHTML('liar', p.id) : '';
         return `
           <div class="${cls}" data-seat-id="${p.id}">

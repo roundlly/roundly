@@ -29,8 +29,8 @@
             && typeof chamLoadRoom === 'function' && typeof chamState !== 'undefined' && chamState && chamState.code) {
           chamLoadRoom(chamState.code).then(ok => { if (ok) { try { chamWireSync(true); } catch(e){} try { chamRerender(); } catch(e){} } });
         } else if (id.startsWith('screen-liar')
-            && typeof liarLoadRoom === 'function' && typeof liarState !== 'undefined' && liarState && liarState.code) {
-          liarLoadRoom(liarState.code).then(ok => { if (ok) { try { liarWireSync(true); } catch(e){} try { liarRerender(); } catch(e){} } });
+            && typeof cardLobbyLoadRoom === 'function' && typeof liarState !== 'undefined' && liarState && liarState.code) {
+          cardLobbyLoadRoom(liarState.code).then(ok => { if (ok) { try { cardLobbyWireSync(true); } catch(e){} try { cardLobbyRerender(); } catch(e){} } });
         } else if (id.startsWith('screen-mafia')
             && typeof mafiaLoadRoom === 'function' && typeof mafiaState !== 'undefined' && mafiaState && mafiaState.code) {
           mafiaLoadRoom(mafiaState.code).then(ok => { if (ok) { try { mafiaWireSync(); } catch(e){} try { mafiaRerender(); } catch(e){} } });

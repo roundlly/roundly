@@ -364,7 +364,7 @@
       return res;
     }
 
-    // ---------- Hot Seat sync transport (mirrors liarPersist/liarLoadRoom/liarWireSync) ----------
+    // ---------- Hot Seat sync transport (mirrors cardLobbyPersist/cardLobbyLoadRoom/cardLobbyWireSync) ----------
     function hotPersist(){
       if (!state.code) return;
       state.revision = (state.revision || 0) + 1;

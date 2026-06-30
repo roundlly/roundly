@@ -102,8 +102,8 @@
       }
 
       // Make sure auth is ready before talking to Supabase
-      if (typeof liarBootstrap === 'function') {
-        try { await liarBootstrap(); } catch(e){}
+      if (typeof cardLobbyBootstrap === 'function') {
+        try { await cardLobbyBootstrap(); } catch(e){}
       }
 
       // If we have Supabase, push to server with uniqueness check

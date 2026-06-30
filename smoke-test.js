@@ -39,7 +39,7 @@ const REQUIRED_GLOBALS = [
   // chameleon
   'openChamLobby', 'chamStartGame', 'chamWireSync', 'renderChamLobbyPlayers',
   // liar
-  'openLiarLobby', 'liarStartGame', 'liarWireSync',
+  'openLiarLobby', 'liarStartGame', 'cardLobbyWireSync',
   // mafia
   'openMafiaLobby', 'openMafiaCardsLobby', 'mafiaStartGame', 'mafiaWireSync',
   // friends / invites / feedback

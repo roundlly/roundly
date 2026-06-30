@@ -37,7 +37,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const GAMES = [
   { key: 'hotseat',   boot: 'hotBootstrap',   sid: 'hotGetSessionId'   },
   { key: 'chameleon', boot: 'chamBootstrap',  sid: 'chamGetSessionId'  },
-  { key: 'liar',      boot: 'liarBootstrap',  sid: 'cardLobbyGetSessionId'  },
+  { key: 'liar',      boot: 'cardLobbyBootstrap',  sid: 'cardLobbyGetSessionId'  },
   { key: 'mafia',     boot: 'mafiaBootstrap', sid: 'mafiaGetSessionId' },
 ];
 

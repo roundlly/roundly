@@ -190,28 +190,28 @@
         // the cup ticking/draining in the background.
         preLeave: () => { liarClearAllAutoAdvance(); liarStopAllSfx(); },
         teardown: () => {
-          if (_liarChannel) {
-            try { _liarChannel.untrack(); } catch(e){}
-            try { window.sb.removeChannel(_liarChannel); } catch(e){}
-            _liarChannel = null; _liarChannelCode = null; _liarChannelSessionId = null;
-            liarResetPresenceState();
+          if (_cardLobbyChannel) {
+            try { _cardLobbyChannel.untrack(); } catch(e){}
+            try { window.sb.removeChannel(_cardLobbyChannel); } catch(e){}
+            _cardLobbyChannel = null; _cardLobbyChannelCode = null; _cardLobbyChannelSessionId = null;
+            cardLobbyResetPresenceState();
           }
         },
       });
     }
     // Local-only cleanup (no Supabase write). Used when host closes the room
     // and when a non-host receives the "closedByHost" broadcast.
-    function liarForceLeaveLocal(){
+    function cardLobbyForceLeaveLocal(){
       liarClearAllAutoAdvance();
       liarStopAllSfx();
       liarMe.myId = null;
       if (liarState) liarState.code = null;
       try { huddleClearLastRoom('liar'); } catch(e){}
-      if (_liarChannel) {
-        try { _liarChannel.untrack(); } catch(e){}
-        try { window.sb.removeChannel(_liarChannel); } catch(e){}
-        _liarChannel = null; _liarChannelCode = null; _liarChannelSessionId = null;
-        liarResetPresenceState();
+      if (_cardLobbyChannel) {
+        try { _cardLobbyChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(_cardLobbyChannel); } catch(e){}
+        _cardLobbyChannel = null; _cardLobbyChannelCode = null; _cardLobbyChannelSessionId = null;
+        cardLobbyResetPresenceState();
       }
       try { history.replaceState(history.state, '', '/'); } catch(e){}
       goTo('games');
@@ -229,7 +229,7 @@
       if (closingCode) {
         huddleCallRPC('huddle_close_room', { p_table: 'liar_rooms', p_code: closingCode });
       }
-      liarForceLeaveLocal();
+      cardLobbyForceLeaveLocal();
     }
     // No-confirm leave for the game-over screen (mirror of liarLeaveRoom).
     function liarLeaveGameOver(){
@@ -254,11 +254,11 @@
       liarMe.myId = null;
       liarState.code = null;
       try { huddleClearLastRoom('liar'); } catch(e){}
-      if (_liarChannel) {
-        try { _liarChannel.untrack(); } catch(e){}
-        try { window.sb.removeChannel(_liarChannel); } catch(e){}
-        _liarChannel = null; _liarChannelCode = null; _liarChannelSessionId = null;
-        liarResetPresenceState();
+      if (_cardLobbyChannel) {
+        try { _cardLobbyChannel.untrack(); } catch(e){}
+        try { window.sb.removeChannel(_cardLobbyChannel); } catch(e){}
+        _cardLobbyChannel = null; _cardLobbyChannelCode = null; _cardLobbyChannelSessionId = null;
+        cardLobbyResetPresenceState();
       }
       try { history.replaceState(history.state, '', '/'); } catch(e){}
       goTo('games');
@@ -591,7 +591,7 @@
       if (fb) fb.classList.add('show');
     }
 
-    // (Old single-device liarRenderPlayers removed — superseded by liarRenderSeats.)
+    // (Old single-device liarRenderPlayers removed — superseded by cardLobbyRenderSeats.)
 
     // ---------- How-to-play (4-slide animated modal, mirrors Hot Seat) ----------
     const LIAR_HOWTO_KEY = 'huddle.liarhowto.seen';
@@ -719,7 +719,7 @@
       // meantime show the user a clear "other player left" message instead of
       // pretending they're about to act.
       const currentSid = liarState.claimedBy && currentPid ? liarState.claimedBy[currentPid] : null;
-      const currentPresent = !!currentSid && _liarPresentSessions && _liarPresentSessions.has(currentSid);
+      const currentPresent = !!currentSid && _cardLobbyPresentSessions && _cardLobbyPresentSessions.has(currentSid);
       const showOtherLeftUi = !isMyTurn && !!currentSid && !currentPresent;
 
       // Header
@@ -986,7 +986,7 @@
       // to any alive non-accused watcher so they can challenge the last play.
       if (!isMyTurn) {
         const curSid = liarState.claimedBy && currentPid ? liarState.claimedBy[currentPid] : null;
-        const curPresent = !!curSid && _liarPresentSessions && _liarPresentSessions.has(curSid);
+        const curPresent = !!curSid && _cardLobbyPresentSessions && _cardLobbyPresentSessions.has(curSid);
         if (curSid && !curPresent) {
           statusEl.innerHTML = t('liar.otherPlayerLeftStatus');
         } else {
@@ -1047,7 +1047,7 @@
         p_card_ids: cardIds,
       });
       // Re-render so the deselect lands visually without waiting for echo.
-      liarRerender();
+      cardLobbyRerender();
     }
 
     function liarAdvanceTurn(){
@@ -1181,14 +1181,14 @@
       // is everyone's visual cue that we're advancing on our own.
       //
       // Every device schedules the auto-advance, but the firing callback gates
-      // on liarShouldITakeAction so only ONE peer actually pushes state — the
+      // on cardLobbyShouldITakeAction so only ONE peer actually pushes state — the
       // loser by default, or (if they've disconnected mid-dwell) the lowest-
       // seat-connected peer as fallback. The mutator (liarStartSip) re-checks
       // the same guard so a takeover that races a return-from-grace no-ops.
       const isLoser = liarState.pendingLoserId === liarMe.myId;
       liarScheduleRevealAdvance(revealKey, () => {
         if (liarState.phase !== 'reveal') return;
-        if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+        if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
         liarStartSip();
       }, 4500);
       // Dwell hint — shown to EVERYONE so they know the cup screen is coming.
@@ -1215,7 +1215,7 @@
       // Only the pending loser can advance to the cup. (Was: also lowest-
       // connected fallback; that case currently degrades to "game stalls
       // until loser returns" — to be re-added via presence-aware policy.)
-      if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+      if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
       // Server builds the chamber pattern with server-side randomness (C2
       // turn 3b). A cheating client cannot preview spill positions.
       huddleCallRPC('huddle_liar_start_sip', { p_code: liarState.code });
@@ -1330,7 +1330,7 @@
         if (spotwedge) spotwedge.className = 'liar-wheel-spotwedge';
         wheelEl.className = 'liar-wheel';
         wheelEl.style.removeProperty('--liar-wheel-target');
-        // Auto-fire liarTakeSip after the brace beat; gated by liarShouldITakeAction
+        // Auto-fire liarTakeSip after the brace beat; gated by cardLobbyShouldITakeAction
         // so only the loser (or the lowest-seat-connected fallback) writes state.
         liarScheduleAutoSip();
       } else {
@@ -1356,11 +1356,11 @@
       __liarAutoSipTimer = setTimeout(() => {
         __liarAutoSipTimer = null;
         try {
-          // Re-check ownership at fire time. liarShouldITakeAction returns
+          // Re-check ownership at fire time. cardLobbyShouldITakeAction returns
           // true for the loser when present, OR for the lowest-seat-connected
           // peer when the loser has disconnected past the grace window.
           if (liarState.phase !== 'cup' || liarState.sipTaken) return;
-          if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+          if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
           // Haptic only on the actual loser's device (not the takeover peer —
           // they didn't "lose" anything).
           if (liarState.pendingLoserId === liarMe.myId) {
@@ -1484,7 +1484,7 @@
       const cupKey = String(liarState.sipChamberIdx) + ':' + liarState.sipOutcome + ':post';
       liarScheduleCupAdvance(cupKey, () => {
         if (liarState.phase !== 'cup' || !liarState.sipTaken) return;
-        if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+        if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
         liarAfterSip();
       }, 8500);
     }
@@ -1698,7 +1698,7 @@
       if (liarState.phase !== 'cup' || liarState.sipTaken) return; // double-fire safety
       // Only the loser's device fires this. (See note in liarStartSip about
       // the removed lowest-connected fallback.)
-      if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+      if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
       liarClearAutoSip();
       // Server picks the chamber + resolves outcome (C2 turn 3b). A cheating
       // client cannot rig their own cup outcome.
@@ -1759,7 +1759,7 @@
       if (liarState.phase !== 'cup' || !liarState.sipTaken) return; // double-tap safety
       // Only the loser's device fires this. (See note in liarStartSip about
       // the removed lowest-connected fallback.)
-      if (!liarShouldITakeAction(liarState.pendingLoserId)) return;
+      if (!cardLobbyShouldITakeAction(liarState.pendingLoserId)) return;
       // Server handles: elimination/survival, win detection, next-round deal
       // (winner-of-call leads), or game-end if 1 survivor remains (C2 turn 3b).
       // All the round-starter rule logic and the cascade into the next round

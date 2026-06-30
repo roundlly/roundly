@@ -93,7 +93,7 @@
     // The `sessionId` is the Supabase auth user ID (stable across page reloads).
     // If Supabase is unavailable, we fall back to a random per-tab id (no cross-reload stability).
     const liarMe = {
-      sessionId: null,         // Supabase user ID OR fallback random — set by liarBootstrap()
+      sessionId: null,         // Supabase user ID OR fallback random — set by cardLobbyBootstrap()
       myId: null,              // playerId this device claimed
       selectedCardIds: [],     // local UI selection — not synced
       bootstrapped: false,     // becomes true once auth has resolved
@@ -103,7 +103,7 @@
     // First load: signs in anonymously, gets a uuid that persists in localStorage.
     // Subsequent loads on same device: restores the same uuid.
     // Failure: falls back to a random per-tab id (game still works, just less stable).
-    async function liarBootstrap(){ return huddleBootstrap(liarMe, "Liar's Cup"); }
+    async function cardLobbyBootstrap(){ return huddleBootstrap(liarMe, "Liar's Cup"); }
     function cardLobbyGetSessionId(){ return huddleGetSessionId(liarMe); }
 
     // ---------- Sync transport (Supabase Realtime + Postgres) ----------
@@ -115,7 +115,7 @@
     // Race model: last-writer-wins. Turn-based gameplay serializes naturally, so
     // simultaneous writes are rare. Revision number defends against out-of-order delivery.
 
-    function liarPersist(){
+    function cardLobbyPersist(){
       // C2 lockdown: direct client writes to `liar_rooms` are now blocked at
       // the RLS layer. All Liar's Cup state mutations go through server RPCs
       // (huddle_liar_*). This function is kept as a defensive no-op so any
@@ -123,10 +123,10 @@
       // attempting a write that would be rejected anyway. Lab mode is a no-op
       // too, matching the prior behavior so the lab harness keeps working.
       if (liarState.labMode) return;
-      console.warn('[Huddle] liarPersist() called but is a no-op — route this write through a huddle_liar_* RPC instead.');
+      console.warn('[Huddle] cardLobbyPersist() called but is a no-op — route this write through a huddle_liar_* RPC instead.');
     }
 
-    async function liarLoadRoom(code){
+    async function cardLobbyLoadRoom(code){
       const incoming = await huddleFetchRoomState('liar_rooms', code);
       if (!incoming) return false;
       if (incoming.closedByHost) return false;
@@ -147,28 +147,28 @@
     // and Supabase emits a `presence.leave` event (~1-2s for clean closes,
     // ~30-60s for unclean drops like wifi loss). 60-second grace timer covers
     // legitimate refreshes (auth user ID is stable across reload).
-    let _liarPresentSessions = new Set(); // sessionIds currently connected
-    let _liarLeaveGraceTimers = new Map(); // sessionId → grace timer id
+    let _cardLobbyPresentSessions = new Set(); // sessionIds currently connected
+    let _cardLobbyLeaveGraceTimers = new Map(); // sessionId → grace timer id
     // 5-min grace (2026-06-27, RECONNECTION_PLAN.md Phase 1) — see
     // CHAM_LEAVE_GRACE_MS for the reasoning.
     const LIAR_LEAVE_GRACE_MS = 300000;
 
     // Is the player at seat `playerId` actually connected right now?
-    function liarIsPlayerPresent(playerId){
+    function cardLobbyIsPlayerPresent(playerId){
       if (!playerId) return false;
       const sid = liarState.claimedBy && liarState.claimedBy[playerId];
-      return sid ? _liarPresentSessions.has(sid) : false;
+      return sid ? _cardLobbyPresentSessions.has(sid) : false;
     }
     // Lowest seat in turn order whose claimant is currently connected.
     // Deterministic: every device computes the same answer for the same state,
     // so the "who takes over" choice is consistent across peers without a
     // coordinator. Returns null if nobody is present.
-    function liarLowestSeatConnectedPlayer(){
+    function cardLobbyLowestSeatConnectedPlayer(){
       const alive = liarState.alivePlayers || [];
       const claimedBy = liarState.claimedBy || {};
       for (const pid of alive) {
         const sid = claimedBy[pid];
-        if (sid && _liarPresentSessions.has(sid)) return pid;
+        if (sid && _cardLobbyPresentSessions.has(sid)) return pid;
       }
       return null;
     }
@@ -176,7 +176,7 @@
     // Yes if I'm the expected actor OR the expected actor is gone and I'm
     // the lowest-seat-connected fallback. Re-checked at every scheduled
     // fire-time so a mid-flight disconnect can hand the baton over cleanly.
-    function liarShouldITakeAction(expectedActorId){
+    function cardLobbyShouldITakeAction(expectedActorId){
       if (!expectedActorId || !liarMe.myId) return false;
       // Lab mode: a single device runs all 3 players, so every gated action
       // (auto-advance reveal→cup, take-sip, after-sip, etc.) must fire locally
@@ -187,48 +187,48 @@
       // hasn't sync'd, or our own session is missing from the set), fall
       // back to "only the expected actor fires". Avoids the worst case of
       // stalling the game before presence handlers wire up.
-      const presenceReady = liarMe.sessionId && _liarPresentSessions.has(liarMe.sessionId);
+      const presenceReady = liarMe.sessionId && _cardLobbyPresentSessions.has(liarMe.sessionId);
       if (!presenceReady) return false;
-      if (liarIsPlayerPresent(expectedActorId)) return false;
-      return liarLowestSeatConnectedPlayer() === liarMe.myId;
+      if (cardLobbyIsPlayerPresent(expectedActorId)) return false;
+      return cardLobbyLowestSeatConnectedPlayer() === liarMe.myId;
     }
     // After the 60s grace expires without a rejoin, treat the session as gone.
     // Only the lowest-connected peer fires the cleanup mutation — everyone
-    // updates their _liarPresentSessions set, but only one peer writes to
-    // Supabase so we avoid a thundering-herd on liarPersist().
-    function liarConfirmUserGone(sessionId){
+    // updates their _cardLobbyPresentSessions set, but only one peer writes to
+    // Supabase so we avoid a thundering-herd on cardLobbyPersist().
+    function cardLobbyConfirmUserGone(sessionId){
       return huddleConfirmUserGone(sessionId, {
-        presentSessions: _liarPresentSessions, graceTimers: _liarLeaveGraceTimers,
-        gameState: liarState, rerender: liarRerender, lowestConnected: liarLowestSeatConnectedPlayer,
+        presentSessions: _cardLobbyPresentSessions, graceTimers: _cardLobbyLeaveGraceTimers,
+        gameState: liarState, rerender: cardLobbyRerender, lowestConnected: cardLobbyLowestSeatConnectedPlayer,
         meObj: liarMe, rpcName: 'huddle_liar_handle_disconnect',
       });
     }
-    function liarStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_liarLeaveGraceTimers, sessionId, LIAR_LEAVE_GRACE_MS, liarConfirmUserGone); }
-    function liarCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_liarLeaveGraceTimers, sessionId); }
-    function liarResetPresenceState(){ huddleResetPresenceState(_liarLeaveGraceTimers, _liarPresentSessions); }
+    function cardLobbyStartLeaveGrace(sessionId){ huddleStartLeaveGrace(_cardLobbyLeaveGraceTimers, sessionId, LIAR_LEAVE_GRACE_MS, cardLobbyConfirmUserGone); }
+    function cardLobbyCancelLeaveGrace(sessionId){ huddleCancelLeaveGrace(_cardLobbyLeaveGraceTimers, sessionId); }
+    function cardLobbyResetPresenceState(){ huddleResetPresenceState(_cardLobbyLeaveGraceTimers, _cardLobbyPresentSessions); }
 
-    let _liarChannel = null;
-    let _liarChannelCode = null;
-    let _liarChannelSessionId = null;
-    function liarWireSync(force){
+    let _cardLobbyChannel = null;
+    let _cardLobbyChannelCode = null;
+    let _cardLobbyChannelSessionId = null;
+    function cardLobbyWireSync(force){
       huddleWireSync({
         force: force,
         gameState: liarState, meObj: liarMe, getSessionId: cardLobbyGetSessionId,
         channelName: 'liar_room:', table: 'liar_rooms',
         presenceKey: liarMe.sessionId, getTrackUserId: () => liarMe.sessionId,
         toastLeftKey: 'liar.toastPlayerLeft', restoreMeId: false,
-        rerender: liarRerender, loadRoom: liarLoadRoom, forceLeaveLocal: liarForceLeaveLocal,
-        resetPresenceState: liarResetPresenceState,
-        graceTimers: _liarLeaveGraceTimers, cancelGrace: liarCancelLeaveGrace, startGrace: liarStartLeaveGrace,
+        rerender: cardLobbyRerender, loadRoom: cardLobbyLoadRoom, forceLeaveLocal: cardLobbyForceLeaveLocal,
+        resetPresenceState: cardLobbyResetPresenceState,
+        graceTimers: _cardLobbyLeaveGraceTimers, cancelGrace: cardLobbyCancelLeaveGrace, startGrace: cardLobbyStartLeaveGrace,
         // claimedBy only changes on a real leave (elimination uses alivePlayers),
         // so the "{name} left" notice never mis-fires on a knockout. Sole-survivor
         // logic handles end-of-game, so there's no graceful return-to-lobby here.
         isOnGameScreen: (id) => id.startsWith('liar-'),
         refs: {
-          getChannel: () => _liarChannel, setChannel: (c) => { _liarChannel = c; },
-          getChannelCode: () => _liarChannelCode, setChannelCode: (c) => { _liarChannelCode = c; },
-          getChannelSessionId: () => _liarChannelSessionId, setChannelSessionId: (s) => { _liarChannelSessionId = s; },
-          getPresent: () => _liarPresentSessions, setPresent: (s) => { _liarPresentSessions = s; },
+          getChannel: () => _cardLobbyChannel, setChannel: (c) => { _cardLobbyChannel = c; },
+          getChannelCode: () => _cardLobbyChannelCode, setChannelCode: (c) => { _cardLobbyChannelCode = c; },
+          getChannelSessionId: () => _cardLobbyChannelSessionId, setChannelSessionId: (s) => { _cardLobbyChannelSessionId = s; },
+          getPresent: () => _cardLobbyPresentSessions, setPresent: (s) => { _cardLobbyPresentSessions = s; },
         },
       });
     }
@@ -238,8 +238,8 @@
     // event fires there) — that case still relies on the heartbeat timeout.
     try {
       const fastUntrack = () => {
-        if (_liarChannel) {
-          try { _liarChannel.untrack(); } catch(e){}
+        if (_cardLobbyChannel) {
+          try { _cardLobbyChannel.untrack(); } catch(e){}
         }
       };
       window.addEventListener('pagehide', fastUntrack, { capture: true });
@@ -251,18 +251,18 @@
     // (#screen-liar-play); a `data-stage` attribute drives which .liar-stage is visible.
     // Only lobby is a separate screen.
     //
-    // liarRerender is a thin wrapper around liarRerenderInner. The wrapper enforces
+    // cardLobbyRerender is a thin wrapper around cardLobbyRerenderInner. The wrapper enforces
     // the cross-device sync model: if liarSyncDelayMs() > 0, the new phase is in
     // the future (writer just stamped phaseStartAt = now + 700ms), so we show the
     // waiting overlay over the CURRENT content and defer the real render until
     // the planned moment. Result: writer and watchers display the new phase at
     // the same wall-clock time, independent of network latency.
-    const __liarRerenderPending = { timer: null };
-    function liarRerender(){
-      huddleSyncGateRerender(liarState, liarRerenderInner, __liarRerenderPending);
+    const __cardLobbyRerenderPending = { timer: null };
+    function cardLobbyRerender(){
+      huddleSyncGateRerender(liarState, cardLobbyRerenderInner, __cardLobbyRerenderPending);
     }
 
-    function liarRerenderInner(){
+    function cardLobbyRerenderInner(){
       // Reveal + cup phases stay on the play stage — the reveal overlay (inside
       // the felt) handles the cards-flip + verdict + wheel without a stage swap,
       // so the felt + seats + ACE-pill position stay continuous across phases.
@@ -304,7 +304,7 @@
         }
       }
       // Always re-render content
-      if (liarState.phase === 'lobby') { liarRenderSeats(); if (typeof renderLobbyInvites === 'function') renderLobbyInvites('liar'); }
+      if (liarState.phase === 'lobby') { cardLobbyRenderSeats(); if (typeof renderLobbyInvites === 'function') renderLobbyInvites('liar'); }
       else if (liarState.phase === 'tablecard') { liarSetHeaderForStage('tablecard'); liarRenderTableCardSplash(); }
       else if (liarState.phase === 'play') liarRenderPlayScreen();
       else if (liarState.phase === 'reveal') { liarExitCupMode(); liarRenderRevealContent(); }
@@ -313,35 +313,35 @@
       // Keep lab perspective bar in sync (visibility + current-turn dot + active chip)
       if (typeof liarLabRenderBar === 'function') liarLabRenderBar();
       // Start / stop the sole-survivor polling fallback based on phase. See
-      // liarStartSoloPoll for why this exists.
+      // cardLobbyStartSoloPoll for why this exists.
       if (liarState.phase === 'play' || liarState.phase === 'reveal' || liarState.phase === 'cup') {
-        liarStartSoloPoll();
+        cardLobbyStartSoloPoll();
       } else {
-        liarStopSoloPoll();
+        cardLobbyStopSoloPoll();
       }
     }
 
     // ===== Sole-survivor polling fallback =====
     // Supabase Realtime presence is the PRIMARY mechanism for detecting that a
-    // player left the game (via the leave event → grace timer → liarConfirmUserGone).
+    // player left the game (via the leave event → grace timer → cardLobbyConfirmUserGone).
     // But abrupt disconnects (mobile tab killed, network drop, browser crash)
     // sometimes don't fire `leave`. If the gone player happened to be the
     // current turn-holder, the remaining players see "Waiting for X" forever.
     //
     // This poll is a SAFETY NET on top of presence. Every 4 seconds (after a
     // 12s grace so presence has time to settle on join), check: of all alive
-    // seats in the game, how many have a session currently in _liarPresentSessions?
+    // seats in the game, how many have a session currently in _cardLobbyPresentSessions?
     // If only one and it's me, I'm the sole survivor → declare myself winner.
     //
     // Conservative gates ensure no false positives:
     //   - 12s grace prevents firing during the moment after I join when
     //     presence hasn't synced yet.
-    //   - Requires my own session to be in _liarPresentSessions (channel
+    //   - Requires my own session to be in _cardLobbyPresentSessions (channel
     //     properly subscribed, not in a broken state).
     //   - Requires alive seats > 1 (already-solo rooms don't need detection).
     //   - Requires lowestSeatConnectedPlayer === me (only one peer writes).
-    let _liarSoloPollTimer = null;
-    let _liarSoloPollStartedAt = 0;
+    let _cardLobbySoloPollTimer = null;
+    let _cardLobbySoloPollStartedAt = 0;
     // 5-min (2026-06-27): raised from 8s to match LIAR_LEAVE_GRACE_MS. The
     // sole-survivor poll declares a winner when only ONE player is present in
     // the realtime channel — but a briefly-locked phone is absent from presence
@@ -351,39 +351,39 @@
     // (which only fires after the full grace) makes this a harmless backstop.
     const LIAR_SOLO_POLL_GRACE_MS = 300000;
     const LIAR_SOLO_POLL_INTERVAL = 3000;   // check every 3s after grace
-    function liarStartSoloPoll(){
-      if (_liarSoloPollTimer) return;
-      _liarSoloPollStartedAt = Date.now();
-      _liarSoloPollTimer = setInterval(liarCheckIfSoleSurvivor, LIAR_SOLO_POLL_INTERVAL);
+    function cardLobbyStartSoloPoll(){
+      if (_cardLobbySoloPollTimer) return;
+      _cardLobbySoloPollStartedAt = Date.now();
+      _cardLobbySoloPollTimer = setInterval(cardLobbyCheckIfSoleSurvivor, LIAR_SOLO_POLL_INTERVAL);
     }
-    function liarStopSoloPoll(){
-      if (_liarSoloPollTimer) {
-        clearInterval(_liarSoloPollTimer);
-        _liarSoloPollTimer = null;
+    function cardLobbyStopSoloPoll(){
+      if (_cardLobbySoloPollTimer) {
+        clearInterval(_cardLobbySoloPollTimer);
+        _cardLobbySoloPollTimer = null;
       }
     }
-    function liarCheckIfSoleSurvivor(){
-      if (!liarState.code || !liarMe.myId) { liarStopSoloPoll(); return; }
+    function cardLobbyCheckIfSoleSurvivor(){
+      if (!liarState.code || !liarMe.myId) { cardLobbyStopSoloPoll(); return; }
       const phase = liarState.phase;
-      if (phase === 'lobby' || phase === 'result') { liarStopSoloPoll(); return; }
-      if (Date.now() - _liarSoloPollStartedAt < LIAR_SOLO_POLL_GRACE_MS) return;
-      if (!liarMe.sessionId || !_liarPresentSessions.has(liarMe.sessionId)) return;
+      if (phase === 'lobby' || phase === 'result') { cardLobbyStopSoloPoll(); return; }
+      if (Date.now() - _cardLobbySoloPollStartedAt < LIAR_SOLO_POLL_GRACE_MS) return;
+      if (!liarMe.sessionId || !_cardLobbyPresentSessions.has(liarMe.sessionId)) return;
       const alive = liarState.alivePlayers || [];
       if (alive.length <= 1) return;
       const claimedBy = liarState.claimedBy || {};
       const presentAlive = alive.filter(pid => {
         const sid = claimedBy[pid];
-        return sid && _liarPresentSessions.has(sid);
+        return sid && _cardLobbyPresentSessions.has(sid);
       });
       if (presentAlive.length !== 1) return;
       if (presentAlive[0] !== liarMe.myId) return;
       // Only the lowest-seat-connected peer writes, defensive against races.
-      if (typeof liarLowestSeatConnectedPlayer === 'function'
-          && liarLowestSeatConnectedPlayer() !== liarMe.myId) return;
+      if (typeof cardLobbyLowestSeatConnectedPlayer === 'function'
+          && cardLobbyLowestSeatConnectedPlayer() !== liarMe.myId) return;
       // I'm provably the only player still here. Declare sole-survivor win
       // via RPC (C2 turn 3c). Server validates caller is a claimant + alive,
       // bumps wins[], and sets phase='result'. Realtime echo updates local.
-      liarStopSoloPoll();
+      cardLobbyStopSoloPoll();
       liarClearAllAutoAdvance && liarClearAllAutoAdvance();
       huddleCallRPC('huddle_liar_finish_solo', { p_code: liarState.code });
     }
@@ -410,7 +410,7 @@
     // ===== LAB MODE — single-device 3-player test harness =====
     // Spins up a fully-populated liarState with 3 fake players (Jordan/Alex/Maria)
     // and lets the tester flip "acting as" perspective between them via the lab bar.
-    // labMode=true makes liarPersist() a no-op so we don't pollute the real
+    // labMode=true makes cardLobbyPersist() a no-op so we don't pollute the real
     // liar_rooms table. The real game render/action functions are used unchanged.
     const LIAR_LAB_PLAYERS = [
       { id:'jordan', name:'Jordan', initial:'J' },
@@ -473,7 +473,7 @@
       liarMe.sessionId = 'lab_' + playerId;
       liarMe.selectedCardIds = []; // hand changes — drop any old selection
       liarLabRenderBar();
-      liarRerender();
+      cardLobbyRerender();
     }
 
     function liarLabExit(){
@@ -607,7 +607,7 @@
     // is consistently ahead.
     //
     // Fix: every phase mutation calls liarMarkPhaseStart() which writes
-    // phaseStartAt = Date.now() + LIAR_SYNC_BUFFER_MS into state. liarRerender
+    // phaseStartAt = Date.now() + LIAR_SYNC_BUFFER_MS into state. cardLobbyRerender
     // (wrapped further down) defers actual rendering until that wall-clock
     // moment. The buffer is wide enough that the broadcast lands on slow peers
     // BEFORE phaseStartAt, so every device renders the new phase together.
@@ -882,7 +882,7 @@
       setTimeout(liarSyncHide, 1600);
     }
 
-    // Called at every phase-boundary mutation, JUST BEFORE liarPersist().
+    // Called at every phase-boundary mutation, JUST BEFORE cardLobbyPersist().
     // Writer sets phaseStartAt = now + buffer; every device (writer + peers)
     // gates their rerender on it, so the new phase lands at the same wall-
     // clock moment everywhere. Phone clock skew (~50ms via NTP) is the only
@@ -980,7 +980,7 @@
     // this, the wheel's .spinning class + the cached __liarLastAnimatedSipKey
     // can leave a returning user looking at a half-spun wheel that won't
     // re-animate because the renderer skips work when the sip key matches.
-    // Re-entering the screen calls liarRerender → liarRenderCupInline, which
+    // Re-entering the screen calls cardLobbyRerender → liarRenderCupInline, which
     // rebuilds the correct visuals from server truth. Safe to call from any
     // phase: every reset is a no-op if the targeted element doesn't exist
     // or is already in its baseline state.
@@ -1017,7 +1017,7 @@
     //      their own — same code only if they share localStorage. Tomorrow: URL-based joins.
     // Builds the public URL that, when opened, drops the visitor straight into this room.
     // Used for the QR code in the lobby and the "share" button.
-    function liarJoinUrl(code){
+    function cardLobbyJoinUrl(code){
       // Use generic joinUrl so the QR carries ?game=liar — autoOpen IIFE routes off it.
       if (typeof joinUrl === 'function') return joinUrl(code, 'liar');
       const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
@@ -1026,10 +1026,10 @@
 
     // Reads ?room=CODE from the URL bar. Used on lobby open so a phone scanning
     // the QR (or pasting the link) joins the SAME room as the host.
-    function liarReadUrlRoom(){ return huddleReadUrlRoom('liar'); }
+    function cardLobbyReadUrlRoom(){ return huddleReadUrlRoom('liar'); }
 
     // Update the browser URL bar so the current room is shareable / bookmarkable.
     // Uses replaceState so we don't create a history entry.
-    function liarSyncUrlToRoom(code){ huddleSyncUrlToRoom(code, 'liar'); }
+    function cardLobbySyncUrlToRoom(code){ huddleSyncUrlToRoom(code, 'liar'); }
 
     // ============================================================

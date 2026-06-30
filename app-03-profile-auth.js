@@ -938,7 +938,7 @@
       // (Done AFTER migrate so the rebuilt channel's reconcile-on-subscribe
       // pulls the migrated state.)
       try { if (typeof chamWireSync === 'function') chamWireSync(); } catch(e){}
-      try { if (typeof liarWireSync === 'function') liarWireSync(); } catch(e){}
+      try { if (typeof cardLobbyWireSync === 'function') cardLobbyWireSync(); } catch(e){}
       // Mafia was missing here too: rebuild its channel so it re-keys presence
       // on the new user id AND its reconcile-on-subscribe pulls the migrated
       // state (incl. the now-migrated narratorUid from fix/03) — so the host's
@@ -1213,7 +1213,7 @@
         if (typeof chamForceLeaveLocal === 'function') chamForceLeaveLocal();
       } catch(e){}
       try {
-        if (typeof liarForceLeaveLocal === 'function') liarForceLeaveLocal();
+        if (typeof cardLobbyForceLeaveLocal === 'function') cardLobbyForceLeaveLocal();
       } catch(e){}
       // Mafia: no dedicated forceLeaveLocal helper exists, so tear down its
       // realtime channel + reset its module-level state inline. Without this,
