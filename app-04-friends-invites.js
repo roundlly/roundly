@@ -636,6 +636,14 @@
       friendsSearchTimer = setTimeout(() => { friendsRunSearch(q); }, 350);
     }
 
+    // Search BOTH the @username AND the display name (nickname) — people
+    // naturally type a friend's NAME, not their handle, so username-only search
+    // left them stuck. Implemented as two parallel ilike "contains" queries (one
+    // per column) merged client-side: this reuses the proven .ilike() escaping
+    // instead of hand-building a fragile PostgREST .or() filter string, and needs
+    // NO database changes. Results are then ranked (exact handle > handle-prefix
+    // > name-prefix > match-anywhere) so the most relevant person is on top, and
+    // trimmed to 8.
     async function friendsRunSearch(q){
       if (!window.sb || !friendsState.me) {
         friendsState.searchResults = [];
@@ -644,22 +652,50 @@
         return;
       }
       try {
-        // ilike with prefix; escape % and _ to avoid wildcard injection.
+        // Escape LIKE wildcards so a typed % or _ matches literally — usernames
+        // legitimately contain underscores. Backslash is Postgres' default LIKE
+        // escape char, so \_ and \% match a literal _ and %.
         const safe = q.replace(/[\\%_]/g, m => '\\' + m);
-        const { data, error } = await window.sb
-          .from('profiles')
-          .select('user_id, username, display_name, avatar')
-          .ilike('username', safe + '%')
-          .neq('user_id', friendsState.me)
-          .limit(8);
-        if (error) {
-          console.warn('[Huddle] friends search failed:', error.message);
+        const pat = '%' + safe + '%';
+        const cols = 'user_id, username, display_name, avatar';
+        // Fetch a few more than we display (per column) so client-side ranking
+        // picks the best 8 rather than being cut off by an arbitrary server slice.
+        const [byHandle, byName] = await Promise.all([
+          window.sb.from('profiles').select(cols)
+            .ilike('username', pat).neq('user_id', friendsState.me).limit(20),
+          window.sb.from('profiles').select(cols)
+            .ilike('display_name', pat).neq('user_id', friendsState.me).limit(20),
+        ]);
+        if (byHandle.error || byName.error) {
+          console.warn('[Huddle] friends search failed:', (byHandle.error || byName.error).message);
           friendsState.searchResults = [];
           friendsState.searchStatus = 'ok';
           renderFriendsSearchResults();
           return;
         }
-        friendsState.searchResults = (data || []);
+        // Merge + dedupe (someone matching on both columns must appear once).
+        const byId = new Map();
+        [...(byHandle.data || []), ...(byName.data || [])].forEach(p => {
+          if (p && p.user_id && !byId.has(p.user_id)) byId.set(p.user_id, p);
+        });
+        // Rank: exact handle → handle-prefix → name-prefix → match-anywhere.
+        const ql = q.trim().toLowerCase();
+        const rankOf = (p) => {
+          const u = (p.username || '').toLowerCase();
+          const d = (p.display_name || '').toLowerCase();
+          if (u === ql) return 0;
+          if (u.startsWith(ql)) return 1;
+          if (d.startsWith(ql)) return 2;
+          if (u.includes(ql)) return 3;
+          if (d.includes(ql)) return 4;
+          return 5;
+        };
+        const ranked = Array.from(byId.values()).sort((a, b) => {
+          const ra = rankOf(a), rb = rankOf(b);
+          if (ra !== rb) return ra - rb;
+          return friendsDisplayName(a).localeCompare(friendsDisplayName(b), undefined, { sensitivity: 'base' });
+        }).slice(0, 8);
+        friendsState.searchResults = ranked;
         friendsState.searchStatus = 'ok';
         renderFriendsSearchResults();
       } catch(e) {
