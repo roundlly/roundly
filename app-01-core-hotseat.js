@@ -1601,6 +1601,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
           </div>
         </div>`}
+        ${state.mode === 'link' ? '' : `
         <div class="setting-row">
           <div class="setting-row-label">${t('lobby.rounds')} ${infoIcon('rounds')}</div>
           <div class="seg">${roundsSeg}</div>
@@ -1608,7 +1609,7 @@
         <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
           <div class="setting-row-label">${t('lobby.order')} ${infoIcon('order')}</div>
           <div class="seg full">${orderSeg}</div>
-        </div>
+        </div>`}
       `;
 
       const hintSlot = document.getElementById('mode-hint-slot');
@@ -1707,6 +1708,17 @@
       }
       if (!hotIsHost()) return;
       if (hotClaimedCount() < 2 || !hotMe.myId) return;
+      // Guess the Theme: ALWAYS start with a RANDOM hot-seat player. After that,
+      // the "whoever gives it away goes next" rule takes over from the result
+      // screen (giverNext*). No fixed turn order / rounds here.
+      if (state.mode === 'link') {
+        const claimedL = hotClaimedIndices();
+        const idxL = claimedL[Math.floor(Math.random() * claimedL.length)];
+        huddleCallRPC('huddle_hot_play_again', {
+          p_code: state.code, p_player_idx: idxL, p_word: pickPrompt(),
+        });
+        return;
+      }
       // For 'host' picker order, show the picker first — hostPicked will
       // call the RPC once a player is chosen. For auto-orders (rotating /
       // random), pick locally and call huddle_hot_play_again directly.
@@ -1771,6 +1783,12 @@
         </div>`;
       }).join('');
       parseEmoji(grid);
+      // Reset the shared sheet's title in case openGiverPicker retitled it.
+      const _sheet = document.getElementById('pick-backdrop');
+      if (_sheet) {
+        const _t = _sheet.querySelector('.sheet-title'); if (_t) _t.textContent = t('picker.title');
+        const _b = _sheet.querySelector('.sheet-body');  if (_b) _b.textContent = t('picker.sub');
+      }
       document.getElementById('pick-backdrop').classList.add('active');
     }
 
@@ -1806,6 +1824,53 @@
       // They can re-tap "Start game" or "Next turn" to reopen the picker.
     }
 
+    // ---------- Guess the Theme: "who gave it away?" picker ----------
+    // The player who just escaped the hot seat picks who gave it away — that
+    // person is in the hot seat next. Candidates = every OTHER claimed player
+    // (the giver can be anyone, and the same person can be picked again). The
+    // server (huddle_hot_giver_next) re-checks that the caller is the current
+    // hot-seat player or host. Reuses the shared #pick-backdrop sheet.
+    function openGiverPicker(){
+      const grid = document.getElementById('pick-grid');
+      if (!grid) return;
+      ensureClaimantProfiles(Object.values(state.claimedBy || {}), openGiverPicker);
+      const guesserIdx = state.currentPlayerIdx;
+      grid.innerHTML = state.players.map((p,i) => {
+        const isClaimed = !!(state.claimedBy && state.claimedBy[p.id]);
+        const isGuesser = i === guesserIdx;
+        const clickable = isClaimed && !isGuesser;
+        const tileDisplay = playerDisplayFor(p, state.claimedBy);
+        const dim = (!isClaimed || isGuesser);
+        return `<div class="pick-tile ${dim ? 'unclaimed' : ''}" ${clickable ? `onclick="giverPicked(${i})"` : ''} ${dim ? 'style="opacity:.4"' : ''}>
+          ${avatarHTML(tileDisplay.avatar, 44, { fallback: p.initial })}
+          <div class="pick-tile-name">${isGuesser ? t('picker.you') : escapeHTML(tileDisplay.name)}</div>
+        </div>`;
+      }).join('');
+      parseEmoji(grid);
+      // Retitle the shared picker sheet for this mode (showPicker resets it back).
+      const sheet = document.getElementById('pick-backdrop');
+      if (sheet) {
+        const tEl = sheet.querySelector('.sheet-title'); if (tEl) tEl.textContent = t('picker.giverTitle');
+        const bEl = sheet.querySelector('.sheet-body');  if (bEl) bEl.textContent = t('picker.giverSub');
+      }
+      sheet.classList.add('active');
+    }
+    function giverPicked(idx){
+      document.getElementById('pick-backdrop').classList.remove('active');
+      huddleCallRPC('huddle_hot_giver_next', {
+        p_code: state.code, p_player_idx: idx, p_word: pickPrompt(),
+      });
+    }
+    // Forfeit (gave up) → nobody gave it away → pass to a RANDOM other player.
+    function giverNextRandom(){
+      const others = hotClaimedIndices().filter(i => i !== state.currentPlayerIdx);
+      if (others.length === 0) return;
+      const idx = others[Math.floor(Math.random() * others.length)];
+      huddleCallRPC('huddle_hot_giver_next', {
+        p_code: state.code, p_player_idx: idx, p_word: pickPrompt(),
+      });
+    }
+
     function applySplashContent(){
       const player = state.players[state.currentPlayerIdx];
       if (!player) return;
@@ -1820,9 +1885,11 @@
 
       document.getElementById('splash-emoji').textContent = meIsHotSeat ? '🔥' : '👂';
       document.getElementById('splash-label').textContent =
-        state.rounds === 1
-          ? t('splash.turnOf', { n: turnNumber, total: totalTurns })
-          : t('splash.roundTurn', { round: state.currentRound, rounds: state.rounds, n: turnNumber, total: totalTurns });
+        (state.mode === 'link')
+          ? t('mode.link')   // continuous game — no "Turn X of Y" count
+          : state.rounds === 1
+            ? t('splash.turnOf', { n: turnNumber, total: totalTurns })
+            : t('splash.roundTurn', { round: state.currentRound, rounds: state.rounds, n: turnNumber, total: totalTurns });
       document.getElementById('splash-name').textContent =
         meIsHotSeat ? t('splash.yourTurn') : t('splash.namesTurn', { name: display.name });
       document.getElementById('splash-role').textContent =
@@ -2032,7 +2099,9 @@
       const claimedTotal = hotClaimedCount();
       const usedCount = (state.playersUsedThisRound || []).length;
       const roundOver = usedCount === claimedTotal;
-      const isLastTurn = roundOver && state.currentRound === state.rounds;
+      // Guess the Theme is continuous (giver goes next), so it never reaches a
+      // fixed "last turn" — the game ends only when someone leaves / host closes.
+      const isLastTurn = state.mode !== 'link' && roundOver && state.currentRound === state.rounds;
       const won = state.roundOutcome === 'won';
 
       ensureClaimantProfiles(Object.values(state.claimedBy || {}), showResult);
@@ -2041,7 +2110,9 @@
       const hotSeatName = isMeHotSeat ? t('picker.you') : display.name;
 
       document.getElementById('result-header').textContent =
-        isLastTurn ? t('result.gameOver') : t('result.namesTurn', { name: hotSeatName });
+        (state.mode === 'link') ? t('result.roundOver')
+        : isLastTurn ? t('result.gameOver')
+        : t('result.namesTurn', { name: hotSeatName });
       document.getElementById('result-emoji').textContent = won ? '🎉' : '🏳️';
       document.getElementById('result-title').textContent = won
         ? t('result.gotIt', { name: hotSeatName })
@@ -2086,12 +2157,27 @@
       const nextBtn = document.getElementById('next-btn');
       const leaveBtn = document.getElementById('leave-btn');
       const amHost = hotIsHost();
-      // Primary button (nextBtn) and secondary leave button vary by phase + role:
-      //   • Game over + host  → "Play again" + "Leave" (host-leave closes the room for everyone)
-      //   • Game over + other → "Waiting for host to start new game…" + "Leave" (just me)
-      //   • Mid-round + host  → "Next turn" + "Leave" (just me; transfers host)
-      //   • Mid-round + other → "Waiting for host…" + "Leave" (just me)
-      if (isLastTurn) {
+      // Guess the Theme drives turns from the result screen: the player who just
+      // escaped (or gave up) chooses who's next — "whoever gave it away". The
+      // host "Next turn" flow doesn't apply here.
+      if (state.mode === 'link') {
+        const amGuesser = player && player.id === hotMe.myId;
+        if (amGuesser && won) {
+          nextBtn.textContent = t('result.whoGaveAway');
+          nextBtn.onclick = openGiverPicker;
+          nextBtn.disabled = false;
+        } else if (amGuesser && !won) {
+          nextBtn.textContent = t('result.passToRandom');
+          nextBtn.onclick = giverNextRandom;
+          nextBtn.disabled = false;
+        } else {
+          nextBtn.textContent = t('result.waitingGiver', { name: hotSeatName });
+          nextBtn.onclick = null;
+          nextBtn.disabled = true;
+        }
+        leaveBtn.textContent = t('result.leaveGame');
+        leaveBtn.onclick = amHost ? hotCloseRoom : hotLeaveGameOver;
+      } else if (isLastTurn) {
         if (amHost) {
           nextBtn.textContent = t('result.playAgain');
           nextBtn.onclick = hotPlayAgain;
