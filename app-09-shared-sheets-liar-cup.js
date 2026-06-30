@@ -496,6 +496,111 @@
       el.textContent = text || '';
       el.className = 'join-code-status' + (kind ? ' ' + kind : '');
     }
+
+    // ---------- QR scan (camera) — Games-tab "Scan QR" entry point ----------
+    // Opens the device camera via the vendored qr-scanner lib, reads a friend's
+    // room QR (which encodes the join URL /?room=CODE&game=GAME), extracts the
+    // code, and routes into the matching lobby through the SAME path as
+    // join-by-code (huddleJoinByCodeCore). Camera is released on close.
+    let _huddleQrScanner = null;     // QrScanner instance (created lazily, reused)
+    let _huddleQrBusy = false;       // guard so one scan doesn't fire join twice
+    let _huddleQrResumeTimer = null; // re-arm after a non-Huddle QR message
+
+    function huddleSetQrStatus(text, kind){
+      const el = document.getElementById('qr-scan-status');
+      if (!el) return;
+      el.textContent = text || '';
+      el.className = 'qr-scan-status' + (kind ? ' ' + kind : '');
+    }
+
+    // Pull the room code out of a scanned QR payload. Room QRs encode a full join
+    // URL (joinUrl: <origin>/?room=CODE&game=GAME); also accept a bare code. Returns
+    // '' when it's not a plausible Huddle code (generateCode = 8 alnum, dashed).
+    function huddleQrExtractCode(text){
+      if (!text) return '';
+      let raw = String(text).trim();
+      try {
+        const u = new URL(raw, window.location.origin);
+        const room = u.searchParams.get('room');
+        if (room) raw = room;
+      } catch(e){ /* not a URL — treat the payload as a bare code below */ }
+      const code = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      return /^[A-Z0-9]{4}-?[A-Z0-9]{4}$/.test(code) ? code : '';
+    }
+
+    async function huddleOpenQrScan(){
+      const bd = document.getElementById('qr-scan-backdrop');
+      const video = document.getElementById('qr-scan-video');
+      if (!bd || !video) return;
+      // Library failed to load (offline / blocked) — fall back to code entry so
+      // the user is never stuck with a dead button.
+      if (typeof QrScanner === 'undefined') {
+        if (typeof openJoinCodeSheet === 'function') openJoinCodeSheet();
+        return;
+      }
+      bd.classList.add('active');
+      _huddleQrBusy = false;
+      huddleSetQrStatus(t('qrScan.starting'), 'searching');
+      try { QrScanner.WORKER_PATH = 'vendor/qr-scanner/qr-scanner-worker.min.js'; } catch(e){}
+      try {
+        if (!_huddleQrScanner) {
+          _huddleQrScanner = new QrScanner(video, (result) => {
+            const text = (result && typeof result === 'object') ? result.data : result;
+            huddleOnQrDecoded(text);
+          }, {
+            preferredCamera: 'environment',     // back camera — for scanning a screen
+            highlightScanRegion: true,
+            highlightCodeOutline: true,
+            returnDetailedScanResult: true,
+          });
+        }
+        await _huddleQrScanner.start();
+        huddleSetQrStatus('', '');
+      } catch(e){
+        console.warn('[Huddle] QR scan start failed:', e && (e.message || e));
+        const msg = String((e && (e.name + ' ' + e.message)) || e || '');
+        if (/NotAllowed|denied|Permission/i.test(msg)) huddleSetQrStatus(t('qrScan.permissionDenied'), 'error');
+        else huddleSetQrStatus(t('qrScan.noCamera'), 'error');
+      }
+    }
+
+    function huddleCloseQrScan(event){
+      if (event && event.currentTarget !== event.target) return;
+      if (_huddleQrResumeTimer) { clearTimeout(_huddleQrResumeTimer); _huddleQrResumeTimer = null; }
+      if (_huddleQrScanner) { try { _huddleQrScanner.stop(); } catch(e){} }
+      _huddleQrBusy = false;
+      const bd = document.getElementById('qr-scan-backdrop');
+      if (bd) bd.classList.remove('active');
+    }
+
+    async function huddleOnQrDecoded(text){
+      if (_huddleQrBusy) return;
+      const code = huddleQrExtractCode(text);
+      if (!code) {
+        // A valid QR, but not a Huddle game link. Tell the user briefly, then keep
+        // scanning (the camera stays on; we just gate re-fires for ~1.6s).
+        _huddleQrBusy = true;
+        huddleSetQrStatus(t('qrScan.notHuddle'), 'error');
+        if (_huddleQrResumeTimer) clearTimeout(_huddleQrResumeTimer);
+        _huddleQrResumeTimer = setTimeout(() => { _huddleQrBusy = false; huddleSetQrStatus('', ''); }, 1600);
+        return;
+      }
+      // Got a real code — stop the camera while we join (releases it), then route.
+      _huddleQrBusy = true;
+      try { if (_huddleQrScanner) _huddleQrScanner.stop(); } catch(e){}
+      let matched = false;
+      await huddleJoinByCodeCore(code, {
+        setStatus: huddleSetQrStatus,
+        onMatch: () => { matched = true; },
+      });
+      if (matched) {
+        huddleCloseQrScan(); // joined — close the overlay (we've routed to the lobby)
+      } else {
+        // Code didn't match a live room (or network) — let them try again.
+        _huddleQrBusy = false;
+        try { if (_huddleQrScanner) await _huddleQrScanner.start(); } catch(e){}
+      }
+    }
     // Shared core for join-by-code, used by the Games-tab join sheet
     // (attemptJoinByCode). Probes all four game tables in parallel — first match
     // wins — then routes into the matching lobby.

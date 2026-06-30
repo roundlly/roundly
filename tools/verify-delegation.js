@@ -201,7 +201,7 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   const M = await page.evaluate(() => {
     goTo('mafia-lobby');
     const screen = document.getElementById('screen-mafia-lobby');
-    const names = ['mafiaStartGame','mafiaLeaveRoom','regenerateMafiaRoom','backFromGameLobby','openMafiaHowTo','mafiaOpenNarratorPicker'];
+    const names = ['mafiaStartGame','mafiaLeaveRoom','regenerateMafiaRoom','backFromGameLobby','openMafiaHowTo'];
     const orig = {}, calls = {};
     names.forEach(n => { orig[n] = window[n]; window[n] = function(){ calls[n] = Array.from(arguments); }; });
     const present = {};
@@ -216,7 +216,6 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   results.push(['[mafia-lobby] Refresh → regenerateMafiaRoom()', M.present.regenerateMafiaRoom && !!M.calls.regenerateMafiaRoom, JSON.stringify(M.present.regenerateMafiaRoom)]);
   results.push(['[mafia-lobby] Back → backFromGameLobby("games")', !!M.calls.backFromGameLobby && M.calls.backFromGameLobby[0] === 'games', JSON.stringify(M.calls.backFromGameLobby)]);
   results.push(['[mafia-lobby] How-to → openMafiaHowTo()', M.present.openMafiaHowTo && !!M.calls.openMafiaHowTo, JSON.stringify(M.present.openMafiaHowTo)]);
-  results.push(['[mafia-lobby] Narrator card → mafiaOpenNarratorPicker()', M.present.mafiaOpenNarratorPicker && !!M.calls.mafiaOpenNarratorPicker, JSON.stringify(M.present.mafiaOpenNarratorPicker)]);
   results.push(['[mafia-lobby] no inline on* left in lobby DOM (QR onerror allowed)', M.leftover.length === 0, JSON.stringify(M.leftover)]);
 
   results.push(['no fatal JS errors', errs.length === 0, errs.join(' | ') || 'clean']);

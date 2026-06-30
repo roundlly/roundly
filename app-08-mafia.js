@@ -1183,7 +1183,9 @@
 
     function mafiaRenderLobby(){
       mafiaUpdateLobbyTitle();
-      mafiaRenderNarratorCard();
+      // Narrator is no longer picked up-front in the lobby — the host chooses it
+      // in a popup when they tap Start (mafiaOpenNarratorPicker). So the lobby
+      // narrator card is gone; mafiaRenderNarratorCard is intentionally not called.
       mafiaRenderSeats();
       mafiaRenderRoleMix();
       mafiaRenderOptionalRoles();
@@ -1307,15 +1309,13 @@
       // No-op when the twemoji CDN is unreachable — native glyphs stay.
       if (typeof parseEmoji === 'function') parseEmoji(grid);
 
-      // Hint text below the grid
-      const playerCount = mafiaPlayerSeats().length;
-      const narratorSet = !!narratorUid;
+      // Hint text below the grid. Narrator is chosen at Start now, so the hint
+      // tracks the effective player count (one seat reserved for the narrator).
+      const playerCount = mafiaEffectivePlayerCount();
       let hintText = '';
       if (playerCount < 5) {
         const needed = 5 - playerCount;
         hintText = t('mafia.hintNeedMorePlayers', { n: needed });
-      } else if (!narratorSet) {
-        hintText = t('mafia.hintNeedNarrator');
       } else if (playerCount > 20) {
         // Shouldn't happen (only 20 seats) but defensive.
         hintText = t('mafia.hintTooMany');
@@ -1332,7 +1332,7 @@
     function mafiaRenderRoleMix(){
       const row = document.getElementById('mafia-rolemix-row');
       if (!row) return;
-      const count = mafiaPlayerSeats().length;
+      const count = mafiaEffectivePlayerCount();
       const opt = mafiaGetOptionalRoles();
       const includeDetective = mafiaIsDetectiveActive();
       const mix = mafiaRoleMixFor(count, includeDetective, opt.child, opt.mafiaLeader);
@@ -1453,15 +1453,28 @@
       }).join('');
     }
 
+    // Players who will actually PLAY (narrator excluded). The narrator is chosen
+    // when the host taps Start (mafiaOpenNarratorPicker), not in the lobby — so
+    // before one is set, reserve one seated person for the to-be-narrator. Keeps
+    // the Start gate, the seats hint, and the role-mix preview all counting the
+    // same "real players" number. 5–20 players ⟺ 6–21 people in the room.
+    function mafiaEffectivePlayerCount(){
+      if (mafiaState.narratorUid) return mafiaPlayerSeats().length;
+      const total = Object.keys(mafiaState.claimedBy || {}).length;
+      return Math.max(0, total - 1);
+    }
+
     function mafiaRenderStartButton(){
       const btn = document.getElementById('mafia-start-btn');
       if (!btn) return;
       const sid = mafiaGetSessionId();
       const isHost = mafiaState.hostId === sid;
-      const playerCount = mafiaPlayerSeats().length;
-      const narratorSet = !!mafiaState.narratorUid;
+      const playerCount = mafiaEffectivePlayerCount();
       const meIsInRoom = !!mafiaMe.myId || mafiaState.narratorUid === sid;
-      const ready = isHost && playerCount >= 5 && playerCount <= 20 && narratorSet && meIsInRoom;
+      // Narrator is NOT required up-front anymore — it's chosen in the popup that
+      // opens when the host taps Start. So the gate is purely "enough people":
+      // 5–20 players (i.e. 6–21 in the room, one of whom will narrate).
+      const ready = isHost && playerCount >= 5 && playerCount <= 20 && meIsInRoom;
       if (ready) btn.removeAttribute('aria-disabled');
       else       btn.setAttribute('aria-disabled', 'true');
       // Subtle hint on the button text when host but not ready (helps host
@@ -1483,55 +1496,89 @@
 
     // ----- Actions -----
 
+    // Seat the host has selected as narrator inside the Start popup (local only
+    // until they confirm — other players see nothing change in the lobby).
+    let _mafiaStartPickerSeat = null;
+
+    // Opens the choose-narrator popup as the FINAL step of starting (the host
+    // taps Start once there are enough people). The host's own seat is
+    // pre-selected — they usually narrate, so it's one more tap to begin.
     function mafiaOpenNarratorPicker(){
       const sid = mafiaGetSessionId();
       if (mafiaState.hostId !== sid) return;
+      // Default narrator = the host (their seat is mafiaMe.myId). Falls back to
+      // null if somehow unseated, which leaves the confirm button disabled.
+      _mafiaStartPickerSeat = mafiaMe.myId || null;
+      mafiaRenderNarratorPickerList();
+      const startBtn = document.getElementById('mafia-narrator-picker-start');
+      if (startBtn) startBtn.textContent = t('lobby.startGame');
+      const bd = document.getElementById('mafia-narrator-picker-backdrop');
+      if (bd) bd.classList.add('active');
+    }
+    function mafiaRenderNarratorPickerList(){
       const list = document.getElementById('mafia-narrator-picker-list');
       if (!list) return;
-      // Show all current claimants (including self) as picker options.
+      const sid = mafiaGetSessionId();
+      // Every seated person is a candidate (including the host). Tapping selects
+      // them locally; the confirm button commits the choice and starts the game.
       const items = Object.entries(mafiaState.claimedBy || {})
         .sort(([a],[b]) => a.localeCompare(b))
         .map(([seatId, uid]) => {
           const isYou = uid === sid;
-          const isCurrent = uid === mafiaState.narratorUid;
-          const cls = ['mafia-narrator-picker-item'];
-          if (isCurrent) cls.push('is-current');
-          return `<button class="theme-option ${isCurrent ? 'active' : ''}" type="button" onclick="mafiaPickNarrator('${seatId}')">
+          const isSel = seatId === _mafiaStartPickerSeat;
+          return `<button class="theme-option ${isSel ? 'active' : ''}" type="button" onclick="mafiaSelectNarratorSeat('${seatId}')">
             <div class="theme-option-icon">🎙️</div>
             <div class="theme-option-content">
               <div class="theme-option-title">${huddleEscape(mafiaSeatNameFor(seatId))}${isYou ? ' · ' + t('mafia.you') : ''}</div>
-              <div class="theme-option-sub">${isCurrent ? t('mafia.narratorCurrent') : t('mafia.narratorPickThis')}</div>
+              <div class="theme-option-sub">${isSel ? t('mafia.narratorCurrent') : t('mafia.narratorPickThis')}</div>
             </div>
-            ${isCurrent ? '<svg class="theme-option-check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+            ${isSel ? '<svg class="theme-option-check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
           </button>`;
         });
-      if (items.length === 0) {
-        list.innerHTML = `<div class="mafia-rolemix-empty" style="padding:14px;text-align:center">${t('mafia.narratorPickerEmpty')}</div>`;
-      } else {
-        list.innerHTML = items.join('');
-      }
-      const bd = document.getElementById('mafia-narrator-picker-backdrop');
-      if (bd) bd.classList.add('active');
+      list.innerHTML = items.length
+        ? items.join('')
+        : `<div class="mafia-rolemix-empty" style="padding:14px;text-align:center">${t('mafia.narratorPickerEmpty')}</div>`;
+      // Confirm only works once a narrator is selected.
+      const startBtn = document.getElementById('mafia-narrator-picker-start');
+      if (startBtn) startBtn.disabled = !_mafiaStartPickerSeat;
+    }
+    function mafiaSelectNarratorSeat(seatId){
+      _mafiaStartPickerSeat = seatId;
+      mafiaRenderNarratorPickerList();
     }
     function mafiaCloseNarratorPicker(event){
       if (event && event.target !== event.currentTarget) return;
       const bd = document.getElementById('mafia-narrator-picker-backdrop');
       if (bd) bd.classList.remove('active');
     }
-    async function mafiaPickNarrator(seatId){
+    // Confirm in the popup: assign the chosen narrator on the server (the start
+    // RPC requires narratorUid set), then start the game. Two existing RPCs
+    // back-to-back — no schema change. On failure, re-enable so the host retries.
+    async function mafiaConfirmNarratorAndStart(){
+      const sid = mafiaGetSessionId();
+      if (mafiaState.hostId !== sid) return;
+      const seat = _mafiaStartPickerSeat;
+      if (!seat) return;
+      const startBtn = document.getElementById('mafia-narrator-picker-start');
+      if (startBtn) { startBtn.disabled = true; startBtn.textContent = t('mafia.starting'); }
       try {
         const newState = await huddleCallRPC('huddle_mafia_set_narrator', {
           p_code: mafiaState.code,
-          p_narrator_seat: seatId,
+          p_narrator_seat: seat,
         });
-        if (newState) {
-          Object.assign(mafiaState, newState);
-          mafiaRerender();
-        }
+        if (newState) Object.assign(mafiaState, newState);
       } catch(e){
-        console.warn('[Mafia] setNarrator failed:', e && e.message);
+        const msg = (e && e.message) || String(e);
+        alert(t('mafia.startFailed', { msg }));
+        if (startBtn) { startBtn.disabled = false; startBtn.textContent = t('lobby.startGame'); }
+        return;
       }
-      mafiaCloseNarratorPicker();
+      const ok = await mafiaDoStartGame();
+      if (ok) {
+        mafiaCloseNarratorPicker();
+      } else if (startBtn) {
+        startBtn.disabled = false; startBtn.textContent = t('lobby.startGame');
+      }
     }
 
     function mafiaLeaveRoom(){
@@ -1590,28 +1637,29 @@
       }
     }
 
-    async function mafiaStartGame(){
-      // Gate: aria-disabled means a Start condition isn't met (e.g. no
-      // narrator picked, not enough players). Surface the hint as a toast.
-      // Bonus for Mafia: if the narrator-not-picked branch is the blocker
-      // AND the narrator card is off-screen, scroll to it so the pulse
-      // animation we added is visible.
-      const _gateBtn = document.getElementById('mafia-start-btn');
-      if (_gateBtn && _gateBtn.getAttribute('aria-disabled') === 'true') {
-        const _hintEl = document.getElementById('mafia-seats-hint');
-        const _msg = _hintEl && _hintEl.textContent && _hintEl.textContent.trim();
-        if (_msg && typeof showLobbyToast === 'function') showLobbyToast(_msg);
-        const _playerCount = (typeof mafiaPlayerSeats === 'function') ? mafiaPlayerSeats().length : 0;
-        if (!mafiaState.narratorUid && _playerCount >= 5 && _playerCount <= 20) {
-          const _card = document.getElementById('mafia-narrator-card');
-          if (_card) { try { _card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(_){} }
-        }
+    // Lobby "Start game" button. With enough people it OPENS the choose-narrator
+    // popup (the narrator is picked there, then the game starts). When the gate
+    // isn't met yet, surface the seats hint as a toast so the host knows why.
+    function mafiaStartGame(){
+      const gateBtn = document.getElementById('mafia-start-btn');
+      if (gateBtn && gateBtn.getAttribute('aria-disabled') === 'true') {
+        const hintEl = document.getElementById('mafia-seats-hint');
+        const msg = hintEl && hintEl.textContent && hintEl.textContent.trim();
+        if (msg && typeof showLobbyToast === 'function') showLobbyToast(msg);
         return;
       }
       const sid = mafiaGetSessionId();
       if (mafiaState.hostId !== sid) return;
-      const btn = document.getElementById('mafia-start-btn');
-      if (btn) { btn.disabled = true; btn.textContent = t('mafia.starting'); }
+      mafiaOpenNarratorPicker();
+    }
+
+    // The actual start: calls huddle_mafia_start_game and routes into the game.
+    // The narrator must already be set (mafiaConfirmNarratorAndStart does it just
+    // before). Returns true on success, false on failure so the caller can
+    // re-enable its button.
+    async function mafiaDoStartGame(){
+      const sid = mafiaGetSessionId();
+      if (mafiaState.hostId !== sid) return false;
       try {
         // Cards mode passes BOTH the host's Detective lobby toggle AND the
         // variant ('cards') to SQL. The variant is written into the room
@@ -1633,24 +1681,19 @@
           mafiaMe.myTeammates = [];
           mafiaMe.narratorRoles = null; // clear narrator-side cache too
           _mafiaRoleHidden = false;
-          // Mafia Cards mode: bypass the rules-gate dispatcher and route
-          // straight into the card-style screens. Also reset the narrator's
-          // local dashboard state (phase pill back to Night, dead set cleared)
-          // so a new game starts fresh even if the host launches twice.
-          if (mafiaCardsMode) {
-            mafiaCardsResetNarratorLocalState();
-            mafiaRerender();
-            return;
-          }
-          // Classic Mafia: dispatcher routes to role card / narrator stub
-          // based on who I am and what phase the server set. Other devices
-          // get there via Realtime.
+          // Cards mode resets the narrator's local dashboard state (phase pill
+          // back to Night, dead set cleared) so a new game starts fresh even if
+          // the host launches twice. Both modes route via mafiaRerender (Cards →
+          // card screens, Classic → rules-gate dispatcher); other devices get
+          // there via Realtime.
+          if (mafiaCardsMode) mafiaCardsResetNarratorLocalState();
           mafiaRerender();
         }
+        return true;
       } catch(e){
         const msg = (e && e.message) || String(e);
         alert(t('mafia.startFailed', { msg }));
-        if (btn) { btn.disabled = false; btn.textContent = t('lobby.startGame'); }
+        return false;
       }
     }
 

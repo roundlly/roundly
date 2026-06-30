@@ -17,6 +17,13 @@
        Segoe UI Emoji centering variance across emoji like 🍇 / 🌮 / 🦊.
        Loads in parallel; if it fails, emoji fall back to native text. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" crossorigin="anonymous" defer></script>
+  <!-- QR scanner (camera) — vendored locally (not a CDN) so the in-app "Scan QR"
+       join feature never depends on a third-party CDN being up at runtime, and is
+       same-origin (no SRI needed). Source: qr-scanner@1.4.2 (nimiq), UMD global
+       `QrScanner`. Loaded with defer — only used when the user taps "Scan QR". The
+       decoder runs in vendor/qr-scanner/qr-scanner-worker.min.js (WORKER_PATH set
+       in app-09 huddleOpenQrScan). -->
+  <script src="vendor/qr-scanner/qr-scanner.umd.min.js" defer></script>
   <!-- Supabase JS — provides auth + realtime + database for cross-device multiplayer.
        Used by Liar's Cup (real multi-device sync). Other games stay single-device.
        Pinned to a specific version with SRI so a CDN compromise can't inject code
@@ -342,24 +349,38 @@
         </button>
       </header>
       <main class="page">
-        <!-- "Join with code" — global entry point for players whose friend
-             shared a room code. Auto-detects which game (Hot Seat / Chameleon
-             / Liar's Cup) the code belongs to and routes into the right lobby
-             so the user never has to guess. Always visible at the top of the
-             Games tab regardless of player-count step. -->
-        <button class="howto-trigger" type="button" onclick="openJoinCodeSheet()" style="margin-bottom:18px">
-          <div class="howto-trigger-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="4" y="4" width="16" height="16" rx="3"></rect>
-              <path d="M8 9h8M8 13h6M8 17h4"></path>
-            </svg>
+        <!-- "Join a game" — global entry point for players whose friend shared a
+             room. Two ways in: type the room code, or scan the host's room QR with
+             the in-app camera scanner. Either way we auto-detect which game the
+             code belongs to and route into the right lobby. Always visible at the
+             top of the Games tab regardless of player-count step. -->
+        <div class="join-game-card">
+          <div class="join-game-head">
+            <div class="join-game-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="m10 17 5-5-5-5"></path><path d="M15 12H3"></path>
+              </svg>
+            </div>
+            <div class="join-game-text">
+              <div class="join-game-title" data-i18n="joinGame.title">Join a game</div>
+              <div class="join-game-sub" data-i18n="joinGame.sub">Got a code or QR from a friend?</div>
+            </div>
           </div>
-          <div class="howto-trigger-text">
-            <div class="howto-trigger-title" data-i18n="joinCode.tileTitle">Join with code</div>
-            <div class="howto-trigger-sub" data-i18n="joinCode.tileSub">Have a friend's room code? Enter it here</div>
+          <div class="join-game-actions">
+            <button class="join-game-btn" type="button" onclick="openJoinCodeSheet()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"></path>
+              </svg>
+              <span data-i18n="joinGame.enterCode">Enter code</span>
+            </button>
+            <button class="join-game-btn join-game-btn-primary" type="button" onclick="huddleOpenQrScan()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><path d="M14 14h3v3M21 17v4M17 21h1"></path>
+              </svg>
+              <span data-i18n="joinGame.scanQr">Scan QR</span>
+            </button>
           </div>
-          <svg class="howto-trigger-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
-        </button>
+        </div>
 
         <!-- Games list — single page. Filter chips at the top let the player pick their
              group size; the list updates in real time below. The previous two-step flow
@@ -1782,16 +1803,8 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
           <strong>Each player on their own phone.</strong> One person becomes the narrator — they run the game with on-screen prompts but don't play. Need 5–8 players + 1 narrator.
         </div>
 
-        <!-- Narrator slot — separate from regular seats. Host taps to open picker. -->
-        <div class="section-title" data-i18n="mafia.narratorLabel">Narrator</div>
-        <button class="mafia-narrator-card" id="mafia-narrator-card" type="button" data-action="mafiaOpenNarratorPicker">
-          <div class="mafia-narrator-icon">🎙️</div>
-          <div class="mafia-narrator-content">
-            <div class="mafia-narrator-title" id="mafia-narrator-title" data-i18n="mafia.narratorNotSet">Tap to pick a narrator</div>
-            <div class="mafia-narrator-sub" id="mafia-narrator-sub" data-i18n="mafia.narratorSub">Runs the game with on-screen prompts. Doesn't play.</div>
-            <div class="mafia-narrator-status" id="mafia-narrator-status"></div>
-          </div>
-        </button>
+        <!-- Narrator is chosen in a popup when the host taps Start (not in the
+             lobby anymore) — see #mafia-narrator-picker-backdrop below. -->
 
         <!-- Role-mix preview — updates live as seats fill -->
         <div class="mafia-rolemix-card">
@@ -1824,9 +1837,10 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
     </section>
 
 
-    <!-- Mafia narrator picker sheet — opens from the narrator slot card.
-         Host-only: lists currently-claimed seats; tapping one assigns them
-         narrator. Non-hosts see a read-only hint. -->
+    <!-- Mafia narrator picker sheet — opens when the host taps Start in the
+         lobby (mafiaOpenNarratorPicker). Host-only: lists currently-claimed
+         seats with the host pre-selected; tapping one selects them, and the
+         "Start game" button below commits the narrator and starts the game. -->
     <div class="sheet-backdrop" id="mafia-narrator-picker-backdrop" onclick="mafiaCloseNarratorPicker(event)">
       <div class="sheet" onclick="event.stopPropagation()" style="position:relative">
         <button class="icon-btn" onclick="mafiaCloseNarratorPicker()" aria-label="Close" data-i18n-aria="common.close" style="position:absolute;top:8px;right:8px">
@@ -1836,6 +1850,7 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
         <div class="sheet-title" data-i18n="mafia.narratorPickerTitle">Pick the narrator</div>
         <div class="sheet-body" data-i18n="mafia.narratorPickerSub" style="margin-bottom:14px">Who runs the game? They won't play — they just read the prompts.</div>
         <div id="mafia-narrator-picker-list"></div>
+        <button class="btn btn-primary btn-lg" id="mafia-narrator-picker-start" type="button" onclick="mafiaConfirmNarratorAndStart()" style="width:100%;margin-top:14px" data-i18n="lobby.startGame">Start game</button>
       </div>
     </div>
 
@@ -1861,6 +1876,28 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
           <button class="btn btn-primary" type="button" onclick="attemptJoinByCode()" data-i18n="joinCode.btn">Join</button>
         </div>
         <div class="join-code-status" id="join-code-status"></div>
+      </div>
+    </div>
+
+    <!-- ============ QR SCAN SHEET (global) ============ -->
+    <!-- Opened from the "Scan QR" button on the Games-tab "Join a game" tile.
+         Uses the device camera (vendored qr-scanner lib) to read a friend's room
+         QR — which encodes the join URL (/?room=CODE&game=GAME). On a successful
+         scan we extract the code and hand off to huddleJoinByCodeCore (the same
+         routing as the code-entry sheet). Camera is released on close. -->
+    <div class="sheet-backdrop" id="qr-scan-backdrop" onclick="huddleCloseQrScan(event)">
+      <div class="sheet" onclick="event.stopPropagation()" style="position:relative">
+        <button class="icon-btn" onclick="huddleCloseQrScan()" aria-label="Close" data-i18n-aria="common.close" style="position:absolute;top:8px;right:8px;z-index:2">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" data-i18n="qrScan.title">Scan a friend's QR</div>
+        <div class="sheet-body" data-i18n="qrScan.instruction" style="margin-bottom:14px">Point your camera at the QR on their screen.</div>
+        <div class="qr-scan-viewport">
+          <video id="qr-scan-video" playsinline muted></video>
+        </div>
+        <div class="qr-scan-status" id="qr-scan-status"></div>
+        <button class="join-game-btn" type="button" onclick="huddleCloseQrScan();openJoinCodeSheet()" style="width:100%;margin-top:12px" data-i18n="qrScan.enterInstead">Enter code instead</button>
       </div>
     </div>
 
