@@ -6211,11 +6211,11 @@
       font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
       padding:4px 10px;border-radius:999px;
     }
-    .th-theme-tag{background:var(--primary);color:#fff}
+    .th-theme-tag{background:var(--primary);color:var(--on-primary)}
     .th-hotseat{
       position:relative;width:118px;height:150px;border-radius:18px;
-      background:linear-gradient(160deg, rgba(249,115,22,.16), rgba(249,115,22,.05));
-      border:1px dashed color-mix(in srgb, var(--primary) 45%, transparent);
+      background:color-mix(in srgb, #f97316 16%, var(--bg-subtle));
+      border:1px dashed color-mix(in srgb, #f97316 55%, transparent);
       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
       opacity:0;
     }
@@ -6248,7 +6248,7 @@
     .th-scene[data-scene="4"].is-active .th-bulb{animation:thBulb .6s cubic-bezier(.22,1,.36,1) .15s both, thFloat 3s ease-in-out 1s infinite}
     @keyframes thBulb{0%{opacity:0;transform:scale(.5) rotate(-10deg)}60%{opacity:1;transform:scale(1.15) rotate(4deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
     .th-reveal{
-      padding:11px 20px;border-radius:14px;font-size:18px;font-weight:800;color:#fff;
+      padding:11px 20px;border-radius:14px;font-size:18px;font-weight:800;color:var(--on-primary);
       background:var(--primary);box-shadow:0 10px 24px color-mix(in srgb, var(--primary) 45%, transparent);
       opacity:0;
     }
@@ -6271,8 +6271,8 @@
     }
     .th-swap-seat{
       width:76px;height:76px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:38px;
-      background:linear-gradient(160deg, rgba(249,115,22,.20), rgba(249,115,22,.06));
-      border:1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+      background:color-mix(in srgb, #f97316 16%, var(--bg-subtle));
+      border:1px solid color-mix(in srgb, #f97316 45%, transparent);
     }
     .th-swap-arrows{font-size:22px;color:var(--text-tertiary);font-weight:800}
     .th-scene[data-scene="5"].is-active .th-swap-avatar--out{animation:thSwapOut 1.8s ease-in-out .4s both}
@@ -6295,7 +6295,7 @@
     .th-end-actions{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;margin-top:10px;opacity:0;position:relative;z-index:10}
     .th-scene-end.is-active .th-end-actions{animation:thRise .5s cubic-bezier(.22,1,.36,1) .52s both}
     .th-end-btn{padding:14px;border-radius:14px;font-size:16px;font-weight:750;cursor:pointer;border:1px solid transparent}
-    .th-end-btn--primary{background:var(--primary);color:#fff;border:none}
+    .th-end-btn--primary{background:var(--primary);color:var(--on-primary);border:none}
     .th-end-btn--ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
     .th-end-credit{font-size:12px;color:var(--text-tertiary);margin-top:6px;opacity:0}
     .th-scene-end.is-active .th-end-credit{animation:thRise .5s ease .7s both}
