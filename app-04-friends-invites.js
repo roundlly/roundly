@@ -383,6 +383,10 @@
       const name = friendsDisplayName(p);
       const handle = p.username ? '@' + p.username : '';
       const avatar = p.avatar || deterministicAvatar(entry.otherId);
+      // "Request sent" pending pill + Cancel (LinkedIn "Pending / Withdraw"
+      // pattern). The pill makes the waiting state explicit — important now that
+      // sent requests also surface at the top of the All tab, where a lone
+      // Cancel button gave no hint that we're waiting on the other person.
       return `
         <div class="friend-row">
           ${avatarHTML(avatar, 44, { fallback: (name[0] || '?').toUpperCase() })}
@@ -391,6 +395,7 @@
             <div class="friend-status">${friendsEscape(handle)}</div>
           </div>
           <div class="friend-row-actions">
+            <span class="friend-status-pill" style="color:var(--text-secondary)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>${t('friends.requestSent')}</span>
             <button class="friend-remove-btn" onclick="friendRequestCancel('${friendsEscape(entry.otherId)}')">${t('friends.actionCancel')}</button>
           </div>
         </div>
@@ -474,24 +479,44 @@
         }
       } else {
         // 'all' tab
+        // Pending friend requests now surface at the TOP of "All" too — not just
+        // on the Requests tab. Why: after you add someone you land back here and
+        // see "Request sent · pending" right at the top (no more "what now?"
+        // dead-end), and someone who RECEIVED a request can Accept it from either
+        // place. The Requests tab keeps showing them as well (nothing removed).
+        // Game invites stay Requests-only — this block is friend requests only.
+        if (friendsState.incoming.length > 0) {
+          html += `<div class="section-title">${t('friends.sectionIncoming')} · ${friendsState.incoming.length}</div>`;
+          html += friendsState.incoming.map(friendsRenderRowIncoming).join('');
+        }
+        if (friendsState.outgoing.length > 0) {
+          html += `<div class="section-title">${t('friends.sectionSent')} · ${friendsState.outgoing.length}</div>`;
+          html += friendsState.outgoing.map(friendsRenderRowOutgoing).join('');
+        }
+
         if (friendsState.friends.length === 0) {
-          // Rich visual empty state — icon + headline + animated arrow pointing at the search bar
-          glowSearch = true;
-          html = `
-            <div class="friends-empty-hero">
-              <div class="friends-empty-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="9" cy="8" r="4"></circle>
-                  <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"></path>
-                  <path d="M19 8v6M22 11h-6"></path>
-                </svg>
-              </div>
-              <div class="friends-empty-title">${t('friends.heroTitle')}</div>
-              <div class="friends-empty-sub">${t('friends.heroSub')}</div>
-            </div>`;
+          // Only show the rich empty-state hero (and glow the search bar) when
+          // there's genuinely nothing — no friends AND no pending requests. If
+          // pending rows are present above, they fill the screen and the hero
+          // would wrongly read as "you have no one".
+          if (friendsState.incoming.length === 0 && friendsState.outgoing.length === 0) {
+            glowSearch = true;
+            html += `
+              <div class="friends-empty-hero">
+                <div class="friends-empty-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="9" cy="8" r="4"></circle>
+                    <path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"></path>
+                    <path d="M19 8v6M22 11h-6"></path>
+                  </svg>
+                </div>
+                <div class="friends-empty-title">${t('friends.heroTitle')}</div>
+                <div class="friends-empty-sub">${t('friends.heroSub')}</div>
+              </div>`;
+          }
         } else {
-          // Split by presence — online first (Discord/Instagram pattern). Sort
-          // alphabetically within each group for a stable, predictable order.
+          // Split accepted friends by presence — online first (Discord/Instagram
+          // pattern). Sort alphabetically within each group for a stable order.
           const byName = (a, b) => friendsDisplayName(a.profile).localeCompare(friendsDisplayName(b.profile), undefined, { sensitivity: 'base' });
           const online = friendsState.friends.filter(e => friendsPresence.has(e.otherId)).sort(byName);
           const offline = friendsState.friends.filter(e => !friendsPresence.has(e.otherId)).sort(byName);
@@ -662,8 +687,10 @@
           }
         }
         await friendsLoad();
-        // Clear search + jump to Requests tab so the user can see the pending
-        // request they just sent (the row that was here is now redundant).
+        // Clear search + land on the All tab. The request the user just sent now
+        // sits at the TOP of All as a "Request sent · pending" row, so they see
+        // exactly what happened without hunting through tabs. It also still
+        // appears under Requests → Sent (kept intentionally, nothing removed).
         if (friendsSearchTimer) { clearTimeout(friendsSearchTimer); friendsSearchTimer = null; }
         const input = document.getElementById('friends-search-input');
         if (input) input.value = '';
@@ -671,7 +698,7 @@
         friendsState.searchResults = [];
         friendsState.searchStatus = '';
         renderFriendsSearchResults();
-        friendsSetTab('requests');
+        friendsSetTab('all');
       } catch(e) {
         console.warn('[Huddle] friendRequestSend exception:', e);
       }
