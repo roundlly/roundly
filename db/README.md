@@ -7,7 +7,7 @@ dump (64 functions) + a `pg_policies` snapshot. This replaces the ~27 ad-hoc, dr
 The repo's old files had **drifted from the live DB in both directions** — some defined
 functions the live DB had already replaced, and the live DB ran functions defined in *no*
 file. These files were generated from what's actually running, so they match reality.
-See [`../PHASE4_FINDINGS.md`](../PHASE4_FINDINGS.md) for the full audit.
+See [`../project-docs/PHASE4_FINDINGS.md`](../project-docs/PHASE4_FINDINGS.md) for the full audit.
 
 ## What to actually run
 
@@ -82,5 +82,5 @@ against each other at create time, so `03–08` can be applied in any order amon
 
 The function files are produced by `tools/build-migration-set.js` from the two CSV dumps
 (`tools/live-functions.csv`, `tools/live-policies.csv`). To refresh after future live changes:
-re-run the dump queries (in `../PHASE4_FINDINGS.md` §5), re-export the CSVs, and
+re-run the dump queries (in `../project-docs/PHASE4_FINDINGS.md` §5), re-export the CSVs, and
 `node tools/build-migration-set.js`.
