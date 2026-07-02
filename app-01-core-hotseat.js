@@ -129,60 +129,138 @@
       ],
     };
 
-    // "Guess the Theme" mode content (internal key stays 'link'). Each entry is a SECRET THEME the helpers
+    // ===================== "GUESS THE THEME" CONTENT =====================
+    // (internal mode key stays 'link'). Each entry is a SECRET THEME the helpers
     // see (and the hot seat guesses). Helpers take turns naming real things that
     // fit the theme; the hot seat works out what links them. Stored by KEY in
     // state.currentWord so every phone renders the theme in its own language
-    // (en/tr) and the result screen can reveal it translated. Curated to be
-    // safe for any group and easy to give honest examples for. emoji = the icon
-    // shown on the helper's card + the result reveal.
+    // (en/tr) and the result screen can reveal it translated.
+    //
+    // HOW TO ADD / REMOVE A THEME (kept deliberately simple):
+    //   • ADD    → insert ONE line: key: { en:'…', tr:'…', emoji:'…', pack:'…' }
+    //   • REMOVE → delete that line. Nothing else needs updating anywhere —
+    //     the pack picker, theme counts and the draw pool all derive from this map.
+    //   • pack must be a LINK_PACKS key (below). A brand-new pack = one line there too.
+    //   • NEVER rename or reuse a key — keys sit in live rooms' currentWord/usedWords;
+    //     renaming breaks the reveal on phones mid-game.
+    //
+    // CURATION RULES (what makes a theme WORK in this game — from the Sidemen
+    // "Hot Seat" format + 5-Second-Rule-style category research, 2026-07-02):
+    //   • 10+ real things must fit it, so several helpers can each find a clue;
+    //   • every example should ALSO fit other themes (honey = sticky AND sweet
+    //     AND yellow) — that overlap is what lets helpers be SNEAKY, which is
+    //     the fun. Avoid one-clue giveaways (planets, brands, sports teams);
+    //   • no local-only knowledge — must land in BOTH en and tr cultures;
+    //   • safe for any group (family-friendly).
     const LINKS = {
-      sticky:    { en:'Things that are sticky',         tr:'Yapışkan şeyler',                emoji:'🍯' },
-      round:     { en:'Things that are round',          tr:'Yuvarlak şeyler',                emoji:'⚪' },
-      cold:      { en:'Things that are cold',           tr:'Soğuk şeyler',                   emoji:'❄️' },
-      hot:       { en:'Things that are hot',            tr:'Sıcak şeyler',                   emoji:'🔥' },
-      loud:      { en:'Things that are loud',           tr:'Gürültülü şeyler',               emoji:'📢' },
-      soft:      { en:'Things that are soft',           tr:'Yumuşak şeyler',                 emoji:'🧸' },
-      sharp:     { en:'Things that are sharp',          tr:'Keskin şeyler',                  emoji:'🔪' },
-      fast:      { en:'Things that are fast',           tr:'Hızlı şeyler',                   emoji:'⚡' },
-      slow:      { en:'Things that are slow',           tr:'Yavaş şeyler',                   emoji:'🐌' },
-      tiny:      { en:'Things that are tiny',           tr:'Minik şeyler',                   emoji:'🐜' },
-      huge:      { en:'Things that are huge',           tr:'Kocaman şeyler',                 emoji:'🐘' },
-      yellow:    { en:'Yellow things',                  tr:'Sarı şeyler',                    emoji:'🟡' },
-      red:       { en:'Red things',                     tr:'Kırmızı şeyler',                 emoji:'🔴' },
-      green:     { en:'Green things',                   tr:'Yeşil şeyler',                   emoji:'🟢' },
-      fly:       { en:'Things that fly',                tr:'Uçan şeyler',                    emoji:'🕊️' },
-      float:     { en:'Things that float',              tr:'Yüzen şeyler',                   emoji:'🛟' },
-      bounce:    { en:'Things that bounce',             tr:'Zıplayan şeyler',                emoji:'🏀' },
-      spin:      { en:'Things that spin',               tr:'Dönen şeyler',                   emoji:'🌀' },
-      melt:      { en:'Things that melt',               tr:'Eriyen şeyler',                  emoji:'🍦' },
-      grow:      { en:'Things that grow',               tr:'Büyüyen şeyler',                 emoji:'🌱' },
-      shine:     { en:'Things that shine',              tr:'Parlayan şeyler',                emoji:'✨' },
-      wheels:    { en:'Things with wheels',             tr:'Tekerlekli şeyler',              emoji:'🚗' },
-      buttons:   { en:'Things with buttons',            tr:'Düğmeli şeyler',                 emoji:'🎛️' },
-      hold:      { en:'Things you hold in one hand',    tr:'Tek elle tuttuğun şeyler',       emoji:'✋' },
-      wear:      { en:'Things you wear',                tr:'Giydiğin şeyler',                emoji:'🧢' },
-      pocket:    { en:'Things in your pocket',          tr:'Cebindeki şeyler',               emoji:'🔑' },
-      kitchen:   { en:'Things in a kitchen',            tr:'Mutfaktaki şeyler',              emoji:'🍴' },
-      beach:     { en:'Things at the beach',            tr:'Plajdaki şeyler',                emoji:'🏖️' },
-      sky:       { en:'Things in the sky',              tr:'Gökyüzündeki şeyler',            emoji:'☁️' },
-      breakfast: { en:'Things you eat for breakfast',   tr:'Kahvaltıda yediğin şeyler',      emoji:'🍳' },
-      party:     { en:'Things at a birthday party',     tr:'Doğum günü partisindeki şeyler', emoji:'🎂' },
-      pairs:     { en:'Things that come in pairs',      tr:'Çift gelen şeyler',              emoji:'🧦' },
-      blow:      { en:'Things you blow',                tr:'Üflediğin şeyler',               emoji:'🎈' },
-      open:      { en:'Things you open',                tr:'Açtığın şeyler',                 emoji:'🚪' },
-      breakable: { en:'Things that break easily',       tr:'Kolay kırılan şeyler',           emoji:'🥚' },
-      wet:       { en:'Things that are wet',            tr:'Islak şeyler',                   emoji:'💧' },
-      scary:     { en:'Things that are scary',          tr:'Korkutucu şeyler',               emoji:'👻' },
-      smell:     { en:'Things that smell nice',         tr:'Güzel kokan şeyler',             emoji:'🌸' },
-      light:     { en:'Things that light up',           tr:'Işık veren şeyler',              emoji:'💡' },
+      // ⭐ classic — describe-style originals (attributes & behaviours)
+      sticky:    { en:'Things that are sticky',         tr:'Yapışkan şeyler',                emoji:'🍯', pack:'classic' },
+      round:     { en:'Things that are round',          tr:'Yuvarlak şeyler',                emoji:'⚪', pack:'classic' },
+      cold:      { en:'Things that are cold',           tr:'Soğuk şeyler',                   emoji:'❄️', pack:'classic' },
+      hot:       { en:'Things that are hot',            tr:'Sıcak şeyler',                   emoji:'🔥', pack:'classic' },
+      loud:      { en:'Things that are loud',           tr:'Gürültülü şeyler',               emoji:'📢', pack:'classic' },
+      soft:      { en:'Things that are soft',           tr:'Yumuşak şeyler',                 emoji:'🧸', pack:'classic' },
+      sharp:     { en:'Things that are sharp',          tr:'Keskin şeyler',                  emoji:'🔪', pack:'classic' },
+      fast:      { en:'Things that are fast',           tr:'Hızlı şeyler',                   emoji:'⚡', pack:'classic' },
+      slow:      { en:'Things that are slow',           tr:'Yavaş şeyler',                   emoji:'🐌', pack:'classic' },
+      tiny:      { en:'Things that are tiny',           tr:'Minik şeyler',                   emoji:'🐜', pack:'classic' },
+      huge:      { en:'Things that are huge',           tr:'Kocaman şeyler',                 emoji:'🐘', pack:'classic' },
+      yellow:    { en:'Yellow things',                  tr:'Sarı şeyler',                    emoji:'🟡', pack:'classic' },
+      red:       { en:'Red things',                     tr:'Kırmızı şeyler',                 emoji:'🔴', pack:'classic' },
+      green:     { en:'Green things',                   tr:'Yeşil şeyler',                   emoji:'🟢', pack:'classic' },
+      fly:       { en:'Things that fly',                tr:'Uçan şeyler',                    emoji:'🕊️', pack:'classic' },
+      float:     { en:'Things that float',              tr:'Yüzen şeyler',                   emoji:'🛟', pack:'classic' },
+      bounce:    { en:'Things that bounce',             tr:'Zıplayan şeyler',                emoji:'🏀', pack:'classic' },
+      spin:      { en:'Things that spin',               tr:'Dönen şeyler',                   emoji:'🌀', pack:'classic' },
+      melt:      { en:'Things that melt',               tr:'Eriyen şeyler',                  emoji:'🍦', pack:'classic' },
+      grow:      { en:'Things that grow',               tr:'Büyüyen şeyler',                 emoji:'🌱', pack:'classic' },
+      shine:     { en:'Things that shine',              tr:'Parlayan şeyler',                emoji:'✨', pack:'classic' },
+      breakable: { en:'Things that break easily',       tr:'Kolay kırılan şeyler',           emoji:'🥚', pack:'classic' },
+      wet:       { en:'Things that are wet',            tr:'Islak şeyler',                   emoji:'💧', pack:'classic' },
+      smell:     { en:'Things that smell nice',         tr:'Güzel kokan şeyler',             emoji:'🌸', pack:'classic' },
+      light:     { en:'Things that light up',           tr:'Işık veren şeyler',              emoji:'💡', pack:'classic' },
+      // 🏠 everyday — home life, routines, stuff on you
+      wheels:    { en:'Things with wheels',             tr:'Tekerlekli şeyler',              emoji:'🚗', pack:'everyday' },
+      buttons:   { en:'Things with buttons',            tr:'Düğmeli şeyler',                 emoji:'🎛️', pack:'everyday' },
+      hold:      { en:'Things you hold in one hand',    tr:'Tek elle tuttuğun şeyler',       emoji:'✋', pack:'everyday' },
+      wear:      { en:'Things you wear',                tr:'Giydiğin şeyler',                emoji:'🧢', pack:'everyday' },
+      pocket:    { en:'Things in your pocket',          tr:'Cebindeki şeyler',               emoji:'🔑', pack:'everyday' },
+      kitchen:   { en:'Things in a kitchen',            tr:'Mutfaktaki şeyler',              emoji:'🍴', pack:'everyday' },
+      pairs:     { en:'Things that come in pairs',      tr:'Çift gelen şeyler',              emoji:'🧦', pack:'everyday' },
+      blow:      { en:'Things you blow',                tr:'Üflediğin şeyler',               emoji:'🎈', pack:'everyday' },
+      open:      { en:'Things you open',                tr:'Açtığın şeyler',                 emoji:'🚪', pack:'everyday' },
+      fridge:    { en:'Things in the fridge',           tr:'Buzdolabındaki şeyler',          emoji:'🧊', pack:'everyday' },
+      bathroom:  { en:'Things in a bathroom',           tr:'Banyodaki şeyler',               emoji:'🛁', pack:'everyday' },
+      charge:    { en:'Things you charge',              tr:'Şarj ettiğin şeyler',            emoji:'🔌', pack:'everyday' },
+      bag:       { en:'Things in a school bag',         tr:'Okul çantasındaki şeyler',       emoji:'🎒', pack:'everyday' },
+      morning:   { en:'Things you do every morning',    tr:'Her sabah yaptığın şeyler',      emoji:'⏰', pack:'everyday' },
+      // 🌍 places — out & about, occasions
+      beach:     { en:'Things at the beach',            tr:'Plajdaki şeyler',                emoji:'🏖️', pack:'places' },
+      sky:       { en:'Things in the sky',              tr:'Gökyüzündeki şeyler',            emoji:'☁️', pack:'places' },
+      party:     { en:'Things at a birthday party',     tr:'Doğum günü partisindeki şeyler', emoji:'🎂', pack:'places' },
+      school:    { en:'Things at school',               tr:'Okuldaki şeyler',                emoji:'🏫', pack:'places' },
+      cinema:    { en:'Things at the cinema',           tr:'Sinemadaki şeyler',              emoji:'🍿', pack:'places' },
+      hospital:  { en:'Things at a hospital',           tr:'Hastanedeki şeyler',             emoji:'🏥', pack:'places' },
+      plane:     { en:'Things on a plane',              tr:'Uçaktaki şeyler',                emoji:'✈️', pack:'places' },
+      market:    { en:'Things at the supermarket',      tr:'Marketteki şeyler',              emoji:'🛒', pack:'places' },
+      wedding:   { en:'Things at a wedding',            tr:'Düğündeki şeyler',               emoji:'💍', pack:'places' },
+      gym:       { en:'Things at the gym',              tr:'Spor salonundaki şeyler',        emoji:'🏋️', pack:'places' },
+      car:       { en:'Things in a car',                tr:'Arabadaki şeyler',               emoji:'🚙', pack:'places' },
+      camping:   { en:'Things you take camping',        tr:'Kampa götürdüğün şeyler',        emoji:'⛺', pack:'places' },
+      garden:    { en:'Things in a garden',             tr:'Bahçedeki şeyler',               emoji:'🌷', pack:'places' },
+      // 😂 funny — relatable & sneaky (the Sidemen-style pack)
+      scary:     { en:'Things that are scary',          tr:'Korkutucu şeyler',               emoji:'👻', pack:'funny' },
+      gross:     { en:'Things that are gross',          tr:'İğrenç şeyler',                  emoji:'🤢', pack:'funny' },
+      stink:     { en:'Things that smell bad',          tr:'Kötü kokan şeyler',              emoji:'🦨', pack:'funny' },
+      annoy:     { en:'Things that are annoying',       tr:'Sinir bozucu şeyler',            emoji:'😤', pack:'funny' },
+      late:      { en:'Excuses for being late',         tr:'Geç kalma bahaneleri',           emoji:'🏃', pack:'funny' },
+      lose:      { en:'Things people always lose',      tr:'Herkesin kaybettiği şeyler',     emoji:'🔍', pack:'funny' },
+      cry:       { en:'Things that make you cry',       tr:'Ağlatan şeyler',                 emoji:'😭', pack:'funny' },
+      wait:      { en:'Things you wait for',            tr:'Beklediğin şeyler',              emoji:'⏳', pack:'funny' },
+      notouch:   { en:'Things you shouldn\'t touch',    tr:'Dokunmaman gereken şeyler',      emoji:'🚫', pack:'funny' },
+      kid:       { en:'Things you loved as a kid',      tr:'Çocukken bayıldığın şeyler',     emoji:'🪁', pack:'funny' },
+      pretend:   { en:'Things people pretend to like',  tr:'İnsanların sever gibi yaptığı şeyler', emoji:'🎭', pack:'funny' },
+      embarrass: { en:'Things that are embarrassing',   tr:'Utandıran şeyler',               emoji:'😳', pack:'funny' },
+      borrow:    { en:'Things people borrow and never return', tr:'Ödünç alınıp geri gelmeyen şeyler', emoji:'🤝', pack:'funny' },
+      // 🍔 food — edible everything
+      breakfast: { en:'Things you eat for breakfast',   tr:'Kahvaltıda yediğin şeyler',      emoji:'🍳', pack:'food' },
+      sweet:     { en:'Things that are sweet',          tr:'Tatlı şeyler',                   emoji:'🍬', pack:'food' },
+      spicy:     { en:'Things that are spicy',          tr:'Acı şeyler',                     emoji:'🌶️', pack:'food' },
+      crunchy:   { en:'Crunchy foods',                  tr:'Çıtır çıtır şeyler',             emoji:'🥨', pack:'food' },
+      bbq:       { en:'Things at a barbecue',           tr:'Mangaldaki şeyler',              emoji:'🍢', pack:'food' },
+      midnight:  { en:'Midnight snacks',                tr:'Gece atıştırmalıkları',          emoji:'🌙', pack:'food' },
+      hands:     { en:'Foods you eat with your hands',  tr:'Elle yediğin şeyler',            emoji:'🍕', pack:'food' },
+      colddrink: { en:'Cold drinks',                    tr:'Soğuk içecekler',                emoji:'🥤', pack:'food' },
+      hotdrink:  { en:'Hot drinks',                     tr:'Sıcak içecekler',                emoji:'☕', pack:'food' },
+      picnic:    { en:'Things at a picnic',             tr:'Piknikteki şeyler',              emoji:'🧺', pack:'food' },
+      dip:       { en:'Things you dip',                 tr:'Sosa bandığın şeyler',           emoji:'🍟', pack:'food' },
+      chocolate: { en:'Things with chocolate',          tr:'Çikolatalı şeyler',              emoji:'🍫', pack:'food' },
     };
+
+    // Theme packs for the "Theme pack" setting in Guess the Theme. Order here =
+    // display order in the picker; 'mixed' is virtual (= every pack). A pack
+    // whose last theme is deleted from LINKS auto-hides from the picker.
+    const LINK_PACKS = {
+      mixed:    { emoji:'🎲', labelKey:'pack.mixed' },
+      classic:  { emoji:'⭐', labelKey:'pack.classic' },
+      everyday: { emoji:'🏠', labelKey:'pack.everyday' },
+      places:   { emoji:'🌍', labelKey:'pack.places' },
+      funny:    { emoji:'😂', labelKey:'pack.funny' },
+      food:     { emoji:'🍔', labelKey:'pack.food' },
+    };
+    // All theme keys in a pack ('mixed'/unknown → the whole pool).
+    function linkPackKeys(pack){
+      const all = Object.keys(LINKS);
+      if (!pack || pack === 'mixed' || !LINK_PACKS[pack]) return all;
+      return all.filter(k => LINKS[k].pack === pack);
+    }
 
     // ---------- State ----------
     const state = {
       mode: null,
       meId: 'jordan',             // who I am on this device (real multiplayer = logged-in user)
       category: 'mixed',
+      themePack: 'mixed',         // Guess the Theme draw pool — a LINK_PACKS key
       rounds: 1,
       order: 'rotating',          // 'rotating' | 'random' | 'host'
       currentRound: 1,
@@ -766,6 +844,13 @@
         if (bd && bd.classList.contains('active') && typeof closeLobbyInviteSheet === 'function') {
           closeLobbyInviteSheet();
         }
+        // Same for the mode-settings sheet — e.g. a non-host is reading the
+        // settings when the host starts the game.
+        const msbd = document.getElementById('hot-modeset-backdrop');
+        if (msbd && msbd.classList.contains('active')) closeHotModeSettings();
+        // …and the theme-pack picker stacked on top of it.
+        const lpbd = document.getElementById('linkpack-backdrop');
+        if (lpbd && lpbd.classList.contains('active')) closeLinkPackSheet();
       }
       if (state.phase === 'lobby') { renderLobbyPlayers(); renderSettings(); updateHowToTrigger(); if (typeof renderLobbyInvites === 'function') renderLobbyInvites('hotseat'); }
       else if (state.phase === 'splash') applySplashContent();
@@ -802,6 +887,7 @@
         // grab the host role or steal seat 0 (last-write-wins on Supabase).
         meId: firstSeat || null,
         category: 'mixed',
+        themePack: 'mixed',
         rounds: 1,
         order: 'rotating',
         currentRound: 1,
@@ -999,7 +1085,7 @@
     }
 
     // Update the lobby's how-to-play trigger sub-text + pulse state to reflect state.mode.
-    // Called whenever mode changes (setMode / applyRecommended), the lobby reopens, or the
+    // Called whenever mode changes (setMode), the lobby reopens, or the
     // language switches (applyLang would otherwise leave the sub stale).
     function updateHowToTrigger(){
       const subEl = document.getElementById('howto-trigger-sub');
@@ -1332,12 +1418,10 @@
       }
       if (screen === 'friends') friendsLoad();
       if (screen === 'lobby')   renderLobbyPlayers();
-      // SETTINGS dropdown: always start collapsed on lobby entry (host or guest,
-      // fresh open or re-entry). Auto-expand intentionally NOT done per design.
-      if (screen === 'lobby') {
-        const el = document.getElementById('hot-settings-collapse');
-        if (el) { el.classList.remove('expanded'); const btn = el.querySelector('.settings-collapse-header'); if (btn) btn.setAttribute('aria-expanded','false'); }
-      }
+      // SETTINGS dropdown (Chameleon only — Hot Seat's settings moved into the
+      // mode-settings sheet next to Start game, see renderHotModeSettings):
+      // always start collapsed on lobby entry (host or guest, fresh open or
+      // re-entry). Auto-expand intentionally NOT done per design.
       if (screen === 'cham-lobby') {
         const el = document.getElementById('cham-settings-collapse');
         if (el) { el.classList.remove('expanded'); const btn = el.querySelector('.settings-collapse-header'); if (btn) btn.setAttribute('aria-expanded','false'); }
@@ -1425,6 +1509,10 @@
     // ---------- Lobby ----------
     async function openLobby(_legacyMode) {
       document.getElementById('lobby-title').textContent = t('lobby.title');
+      // Fresh lobby entry → forget that settings were ever viewed, so the
+      // first Start tap re-offers the mode-settings sheet (per device+entry).
+      hotModeSetSeen = false;
+      hotModeSetStartFlow = false;
       // Drop any seat we still hold in OTHER game lobbies before claiming
       // one here — invariant: one user, one seat across all games.
       try { huddleLeaveOtherGameSeats('hotseat'); } catch(e){}
@@ -1592,8 +1680,9 @@
       return `<button class="info-btn" data-action="showInfo" data-arg="${key}" aria-label="What's this?">i</button>`;
     }
 
-    // Shared between Hot Seat ('hot') and Chameleon ('cham') lobbies. Flips
-    // the .expanded class on the wrapper; goTo() resets to closed on lobby entry.
+    // Chameleon lobby only since the Hot Seat collapse was replaced by the
+    // mode-settings sheet (renderHotModeSettings). Flips the .expanded class
+    // on the wrapper; goTo() resets to closed on lobby entry.
     function toggleSettingsCollapse(which){
       const id = which === 'cham' ? 'cham-settings-collapse' : 'hot-settings-collapse';
       const el = document.getElementById(id);
@@ -1605,21 +1694,6 @@
 
     function renderSettings() {
       const list = document.getElementById('settings-list');
-      const recWrap = document.getElementById('btn-recommended-wrap');
-
-      const roundsSeg = [1,2,3,5].map(r =>
-        `<button data-action="setRounds" data-arg="${r}" class="${state.rounds===r?'active':''}">${r}</button>`
-      ).join('');
-
-      const orderSeg = [
-        {v:'rotating',k:'order.rotating'},
-        {v:'random',k:'order.random'},
-        {v:'host',k:'order.host'},
-      ].map(o =>
-        `<button data-action="setOrder" data-arg="${o.v}" class="${state.order===o.v?'active':''}">${t(o.k)}</button>`
-      ).join('');
-
-      const recActive = state.mode === 'classic' && state.category === 'mixed' && state.rounds === 1 && state.order === 'rotating';
 
       // Inline mode hint — shown for the non-default modes, explains the rule twist
       // right beneath the Mode row so the user doesn't have to leave the lobby to learn.
@@ -1638,17 +1712,6 @@
         </div>`;
       }
 
-      recWrap.innerHTML = `
-        <button class="btn-recommended${recActive ? ' applied' : ''}" id="btn-recommended" data-action="applyRecommended">
-          <div class="btn-recommended-icon">✨</div>
-          <div class="btn-recommended-text">
-            <div class="btn-recommended-title">${t('lobby.useRecommended')}</div>
-            <div class="btn-recommended-sub">${t('lobby.useRecommendedSub')}</div>
-          </div>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="m9 18 6-6-6-6"></path></svg>
-        </button>
-      `;
-
       list.innerHTML = `
         <div class="setting-row" data-action="openModeSheet" style="cursor:pointer">
           <div class="setting-row-label">${t('lobby.mode')}</div>
@@ -1657,41 +1720,120 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
           </div>
         </div>
-        ${state.mode === 'link' ? '' : `
-        <div class="setting-row" data-action="openCategorySheet" style="cursor:pointer">
-          <div class="setting-row-label">${t('lobby.category')}</div>
-          <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
-            <span>${t('cat.' + state.category)}</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
-          </div>
-        </div>`}
-        ${state.mode === 'link' ? '' : `
-        <div class="setting-row">
-          <div class="setting-row-label">${t('lobby.rounds')} ${infoIcon('rounds')}</div>
-          <div class="seg">${roundsSeg}</div>
-        </div>
-        <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
-          <div class="setting-row-label">${t('lobby.order')} ${infoIcon('order')}</div>
-          <div class="seg full">${orderSeg}</div>
-        </div>`}
       `;
 
       const hintSlot = document.getElementById('mode-hint-slot');
       if (hintSlot) hintSlot.innerHTML = modeHintHTML;
+
+      // Keep the mode-settings sheet in step — mode/category/rounds/order can
+      // change under an open sheet via realtime (e.g. a non-host is looking at
+      // it while the host edits), and the seg .active states live there now.
+      renderHotModeSettings();
     }
 
-    // "Selected" indicator is derived in renderSettings() from state matching the recommended preset.
-    // No manual class flips, no setTimeout flash — change a setting, the border disappears automatically.
-    function applyRecommended() {
-      if (state.code && !hotIsHost()) return;
-      // Optimistic local update; server-validated via RPC.
-      state.mode = 'classic';
-      state.category = 'mixed';
-      state.rounds = 1;
-      state.order = 'rotating';
-      if (state.code) huddleCallRPC('huddle_hot_apply_recommended', { p_code: state.code });
-      renderSettings();
-      if (typeof updateHowToTrigger === 'function') updateHowToTrigger();
+    // ---------- Mode settings sheet (gear button next to Start game) ----------
+    // Every setting except Mode lives here: Classic/Silent → Category + Rounds +
+    // Hot seat order; Guess the Theme → no extra settings yet (secret themes are
+    // drawn automatically — see pickLink). Everyone can open the sheet; only the
+    // host can change values (the setters are host-gated). The FIRST Start-game
+    // tap in a lobby entry auto-opens it with an in-sheet Start button so the
+    // host always sees the setup once before playing (see startGame).
+    let hotModeSetSeen = false;      // "opened the sheet at least once" — reset on lobby entry
+    let hotModeSetStartFlow = false; // true only while auto-opened by a Start-game tap
+
+    function renderHotModeSettings(){
+      const titleEl = document.getElementById('hot-modeset-title');
+      const subEl   = document.getElementById('hot-modeset-sub');
+      const listEl  = document.getElementById('hot-modeset-list');
+      const extraEl = document.getElementById('hot-modeset-extra');
+      const footEl  = document.getElementById('hot-modeset-footer');
+      if (!titleEl || !subEl || !listEl || !extraEl || !footEl) return;
+
+      titleEl.textContent = t('mode.' + state.mode) + ' — ' + t('lobby.settings');
+      subEl.textContent = t('mode.sub_' + state.mode);
+
+      if (state.mode === 'link') {
+        // Guess the Theme's one setting: which THEME PACK feeds the draw pool
+        // (see LINKS/LINK_PACKS). Row mirrors the Category row's look & flow.
+        const packKey = LINK_PACKS[state.themePack] ? state.themePack : 'mixed';
+        const pk = LINK_PACKS[packKey];
+        listEl.style.display = '';
+        listEl.innerHTML = `
+          <div class="setting-row" data-action="openLinkPackSheet" style="cursor:pointer">
+            <div class="setting-row-label">${t('lobby.themePack')}</div>
+            <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
+              <span>${pk.emoji} ${t(pk.labelKey)}</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
+            </div>
+          </div>
+        `;
+      } else {
+        const roundsSeg = [1,2,3,5].map(r =>
+          `<button data-action="setRounds" data-arg="${r}" class="${state.rounds===r?'active':''}">${r}</button>`
+        ).join('');
+        const orderSeg = [
+          {v:'rotating',k:'order.rotating'},
+          {v:'random',k:'order.random'},
+          {v:'host',k:'order.host'},
+        ].map(o =>
+          `<button data-action="setOrder" data-arg="${o.v}" class="${state.order===o.v?'active':''}">${t(o.k)}</button>`
+        ).join('');
+        listEl.style.display = '';
+        listEl.innerHTML = `
+          <div class="setting-row" data-action="openCategorySheet" style="cursor:pointer">
+            <div class="setting-row-label">${t('lobby.category')}</div>
+            <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:14px">
+              <span>${t('cat.' + state.category)}</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-row-label">${t('lobby.rounds')} ${infoIcon('rounds')}</div>
+            <div class="seg">${roundsSeg}</div>
+          </div>
+          <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
+            <div class="setting-row-label">${t('lobby.order')} ${infoIcon('order')}</div>
+            <div class="seg full">${orderSeg}</div>
+          </div>
+        `;
+      }
+
+      let extraHTML = '';
+      // Non-host: values are view-only (the setters are host-gated) — say so.
+      if (state.hostId && !hotIsHost()) {
+        extraHTML += `<div class="modeset-note">🔒 ${t('modeset.hostOnly')}</div>`;
+      }
+      extraEl.innerHTML = extraHTML;
+
+      // In-sheet Start button — ONLY when the sheet was auto-opened by a Start
+      // tap, so the host reviews the setup and starts in one flow.
+      footEl.innerHTML = (hotModeSetStartFlow && hotIsHost())
+        ? `<button class="btn btn-primary btn-lg" style="width:100%;margin-top:16px" data-action="hotModeSetStartFromSheet">${t('lobby.startGame')}</button>`
+        : '';
+      parseEmoji(listEl);
+      parseEmoji(extraEl);
+    }
+    function openHotModeSettings(){
+      hotModeSetSeen = true;
+      hotModeSetStartFlow = false;
+      renderHotModeSettings();
+      const bd = document.getElementById('hot-modeset-backdrop');
+      if (bd) bd.classList.add('active');
+    }
+    function closeHotModeSettings(){
+      const bd = document.getElementById('hot-modeset-backdrop');
+      if (bd) bd.classList.remove('active');
+      if (hotModeSetStartFlow) {
+        // Dismissed without starting — drop the in-sheet Start button so a
+        // later gear-open shows a plain settings sheet again.
+        hotModeSetStartFlow = false;
+        renderHotModeSettings();
+      }
+    }
+    function hotModeSetStartFromSheet(){
+      hotModeSetStartFlow = false;
+      closeHotModeSettings();
+      startGame();
     }
     function setMode(m){
       if (state.code && !hotIsHost()) return;
@@ -1736,6 +1878,40 @@
       setMode(m);
       setTimeout(() => document.getElementById('mode-backdrop').classList.remove('active'), 140);
     }
+
+    // ---------- Theme-pack picker (Guess the Theme; mirrors mode/category pickers) ----------
+    // Packs render from LINK_PACKS + LINKS, so adding/removing themes or packs
+    // in those maps updates this picker (and its counts) automatically.
+    function renderLinkPackOptions(){
+      const wrap = document.getElementById('linkpack-options');
+      if (!wrap) return;
+      const active = LINK_PACKS[state.themePack] ? state.themePack : 'mixed';
+      wrap.innerHTML = Object.keys(LINK_PACKS)
+        .filter(p => linkPackKeys(p).length > 0)
+        .map(p => `
+        <button class="theme-option${active === p ? ' active' : ''}" data-action="pickLinkPack" data-arg="${p}">
+          <span class="theme-option-icon" style="background:var(--bg-subtle)">${LINK_PACKS[p].emoji}</span>
+          <span class="theme-option-text">
+            <span class="theme-option-title">${t(LINK_PACKS[p].labelKey)}</span>
+            <span class="theme-option-sub">${t('themePack.count', { n: linkPackKeys(p).length })}</span>
+          </span>
+          <svg class="theme-option-check" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        </button>
+      `).join('');
+      parseEmoji(wrap);
+    }
+    function openLinkPackSheet(){
+      renderLinkPackOptions();
+      document.getElementById('linkpack-backdrop').classList.add('active');
+    }
+    function closeLinkPackSheet(){
+      document.getElementById('linkpack-backdrop').classList.remove('active');
+    }
+    function pickLinkPack(p){
+      setThemePack(p);
+      setTimeout(closeLinkPackSheet, 140);
+    }
+    function setThemePack(p){ if (state.code && !hotIsHost()) return; if (!LINK_PACKS[p]) p = 'mixed'; state.themePack = p; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'themePack', p_value: p }); renderSettings(); }
     function setCategory(c){ if (state.code && !hotIsHost()) return; state.category = c; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'category', p_value: c }); renderSettings(); }
     function setRounds(r){ r = Number(r); if (state.code && !hotIsHost()) return; state.rounds = r; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'rounds', p_value: r }); renderSettings(); }
     function setOrder(o){ if (state.code && !hotIsHost()) return; state.order = o; if (state.code) huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'order', p_value: o }); renderSettings(); }
@@ -1772,6 +1948,19 @@
       }
       if (!hotIsHost()) return;
       if (hotClaimedCount() < 2 || !hotMe.myId) return;
+      // First Start tap in this lobby entry WITHOUT ever opening the settings
+      // sheet → show the sheet first (with its own Start button) so the host
+      // reviews the setup before the game begins. Lobby-only: "Play again"
+      // re-enters startGame from the result screen and must never bounce
+      // through the sheet.
+      if (_activeEl && _activeEl.id === 'screen-lobby' && !hotModeSetSeen) {
+        hotModeSetSeen = true;
+        hotModeSetStartFlow = true;
+        renderHotModeSettings();
+        const msbd = document.getElementById('hot-modeset-backdrop');
+        if (msbd) msbd.classList.add('active');
+        return;
+      }
       // Guess the Theme: ALWAYS start with a RANDOM hot-seat player. After that,
       // the "whoever gives it away goes next" rule takes over from the result
       // screen (giverNext*). No fixed turn order / rounds here.
@@ -2011,7 +2200,11 @@
     // "Guess the Link" picker — mirrors pickWord but draws a secret-theme KEY
     // from LINKS, reusing state.usedWords so a single game never repeats a theme.
     function pickLink() {
-      const keys = Object.keys(LINKS);
+      // Draw only from the selected theme pack (lobby setting). An unknown or
+      // near-empty pack (old room state / a future pack edit) falls back to
+      // the whole pool so the game can never stall on a bad setting.
+      let keys = linkPackKeys(state.themePack);
+      if (keys.length < 3) keys = Object.keys(LINKS);
       if (!Array.isArray(state.usedWords)) state.usedWords = [];
       const remaining = keys.filter(k => state.usedWords.indexOf(k) === -1);
       const pool = remaining.length > 0 ? remaining : keys;

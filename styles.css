@@ -5194,29 +5194,26 @@
       color:rgba(255,255,255,.65);margin-top:8px;
     }
 
-    /* ===== Recommended setup button ===== */
-    .btn-recommended{
-      width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;
-      background:linear-gradient(135deg,#f9f9f9 0%,#fff 100%);
-      border:1px solid var(--border);border-radius:var(--radius-md);
-      cursor:pointer;margin-bottom:12px;text-align:left;font:inherit;color:inherit;
-      transition:all .2s ease;
+    /* ===== Lobby mode block + mode-settings sheet (gear next to Start game) ===== */
+    /* Mode row wrapper in the lobby — mirrors the vertical rhythm the old settings
+       collapse had (.settings-collapse margin-bottom). */
+    .lobby-mode-block{margin-bottom:12px}
+    /* Start row: Start game stretches, the gear is a fixed square matching the
+       .btn-lg height (56px) so the pair reads as one control strip. */
+    .lobby-start-row{display:flex;gap:10px;align-items:stretch}
+    .lobby-start-row .btn-primary{flex:1;min-width:0}
+    .btn-modeset{
+      flex:0 0 56px;width:56px;height:56px;
+      display:flex;align-items:center;justify-content:center;
+      background:var(--bg-subtle);border:1px solid var(--border-strong);
+      border-radius:var(--radius-lg);color:var(--text);cursor:pointer;padding:0;
+      transition:border-color .15s ease;
     }
-    .btn-recommended:hover{border-color:var(--text);transform:translateY(-1px)}
-    .btn-recommended-icon{
-      font-size:18px;width:32px;height:32px;border-radius:50%;
-      background:var(--bg-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0;
-    }
-    .btn-recommended-text{flex:1;min-width:0}
-    .btn-recommended-title{font-weight:600;font-size:14px;letter-spacing:-.005em}
-    .btn-recommended-sub{font-size:12px;color:var(--text-secondary);margin-top:1px}
-    /* Selected state: single 2px border in var(--text). Padding shrinks by 1px to keep total
-       (border+padding) constant — no layout shift on toggle. ONE drawing layer = perfectly
-       uniform around the rounded corners. Don't stack border + inset box-shadow (corner radii
-       differ by border-width, the two layers don't merge cleanly). */
-    .btn-recommended.applied{
-      border:2px solid var(--text);
-      padding:11px 13px;
+    .btn-modeset:hover,.btn-modeset:active{border-color:var(--text)}
+    /* "Only the host can change these settings" line inside the sheet. */
+    .modeset-note{
+      display:flex;align-items:center;justify-content:center;gap:6px;
+      margin-top:12px;font-size:12.5px;color:var(--text-tertiary);text-align:center;
     }
 
     /* ===== Role splash screen ===== */
@@ -5337,7 +5334,6 @@
        scannable AND pops nicely against the dark room-code-card gradient. */
     [data-theme="dark"] .room-qr-wrap{background:#fff}
     [data-theme="dark"] .room-qr{background:#fff}
-    [data-theme="dark"] .btn-recommended{background:linear-gradient(135deg,var(--surface) 0%,var(--surface-elevated) 100%)}
     /* Mini-phone mockups in How-to-play modal — give them visible frames
        and a light inner screen so the illustration reads at a glance. */
     [data-theme="dark"] .mp{

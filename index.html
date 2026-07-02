@@ -917,6 +917,28 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
       </div>
     </div>
 
+    <!-- ============ MODE SETTINGS SHEET (lobby) ============ -->
+    <!-- Opened by the gear button next to Start game. Shows the settings for the CURRENT mode
+         (Classic/Silent: Category + Rounds + Hot seat order; Guess the Theme: none yet). Also
+         auto-opens the first time the host taps Start in a room without having looked at the
+         settings — in that flow it carries its own Start game button (see startGame /
+         hotModeSetStartFromSheet in app-01). Content rendered by renderHotModeSettings().
+         MUST stay BEFORE the category sheet in the DOM: equal z-index means later-DOM paints
+         on top, so the Category picker opened from inside this sheet stacks ABOVE it. -->
+    <div class="sheet-backdrop" id="hot-modeset-backdrop" data-action="closeHotModeSettings" data-action-self>
+      <div class="sheet" style="position:relative">
+        <button class="icon-btn" data-action="closeHotModeSettings" aria-label="Close" data-i18n-aria="common.close" style="position:absolute;top:8px;right:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" id="hot-modeset-title">Settings</div>
+        <div class="sheet-body" id="hot-modeset-sub" style="margin-bottom:14px"></div>
+        <div class="menu-list" id="hot-modeset-list"><!-- populated by renderHotModeSettings() --></div>
+        <div id="hot-modeset-extra"><!-- no-settings hint (Guess the Theme) + host-only note --></div>
+        <div id="hot-modeset-footer"><!-- Start game button, only in the tap-Start-first flow --></div>
+      </div>
+    </div>
+
     <!-- ============ MODE PICKER SHEET (lobby) ============ -->
     <!-- Same UX contract as Theme/Language/Category pickers: bottom sheet, .theme-option rows
          with checkmark on the active option. Mode controls the rule variant for this Hot Seat
@@ -945,6 +967,23 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
         <div class="sheet-title" data-i18n="lobby.category">Category</div>
         <div class="sheet-body" data-i18n="category.sub" style="margin-bottom:14px">Choose which words to play with.</div>
         <div class="theme-options" id="category-options"><!-- populated by renderCategoryOptions() --></div>
+      </div>
+    </div>
+
+    <!-- ============ THEME PACK PICKER SHEET (Guess the Theme settings) ============ -->
+    <!-- Opened from the mode-settings sheet when mode = Guess the Theme. Same UX contract
+         as the Mode/Category pickers. MUST stay AFTER #hot-modeset-backdrop in the DOM:
+         equal z-index means later-DOM paints on top, so this picker stacks ABOVE the
+         settings sheet it was opened from (same trick as the Category sheet). -->
+    <div class="sheet-backdrop" id="linkpack-backdrop" data-action="closeLinkPackSheet" data-action-self>
+      <div class="sheet" style="position:relative">
+        <button class="icon-btn" data-action="closeLinkPackSheet" aria-label="Close" data-i18n-aria="common.close" style="position:absolute;top:8px;right:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" data-i18n="lobby.themePack">Theme pack</div>
+        <div class="sheet-body" data-i18n="themePack.sub" style="margin-bottom:14px">Pick which themes can come up this game.</div>
+        <div class="theme-options" id="linkpack-options"><!-- populated by renderLinkPackOptions() --></div>
       </div>
     </div>
 
@@ -993,24 +1032,16 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
           <svg class="howto-trigger-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
         </button>
 
-        <!-- SETTINGS collapsible. Closed by default each lobby entry (see goTo). Header tap toggles
-             .expanded on the wrapper, revealing recommended button + Mode/Category/Rounds/Order. -->
-        <div class="settings-collapse" id="hot-settings-collapse">
-          <button class="settings-collapse-header" type="button" data-action="toggleSettingsCollapse" data-arg="hot" aria-expanded="false" aria-controls="hot-settings-body">
-            <div class="settings-collapse-header-label" data-i18n="lobby.settings">Settings</div>
-            <svg class="settings-collapse-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
-          </button>
-          <div class="settings-collapse-body" id="hot-settings-body">
-            <!-- Recommended preset lives OUTSIDE the settings card — parent .menu-list has overflow:hidden
-                 which clips child outlines at the rounded corners. Keep preset-applier buttons free-standing. -->
-            <div id="btn-recommended-wrap"></div>
-            <div class="menu-list" id="settings-list">
-              <!-- populated by JS based on mode -->
-            </div>
-            <!-- Inline rule hint for non-classic modes. Lives outside the menu-list because the
-                 parent has overflow:hidden + rounded corners that would clip the hint card. -->
-            <div id="mode-hint-slot" style="margin-top:10px"></div>
+        <!-- MODE — the only setting that lives in the lobby. Everything else (Category /
+             Rounds / Hot seat order) moved into the mode-settings sheet opened by the gear
+             button next to Start game (see renderHotModeSettings in app-01). -->
+        <div class="lobby-mode-block">
+          <div class="menu-list" id="settings-list">
+            <!-- populated by renderSettings() — Mode row only -->
           </div>
+          <!-- Inline rule hint for non-classic modes. Lives outside the menu-list because the
+               parent has overflow:hidden + rounded corners that would clip the hint card. -->
+          <div id="mode-hint-slot" style="margin-top:10px"></div>
         </div>
 
         <div class="lobby-players-header">
@@ -1024,8 +1055,13 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
         <div class="hot-seats-hint" id="hot-seats-hint"></div>
 
         <div class="sticky-bottom">
-          <button class="btn btn-ghost lobby-lock-btn" type="button" id="hot-lock-btn" onclick="huddleToggleLock('hot')" style="display:none"></button>
-          <button class="btn btn-primary btn-lg" id="hot-start-btn" data-action="startGame" data-i18n="lobby.startGame" aria-disabled="true">Start game</button>
+          <button class="btn btn-ghost lobby-lock-btn" type="button" id="hot-lock-btn" data-action="huddleToggleLock" data-arg="hot" style="display:none"></button>
+          <div class="lobby-start-row">
+            <button class="btn btn-primary btn-lg" id="hot-start-btn" data-action="startGame" data-i18n="lobby.startGame" aria-disabled="true">Start game</button>
+            <button class="btn-modeset" type="button" id="hot-modeset-btn" data-action="openHotModeSettings" aria-label="Game settings" data-i18n-aria="lobby.gameSettings">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
       </main>
     </section>

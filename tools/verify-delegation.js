@@ -64,7 +64,7 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   const L = await page.evaluate(() => {
     goTo('lobby');
     const screen = document.getElementById('screen-lobby');
-    const names = ['startGame','hotLeaveRoom','regenerateHotRoom','backFromGameLobby','toggleSettingsCollapse','openHowTo'];
+    const names = ['startGame','hotLeaveRoom','regenerateHotRoom','backFromGameLobby','openHotModeSettings','huddleToggleLock','openHowTo'];
     const orig = {}, calls = {};
     names.forEach(n => { orig[n] = window[n]; window[n] = function(){ calls[n] = Array.from(arguments); }; });
     const fire = (act) => { const el = screen.querySelector('[data-action="' + act + '"]'); if (el) el.click(); return !!el; };
@@ -80,9 +80,22 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   results.push(['[hot-lobby] Leave button → hotLeaveRoom()', L.present.hotLeaveRoom && !!L.calls.hotLeaveRoom, JSON.stringify(L.calls.hotLeaveRoom || L.present.hotLeaveRoom)]);
   results.push(['[hot-lobby] Refresh-code → regenerateHotRoom()', L.present.regenerateHotRoom && !!L.calls.regenerateHotRoom, JSON.stringify(L.calls.regenerateHotRoom || L.present.regenerateHotRoom)]);
   results.push(['[hot-lobby] Back → backFromGameLobby("games")', L.calls.backFromGameLobby && L.calls.backFromGameLobby[0] === 'games', JSON.stringify(L.calls.backFromGameLobby)]);
-  results.push(['[hot-lobby] Settings toggle → toggleSettingsCollapse("hot")', L.calls.toggleSettingsCollapse && L.calls.toggleSettingsCollapse[0] === 'hot', JSON.stringify(L.calls.toggleSettingsCollapse)]);
+  results.push(['[hot-lobby] Settings gear → openHotModeSettings()', L.present.openHotModeSettings && !!L.calls.openHotModeSettings, JSON.stringify(L.calls.openHotModeSettings || L.present.openHotModeSettings)]);
+  results.push(['[hot-lobby] Lock button → huddleToggleLock("hot")', L.calls.huddleToggleLock && L.calls.huddleToggleLock[0] === 'hot', JSON.stringify(L.calls.huddleToggleLock)]);
   results.push(['[hot-lobby] How-to → openHowTo()', L.present.openHowTo && !!L.calls.openHowTo, JSON.stringify(L.calls.openHowTo || L.present.openHowTo)]);
   results.push(['[hot-lobby] no inline on* left (QR onerror allowed)', L.leftover.length === 0, JSON.stringify(L.leftover)]);
+
+  // Mode-settings sheet backdrop self-guard (data-action-self): inner clicks keep it
+  // open, a direct backdrop click closes it via the real closeHotModeSettings().
+  const MS = await page.evaluate(() => {
+    const bd = document.getElementById('hot-modeset-backdrop');
+    if (!bd) return { ok:false, why:'no hot-modeset-backdrop' };
+    const sheet = bd.querySelector('.sheet');
+    bd.classList.add('active'); sheet.click();
+    const stillOpen = bd.classList.contains('active'); bd.click();
+    return { ok: stillOpen && !bd.classList.contains('active'), stillOpen };
+  });
+  results.push(['[hot-lobby] mode-settings backdrop self-guard (inner keeps open, backdrop closes)', MS.ok, JSON.stringify(MS)]);
 
   const INV = await page.evaluate(() => {
     goTo('lobby');
@@ -99,13 +112,14 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   const Lspin = await page.evaluate(() => { goTo('lobby'); return !!document.querySelector('#screen-lobby .room-code-action button[data-action*="regenerateHotRoom"]'); });
   results.push(['[hot-lobby] regenerateHotRoom still finds its refresh button (data-action selector)', Lspin, JSON.stringify(Lspin)]);
 
-  // Dynamic settings controls (rounds/order) — only if renderSettings populated them.
+  // Dynamic settings controls (rounds/order) — now live in the mode-settings SHEET
+  // (#hot-modeset-list), populated by renderSettings() → renderHotModeSettings().
   const S = await page.evaluate(() => {
     goTo('lobby');
     try { if (typeof renderSettings === 'function') renderSettings(); } catch(e) { return { skipped:true, why:String(e.message||e) }; }
-    const rb = document.querySelector('#settings-list [data-action="setRounds"][data-arg="2"]');
-    const ob = document.querySelector('#settings-list [data-action="setOrder"]');
-    if (!rb && !ob) return { skipped:true, why:'settings not rendered (needs a mode)' };
+    const rb = document.querySelector('#hot-modeset-list [data-action="setRounds"][data-arg="2"]');
+    const ob = document.querySelector('#hot-modeset-list [data-action="setOrder"]');
+    if (!rb && !ob) return { skipped:true, why:'settings not rendered (link mode has none)' };
     const orig = { setRounds: window.setRounds, setOrder: window.setOrder }; const calls = {};
     window.setRounds = function(){ calls.setRounds = Array.from(arguments); };
     window.setOrder  = function(){ calls.setOrder  = Array.from(arguments); };
@@ -119,6 +133,23 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
     results.push(['[hot-lobby] rounds button → setRounds("2") (delegation passes string; fn coerces)', !!S.calls.setRounds && S.calls.setRounds[0] === '2', JSON.stringify(S.calls.setRounds)]);
     if (S.calls.setOrder) results.push(['[hot-lobby] order button → setOrder(arg)', !!S.calls.setOrder, JSON.stringify(S.calls.setOrder)]);
   }
+
+  // Guess the Theme: the mode-settings sheet shows a Theme-pack row that opens the
+  // pack picker (≥5 packs incl. Mixed, counts derived from LINKS); backdrop closes it.
+  const LP = await page.evaluate(() => {
+    goTo('lobby');
+    try { state.mode = 'link'; renderSettings(); } catch(e){ return { ok:false, why:String(e.message||e) }; }
+    const row = document.querySelector('#hot-modeset-list [data-action="openLinkPackSheet"]');
+    if (!row) { state.mode = 'classic'; renderSettings(); return { ok:false, why:'no theme-pack row' }; }
+    row.click();
+    const open = document.getElementById('linkpack-backdrop').classList.contains('active');
+    const opts = document.querySelectorAll('#linkpack-options [data-action="pickLinkPack"]').length;
+    document.getElementById('linkpack-backdrop').click();
+    const closed = !document.getElementById('linkpack-backdrop').classList.contains('active');
+    state.mode = 'classic'; renderSettings();
+    return { ok: open && opts >= 5 && closed, open, opts, closed };
+  });
+  results.push(['[hot-lobby] theme-pack row → picker opens, ≥5 packs, backdrop closes', LP.ok, JSON.stringify(LP)]);
 
   // ===================== CHAMELEON LOBBY =====================
   const C = await page.evaluate(() => {

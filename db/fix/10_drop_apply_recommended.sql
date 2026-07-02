@@ -1,0 +1,33 @@
+-- ============================================================================
+-- FIX — drop the retired huddle_hot_apply_recommended RPC
+-- ----------------------------------------------------------------------------
+-- WHY: the "Use recommended setup" button was removed from the Hot Seat lobby
+-- (2026-07-02 settings redesign — everything except Mode moved into the
+-- per-mode settings sheet next to Start game). This RPC was that button's ONLY
+-- caller; the client now has ZERO references to it (verified by grep across
+-- all js/html/css). An orphaned SECURITY DEFINER function that can still
+-- mutate room settings is pointless attack/maintenance surface — drop it.
+--
+-- WHY THIS IS SAFE:
+--   • Only ever called from the removed lobby button (huddle_c2_hot_lobby
+--     turn: reset mode/category/rounds/order to the preset). No other RPC,
+--     trigger, or client path uses it.
+--   • Existence + lockdown verified LIVE 2026-07-02 via the anon PostgREST
+--     probe: returns 42501 "permission denied for function
+--     huddle_hot_apply_recommended" (exists; anon/public already revoked).
+--   • Reversible: the full function body is preserved in
+--     db/archive/huddle_c2_hot_lobby.sql (~line 146) if it's ever wanted back.
+--
+-- NOTE: db/migrations/04_hotseat_rpcs.sql still contains the CREATE for this
+-- function. That file is GENERATED from live snapshots (do not hand-edit) —
+-- the next regeneration via tools/build-migration-set.js will drop it
+-- automatically once this fix has been applied.
+--
+-- No client change, no redeploy needed. Run in the Supabase SQL editor.
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS public.huddle_hot_apply_recommended(text);
+
+-- Sanity check — should return ZERO rows:
+--   SELECT oid::regprocedure::text FROM pg_proc
+--   WHERE proname = 'huddle_hot_apply_recommended';
