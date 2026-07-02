@@ -6099,215 +6099,197 @@
     }
 
     /* ============================================================
-       GUESS THE THEME — "How to play" animated explainer
-       Story-style, auto-playing, theme-adaptive (uses app variables).
-       Scenes activate via .is-active (added by the app-01 controller),
-       which fires each scene's entrance animations.
+       GUESS THE THEME — "How to play" walkthrough (tg-*)
+       Manually paced: 8 steps, Back/Next buttons, no timers (fresh
+       design 2026-07-02, replaces the auto-playing th-* story).
+       Theme-adaptive: app variables + a scoped warm accent with an
+       explicit [data-theme="dark"] override (no inversion traps).
+       Steps activate via .is-active (app-01 tgGo); display none→block
+       restarts each step's entrance animations naturally.
        ============================================================ */
     #screen-theme-howto{background:var(--bg)}
-    .th-howto{
+    .tg-guide{
       position:fixed;inset:0;display:flex;flex-direction:column;
-      background:var(--bg);color:var(--text);overflow:hidden;
+      background:var(--bg);color:var(--text);
+      --tg-accent:#e8590c;
+      --tg-soft:rgba(232,89,12,.10);
       -webkit-tap-highlight-color:transparent;
     }
-    /* Soft warm aura — premium glow that reads on light or dark backgrounds. */
-    .th-aura{
-      position:absolute;inset:0;pointer-events:none;z-index:0;
-      background:
-        radial-gradient(70% 45% at 50% -4%, rgba(249,115,22,.20), transparent 70%),
-        radial-gradient(90% 60% at 50% 108%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 72%);
-    }
-    /* ---- top bar: segmented progress + close ---- */
-    .th-topbar{
-      position:relative;z-index:10;
-      display:flex;align-items:center;gap:12px;
-      padding:calc(env(safe-area-inset-top,0) + 14px) 16px 6px;
-    }
-    .th-progress{display:flex;gap:6px;flex:1}
-    .th-seg{
-      position:relative;flex:1;height:4px;border-radius:999px;overflow:hidden;
-      background:color-mix(in srgb, var(--text) 16%, transparent);
-    }
-    .th-seg i{
-      position:absolute;inset:0;border-radius:999px;background:var(--primary);
-      transform:scaleX(0);transform-origin:left;
-    }
-    .th-seg.done i{transform:scaleX(1)}
-    .th-seg.active i{transform:scaleX(1);transition:transform var(--th-dur,4.2s) linear}
-    .th-close{
-      flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;
-      background:color-mix(in srgb, var(--text) 8%, transparent);color:var(--text);
-      display:flex;align-items:center;justify-content:center;transition:background .15s ease;
-    }
-    .th-close:hover{background:color-mix(in srgb, var(--text) 16%, transparent)}
+    [data-theme="dark"] .tg-guide{--tg-accent:#ff9350;--tg-soft:rgba(255,147,80,.16)}
 
-    /* ---- stage + scenes ---- */
-    .th-stage{flex:1;position:relative;overflow:hidden;z-index:1}
-    .th-scene{
-      position:absolute;inset:0;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:30px;padding:18px 24px 40px;
-      opacity:0;visibility:hidden;transition:opacity .4s ease;
-    }
-    .th-scene.is-active{opacity:1;visibility:visible}
-    .th-visual{
-      flex:1;width:100%;max-width:440px;min-height:0;
-      display:flex;align-items:center;justify-content:center;position:relative;
-    }
-    .th-caption{text-align:center;max-width:340px}
-    .th-eyebrow{
-      font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;
-      color:var(--primary);margin-bottom:9px;
-      opacity:0;transform:translateY(10px);
-    }
-    .th-line{
-      font-size:21px;font-weight:750;line-height:1.32;letter-spacing:-.01em;color:var(--text);
-      opacity:0;transform:translateY(10px);
-    }
-    .th-scene.is-active .th-eyebrow{animation:thRise .5s cubic-bezier(.22,1,.36,1) .28s both}
-    .th-scene.is-active .th-line{animation:thRise .5s cubic-bezier(.22,1,.36,1) .42s both}
-    @keyframes thRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-    @keyframes thPop{0%{opacity:0;transform:scale(.6) translateY(8px)}60%{opacity:1;transform:scale(1.08) translateY(0)}100%{opacity:1;transform:scale(1)}}
-    @keyframes thFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+    /* Top bar — progress dots + close */
+    .tg-top{display:flex;align-items:center;gap:12px;padding:14px 16px 6px}
+    .tg-dots{display:flex;gap:6px;flex:1;align-items:center}
+    .tg-dot{width:8px;height:8px;border-radius:99px;background:var(--border);transition:all .25s ease}
+    .tg-dot.active{width:24px;background:var(--tg-accent)}
+    .tg-dot.done{background:var(--tg-accent);opacity:.4}
+    .tg-close{width:36px;height:36px;border-radius:99px;border:none;display:flex;align-items:center;justify-content:center;background:var(--bg-subtle);color:var(--text-secondary);cursor:pointer;flex-shrink:0}
 
-    /* ---- Scene 1: phones in a room ---- */
-    .th-room{position:relative;width:230px;height:200px}
-    .th-room-glow{
-      position:absolute;left:50%;top:54%;width:200px;height:120px;transform:translate(-50%,-50%) scale(.6);
-      border-radius:50%;opacity:0;
-      background:radial-gradient(circle, color-mix(in srgb, var(--primary) 28%, transparent), transparent 70%);
-    }
-    .th-scene[data-scene="1"].is-active .th-room-glow{animation:thGlowIn .8s ease .1s forwards}
-    @keyframes thGlowIn{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
-    .th-phone{
-      position:absolute;width:74px;height:104px;border-radius:16px;
-      background:var(--bg-subtle);border:1px solid var(--border);
-      box-shadow:0 10px 24px rgba(0,0,0,.14);
-      display:flex;align-items:center;justify-content:center;font-size:34px;
-      opacity:0;
-    }
-    .th-phone--a{left:18px;top:34px;transform:rotate(-9deg)}
-    .th-phone--b{left:50%;top:12px;margin-left:-37px;z-index:2}
-    .th-phone--c{right:18px;top:34px;transform:rotate(9deg)}
-    .th-scene[data-scene="1"].is-active .th-phone--a{animation:thPhoneA .55s cubic-bezier(.22,1,.36,1) .15s both, thFloat 4s ease-in-out 1s infinite}
-    .th-scene[data-scene="1"].is-active .th-phone--b{animation:thPhoneB .55s cubic-bezier(.22,1,.36,1) .32s both, thFloat 4s ease-in-out 1.4s infinite}
-    .th-scene[data-scene="1"].is-active .th-phone--c{animation:thPhoneC .55s cubic-bezier(.22,1,.36,1) .49s both, thFloat 4s ease-in-out 1.2s infinite}
-    @keyframes thPhoneA{from{opacity:0;transform:rotate(-9deg) translateY(16px) scale(.8)}to{opacity:1;transform:rotate(-9deg) translateY(0) scale(1)}}
-    @keyframes thPhoneB{from{opacity:0;transform:translateY(16px) scale(.8)}to{opacity:1;transform:translateY(0) scale(1)}}
-    @keyframes thPhoneC{from{opacity:0;transform:rotate(9deg) translateY(16px) scale(.8)}to{opacity:1;transform:rotate(9deg) translateY(0) scale(1)}}
+    /* Steps. The body is a flex column and the active step gets margin:auto —
+       centers vertically on tall screens, degrades to normal top-aligned
+       scrolling when a step is taller than the viewport. */
+    .tg-body{flex:1;overflow-y:auto;padding:6px 20px 8px;display:flex;flex-direction:column}
+    .tg-step{display:none}
+    .tg-step.is-active{display:block;margin:auto 0;animation:tgStepIn .35s ease both}
+    @keyframes tgStepIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
-    /* ---- Scene 2: secret theme vs hidden hot seat ---- */
-    .th-secret{display:flex;align-items:center;gap:18px;flex-wrap:wrap;justify-content:center}
-    .th-theme-card{
-      position:relative;width:150px;padding:20px 16px 30px;border-radius:18px;text-align:center;
-      background:var(--bg-subtle);border:1px solid var(--border);box-shadow:0 12px 28px rgba(0,0,0,.12);
-      display:flex;flex-direction:column;align-items:center;gap:8px;
-      opacity:0;
+    /* Illustration canvas */
+    .tg-canvas{
+      position:relative;min-height:264px;padding:24px 14px;overflow:hidden;
+      display:flex;align-items:center;justify-content:center;
+      border:1px solid var(--border);border-radius:24px;
+      background:radial-gradient(120% 90% at 50% 0%, var(--tg-soft), transparent 70%), var(--bg-subtle);
     }
-    .th-scene[data-scene="2"].is-active .th-theme-card{animation:thPop .6s cubic-bezier(.22,1,.36,1) .12s both}
-    .th-theme-emoji{font-size:40px}
-    .th-theme-text{font-size:15px;font-weight:750;line-height:1.25;color:var(--text)}
-    .th-theme-tag,.th-hotseat-tag{
-      position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);white-space:nowrap;
-      font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
-      padding:4px 10px;border-radius:999px;
-    }
-    .th-theme-tag{background:var(--primary);color:var(--on-primary)}
-    .th-hotseat{
-      position:relative;width:118px;height:150px;border-radius:18px;
-      background:color-mix(in srgb, #f97316 16%, var(--bg-subtle));
-      border:1px dashed color-mix(in srgb, #f97316 55%, transparent);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-      opacity:0;
-    }
-    .th-scene[data-scene="2"].is-active .th-hotseat{animation:thPop .6s cubic-bezier(.22,1,.36,1) .34s both}
-    .th-hotseat-fire{font-size:30px;animation:thFloat 3.4s ease-in-out infinite}
-    .th-hotseat-q{font-size:44px;font-weight:800;color:var(--primary);line-height:1}
-    .th-scene[data-scene="2"].is-active .th-hotseat-q{animation:thPulseQ 1.4s ease-in-out .7s infinite}
-    @keyframes thPulseQ{0%,100%{opacity:.55;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
-    .th-hotseat-tag{background:color-mix(in srgb, var(--text) 12%, transparent);color:var(--text-secondary)}
+    .tg-canvas--list{min-height:0;padding:18px 14px}
 
-    /* ---- Scene 3: clue bubbles popping in ---- */
-    .th-clues{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
-    .th-bubble{
-      display:inline-flex;align-items:center;gap:9px;
-      padding:11px 18px;border-radius:16px;border-bottom-left-radius:5px;
-      background:var(--bg-subtle);border:1px solid var(--border);box-shadow:0 6px 16px rgba(0,0,0,.10);
-      font-size:17px;font-weight:700;color:var(--text);opacity:0;
-    }
-    .th-bubble-emoji{font-size:20px}
-    .th-bubble--2{align-self:flex-end;border-radius:16px;border-bottom-right-radius:5px}
-    .th-bubble--4{align-self:flex-end;border-radius:16px;border-bottom-right-radius:5px}
-    .th-scene[data-scene="3"].is-active .th-bubble--1{animation:thPop .5s cubic-bezier(.22,1,.36,1) .15s both}
-    .th-scene[data-scene="3"].is-active .th-bubble--2{animation:thPop .5s cubic-bezier(.22,1,.36,1) .6s both}
-    .th-scene[data-scene="3"].is-active .th-bubble--3{animation:thPop .5s cubic-bezier(.22,1,.36,1) 1.05s both}
-    .th-scene[data-scene="3"].is-active .th-bubble--4{animation:thPop .5s cubic-bezier(.22,1,.36,1) 1.5s both}
+    /* Caption */
+    .tg-text{text-align:center;padding:18px 2px 6px}
+    .tg-eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--tg-accent);margin-bottom:8px}
+    .tg-title{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.16;margin:0 0 10px}
+    .tg-sub{font-size:15px;line-height:1.55;color:var(--text-secondary);margin:0}
+    .tg-credit{font-size:12px;color:var(--text-tertiary);margin:14px 0 0}
 
-    /* ---- Scene 4: lightbulb + reveal ---- */
-    .th-crack{position:relative;display:flex;flex-direction:column;align-items:center;gap:18px}
-    .th-bulb{font-size:72px;opacity:0}
-    .th-scene[data-scene="4"].is-active .th-bulb{animation:thBulb .6s cubic-bezier(.22,1,.36,1) .15s both, thFloat 3s ease-in-out 1s infinite}
-    @keyframes thBulb{0%{opacity:0;transform:scale(.5) rotate(-10deg)}60%{opacity:1;transform:scale(1.15) rotate(4deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
-    .th-reveal{
-      padding:11px 20px;border-radius:14px;font-size:18px;font-weight:800;color:var(--on-primary);
-      background:var(--primary);box-shadow:0 10px 24px color-mix(in srgb, var(--primary) 45%, transparent);
-      opacity:0;
-    }
-    .th-scene[data-scene="4"].is-active .th-reveal{animation:thPop .55s cubic-bezier(.22,1,.36,1) .85s both}
-    .th-spark{position:absolute;font-size:22px;opacity:0}
-    .th-spark--1{left:6px;top:8px}
-    .th-spark--2{right:4px;top:26px}
-    .th-spark--3{right:30px;top:-6px}
-    .th-scene[data-scene="4"].is-active .th-spark{animation:thSpark 1.5s ease-in-out 1.1s infinite}
-    .th-scene[data-scene="4"].is-active .th-spark--2{animation-delay:1.4s}
-    .th-scene[data-scene="4"].is-active .th-spark--3{animation-delay:1.7s}
-    @keyframes thSpark{0%,100%{opacity:0;transform:scale(.6)}50%{opacity:1;transform:scale(1.1)}}
+    /* Bottom nav — Back (hidden on step 1 via visibility) + Next */
+    .tg-nav{display:flex;gap:10px;padding:10px 20px calc(14px + env(safe-area-inset-bottom, 0px))}
+    .tg-btn{height:54px;border-radius:var(--radius-lg);font-size:16px;font-weight:700;cursor:pointer;transition:all .15s ease;display:flex;align-items:center;justify-content:center}
+    .tg-btn--back{flex:0 0 104px;background:var(--bg);border:1px solid var(--border-strong);color:var(--text)}
+    .tg-btn--next{flex:1;background:var(--tg-accent);border:1px solid transparent;color:#fff}
+    .tg-btn--next:active{transform:scale(.985)}
+    [data-theme="dark"] .tg-guide .tg-btn--next{color:#241104}
 
-    /* ---- Scene 5: seat swap ---- */
-    .th-swap{position:relative;display:flex;flex-direction:column;align-items:center;gap:22px}
-    .th-swap-row{display:flex;align-items:center;gap:14px}
-    .th-swap-avatar{
-      width:66px;height:66px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-      font-size:34px;background:var(--bg-subtle);border:1px solid var(--border);box-shadow:0 8px 18px rgba(0,0,0,.12);
+    /* Shared bits — mini phone mockups + pill chips */
+    .tg-phone{position:relative;width:96px;border-radius:18px;border:1.5px solid var(--border-strong);background:var(--bg);padding:7px 7px 10px;box-shadow:0 12px 26px rgba(0,0,0,.12)}
+    .tg-phone-notch{width:26px;height:4px;border-radius:99px;background:var(--border);margin:0 auto 7px}
+    .tg-phone-screen{border-radius:12px;background:var(--bg-subtle);min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px 6px;text-align:center}
+    .tg-phone--big{width:124px}
+    .tg-phone--big .tg-phone-screen{min-height:120px}
+    .tg-face{font-size:30px;line-height:1}
+    .tg-phone-tag{
+      position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);white-space:nowrap;
+      background:var(--tg-accent);color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.04em;
+      padding:3px 9px;border-radius:99px;
     }
-    .th-swap-seat{
-      width:76px;height:76px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:38px;
-      background:color-mix(in srgb, #f97316 16%, var(--bg-subtle));
-      border:1px solid color-mix(in srgb, #f97316 45%, transparent);
+    [data-theme="dark"] .tg-guide .tg-phone-tag{color:#241104}
+    .tg-chip{
+      display:inline-flex;align-items:center;gap:6px;margin-top:14px;
+      background:var(--bg);border:1px solid var(--border);color:var(--text-secondary);
+      font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:99px;
     }
-    .th-swap-arrows{font-size:22px;color:var(--text-tertiary);font-weight:800}
-    .th-scene[data-scene="5"].is-active .th-swap-avatar--out{animation:thSwapOut 1.8s ease-in-out .4s both}
-    .th-scene[data-scene="5"].is-active .th-swap-avatar--in{animation:thSwapIn 1.8s ease-in-out .4s both}
-    @keyframes thSwapOut{0%{transform:translateX(0)}40%{transform:translateX(-8px) scale(.92);opacity:.85}100%{transform:translateX(0)}}
-    @keyframes thSwapIn{0%{transform:translateX(0) scale(1)}40%{transform:translateX(-66px) scale(1.06)}70%{transform:translateX(-66px) scale(1.06)}100%{transform:translateX(0) scale(1)}}
-    .th-swap-point{font-size:38px;opacity:0}
-    .th-scene[data-scene="5"].is-active .th-swap-point{animation:thPoint .6s cubic-bezier(.22,1,.36,1) .1s both, thBob 1.2s ease-in-out 1s infinite}
-    @keyframes thPoint{from{opacity:0;transform:translateY(-10px) scale(.7)}to{opacity:1;transform:translateY(0) scale(1)}}
-    @keyframes thBob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+    .tg-chip--accent{border-color:var(--tg-accent);color:var(--tg-accent);background:var(--tg-soft)}
+    .tg-chip--warn{margin-top:6px}
 
-    /* ---- End card ---- */
-    .th-scene-end{gap:14px;justify-content:center}
-    .th-end-icon{font-size:60px;opacity:0}
-    .th-scene-end.is-active .th-end-icon{animation:thBulb .6s cubic-bezier(.22,1,.36,1) .1s both}
-    .th-end-title{font-size:26px;font-weight:800;color:var(--text);opacity:0}
-    .th-scene-end.is-active .th-end-title{animation:thRise .5s cubic-bezier(.22,1,.36,1) .25s both}
-    .th-end-sub{font-size:15px;color:var(--text-secondary);max-width:280px;text-align:center;opacity:0}
-    .th-scene-end.is-active .th-end-sub{animation:thRise .5s cubic-bezier(.22,1,.36,1) .38s both}
-    .th-end-actions{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;margin-top:10px;opacity:0;position:relative;z-index:10}
-    .th-scene-end.is-active .th-end-actions{animation:thRise .5s cubic-bezier(.22,1,.36,1) .52s both}
-    .th-end-btn{padding:14px;border-radius:14px;font-size:16px;font-weight:750;cursor:pointer;border:1px solid transparent}
-    .th-end-btn--primary{background:var(--primary);color:var(--on-primary);border:none}
-    .th-end-btn--ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
-    .th-end-credit{font-size:12px;color:var(--text-tertiary);margin-top:6px;opacity:0}
-    .th-scene-end.is-active .th-end-credit{animation:thRise .5s ease .7s both}
+    /* Step 1 — the room */
+    .tg-room{display:flex;align-items:center;gap:14px;padding-bottom:14px}
+    .tg-room .tg-phone{animation:tgBob 3.2s ease-in-out infinite}
+    .tg-phone--hot{transform:scale(1.12);border-color:var(--tg-accent);box-shadow:0 0 0 4px var(--tg-soft),0 14px 30px rgba(0,0,0,.14);z-index:1;animation-delay:.4s}
+    .tg-phone--late{animation-delay:.9s}
+    @keyframes tgBob{0%,100%{translate:0 0}50%{translate:0 -7px}}
 
-    /* ---- tap zones (left=back, right=next); off on the end card ---- */
-    .th-tap{position:absolute;top:64px;bottom:0;width:38%;z-index:5;border:none;background:transparent;cursor:pointer;padding:0}
-    .th-tap--prev{left:0}
-    .th-tap--next{right:0;width:62%}
-    .th-howto.is-end .th-tap{display:none}
+    /* Step 2 — helpers see / hot seat sees */
+    .tg-duo{display:flex;gap:18px;align-items:flex-start;padding-bottom:6px}
+    .tg-duo-col{display:flex;flex-direction:column;align-items:center}
+    .tg-theme-emoji{font-size:26px;line-height:1}
+    .tg-theme-text{font-size:12.5px;font-weight:800;line-height:1.3}
+    .tg-mystery{font-size:44px;font-weight:800;color:var(--text-tertiary)}
+    .tg-duo .tg-phone{animation:tgBob 3.4s ease-in-out infinite}
+    .tg-duo-col:last-child .tg-phone{animation-delay:.6s}
+
+    /* Step 3 — the clues chat */
+    .tg-chat{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;padding:4px 0}
+    .tg-bubble{
+      display:flex;align-items:center;gap:9px;align-self:flex-start;margin-left:8%;
+      background:var(--bg);border:1px solid var(--border);border-radius:18px;
+      padding:9px 16px;font-size:15px;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.08);
+      opacity:0;animation:tgPop .4s ease forwards;
+    }
+    .tg-bubble--right{align-self:flex-end;margin-left:0;margin-right:8%}
+    .tg-bubble:nth-child(1){animation-delay:.15s}
+    .tg-bubble:nth-child(2){animation-delay:.5s}
+    .tg-bubble:nth-child(3){animation-delay:.85s}
+    .tg-chat .tg-chip--warn{opacity:0;animation:tgPop .4s ease forwards;animation-delay:1.25s}
+    .tg-bubble-face{font-size:19px;line-height:1}
+    @keyframes tgPop{from{opacity:0;transform:translateY(10px) scale(.92)}to{opacity:1;transform:none}}
+
+    /* Step 4 — the escape */
+    .tg-guess{position:relative;display:flex;flex-direction:column;align-items:center;padding-top:34px}
+    .tg-shout{
+      position:relative;background:var(--bg);border:1.5px solid var(--tg-accent);color:var(--text);
+      border-radius:18px;padding:10px 16px;font-size:14.5px;font-weight:800;max-width:230px;text-align:center;
+      box-shadow:0 8px 20px rgba(0,0,0,.10);margin-bottom:16px;
+      opacity:0;animation:tgPop .45s ease forwards .35s;z-index:1;
+    }
+    .tg-shout::after{content:'';position:absolute;left:50%;bottom:-7px;width:12px;height:12px;transform:translateX(-50%) rotate(45deg);background:var(--bg);border-right:1.5px solid var(--tg-accent);border-bottom:1.5px solid var(--tg-accent)}
+    .tg-bulb{font-size:36px;animation:tgGlow 1.6s ease-in-out infinite}
+    @keyframes tgGlow{0%,100%{filter:brightness(1);transform:scale(1)}50%{filter:brightness(1.25);transform:scale(1.08)}}
+    .tg-guess .tg-confetti{position:absolute;font-size:18px;opacity:0;animation:tgFloatUp 2.6s ease-out infinite}
+    .tg-confetti--1{left:16%;top:52%;animation-delay:.3s}
+    .tg-confetti--2{right:15%;top:40%;animation-delay:1s}
+    .tg-confetti--3{left:26%;top:26%;animation-delay:1.7s}
+    @keyframes tgFloatUp{0%{opacity:0;transform:translateY(12px)}25%{opacity:1}100%{opacity:0;transform:translateY(-26px)}}
+
+    /* Step 5 — who gave it away (👉 rotated 90° points down at the culprit) */
+    .tg-lineup{display:flex;align-items:center;gap:18px;padding-top:26px;padding-bottom:16px}
+    .tg-suspect{
+      position:relative;width:62px;height:62px;border-radius:99px;background:var(--bg);
+      border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:29px;
+      box-shadow:0 8px 18px rgba(0,0,0,.08);
+    }
+    .tg-suspect--busted{border-color:var(--tg-accent);box-shadow:0 0 0 4px var(--tg-soft),0 8px 18px rgba(0,0,0,.10)}
+    .tg-point{position:absolute;top:-40px;left:50%;font-size:30px;line-height:1;animation:tgPointAt 1.1s ease-in-out infinite}
+    @keyframes tgPointAt{0%,100%{transform:translateX(-50%) translateY(0) rotate(90deg)}50%{transform:translateX(-50%) translateY(7px) rotate(90deg)}}
+    .tg-phone-tag--busted{bottom:-14px}
+
+    /* Step 6 — the three hot-seat orders */
+    .tg-ways{display:flex;flex-direction:column;gap:10px;width:100%;max-width:330px}
+    .tg-way{
+      display:flex;align-items:center;gap:12px;text-align:left;
+      background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:12px 14px;
+      opacity:0;animation:tgPop .4s ease forwards;
+    }
+    .tg-way:nth-child(1){animation-delay:.1s}
+    .tg-way:nth-child(2){animation-delay:.35s}
+    .tg-way:nth-child(3){animation-delay:.6s}
+    .tg-way--default{border-color:var(--tg-accent);box-shadow:0 0 0 3px var(--tg-soft)}
+    .tg-way-emoji{font-size:23px;line-height:1;flex-shrink:0}
+    .tg-way-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .tg-way-name{font-size:14.5px;font-weight:800}
+    .tg-way-sub{font-size:12.5px;line-height:1.4;color:var(--text-secondary)}
+    .tg-badge{
+      margin-left:auto;flex-shrink:0;background:var(--tg-accent);color:#fff;
+      font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      padding:4px 8px;border-radius:99px;
+    }
+    [data-theme="dark"] .tg-guide .tg-badge{color:#241104}
+
+    /* Step 7 — theme-pack card fan. Cards spread horizontally AND rotate, with
+       the pack emoji as a top-left corner pip — so every card's emoji stays
+       visible in the overlap (a centered emoji gets covered by the next card). */
+    .tg-packs{display:flex;flex-direction:column;align-items:center}
+    .tg-fan{position:relative;width:270px;height:140px}
+    .tg-card{
+      position:absolute;left:50%;bottom:0;width:74px;height:102px;
+      border-radius:14px;background:var(--bg);border:1.5px solid var(--border-strong);
+      display:flex;align-items:flex-start;justify-content:flex-start;padding:8px 0 0 9px;font-size:24px;line-height:1;
+      box-shadow:0 10px 22px rgba(0,0,0,.12);transform-origin:50% 130%;
+      opacity:0;animation:tgDeal .5s ease forwards;
+    }
+    .tg-card--1{margin-left:-105px;transform:rotate(-16deg);animation-delay:.05s}
+    .tg-card--2{margin-left:-71px;transform:rotate(-8deg);animation-delay:.2s}
+    .tg-card--3{margin-left:-37px;transform:rotate(0deg);animation-delay:.35s;border-color:var(--tg-accent)}
+    .tg-card--4{margin-left:-3px;transform:rotate(8deg);animation-delay:.5s}
+    .tg-card--5{margin-left:31px;transform:rotate(16deg);animation-delay:.65s}
+    @keyframes tgDeal{from{opacity:0;translate:0 16px}to{opacity:1;translate:0 0}}
+
+    /* Step 8 — ready */
+    .tg-ready{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 2px}
+    .tg-ready-emoji{font-size:64px;line-height:1;animation:tgBob 3s ease-in-out infinite}
+    .tg-ready-pop{position:absolute;top:-6px;right:calc(50% - 64px);font-size:26px;animation:tgFloatUp 2.4s ease-out infinite .4s}
+    .tg-replay{
+      display:inline-flex;align-items:center;gap:7px;margin-top:18px;
+      background:var(--bg);border:1px solid var(--border-strong);color:var(--text);
+      font-size:13.5px;font-weight:700;padding:9px 16px;border-radius:99px;cursor:pointer;
+    }
 
     @media (prefers-reduced-motion: reduce){
-      .th-scene *{animation-duration:.001s !important;animation-iteration-count:1 !important}
+      .tg-step, .tg-step *{animation-duration:.001s !important;animation-iteration-count:1 !important}
     }
-

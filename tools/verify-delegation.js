@@ -209,6 +209,37 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   });
   results.push(['[theme-end] standings render (2 rows, crown, biggest-giver) + host buttons wired', TE.ok, JSON.stringify(TE)]);
 
+  // Guess the Theme: manually-paced how-to walkthrough — 8 steps, Back/Next
+  // via the data-action engine, Back hidden on step 1, Next relabels to the
+  // closing CTA on the last step, and the last Next closes back out.
+  const TW = await page.evaluate(() => {
+    goTo('lobby');
+    if (typeof openThemeHowTo !== 'function') return { ok:false, why:'no openThemeHowTo' };
+    openThemeHowTo();
+    const onScreen = document.querySelector('.screen.active').id === 'screen-theme-howto';
+    const steps = document.querySelectorAll('#screen-theme-howto .tg-step').length;
+    const dots = document.querySelectorAll('#tg-dots .tg-dot').length;
+    const backBtn = document.getElementById('tg-back-btn');
+    const nextBtn = document.getElementById('tg-next-btn');
+    const backHiddenAtStart = backBtn.style.visibility === 'hidden';
+    const activeStep = () => { const el = document.querySelector('#screen-theme-howto .tg-step.is-active'); return el ? Number(el.getAttribute('data-tg-step')) : -1; };
+    nextBtn.click();                                     // 0 → 1 through delegation
+    const afterNext = activeStep();
+    const backVisibleAfter = backBtn.style.visibility !== 'hidden';
+    backBtn.click();                                     // 1 → 0
+    const afterBack = activeStep();
+    tgGo(7);                                             // jump to the last step
+    const lastLabel = nextBtn.textContent;
+    const lastIsCta = lastLabel !== '' && lastLabel !== 'Next';
+    nextBtn.click();                                     // "Let's play" → closes
+    const closedBackTo = document.querySelector('.screen.active').id;
+    return { ok: onScreen && steps === 8 && dots === 8 && backHiddenAtStart
+                 && afterNext === 1 && backVisibleAfter && afterBack === 0
+                 && lastIsCta && closedBackTo === 'screen-lobby',
+             onScreen, steps, dots, backHiddenAtStart, afterNext, backVisibleAfter, afterBack, lastLabel, closedBackTo };
+  });
+  results.push(['[theme-howto] 8-step walkthrough: Next/Back wired, Back hidden on start, last Next closes', TW.ok, JSON.stringify(TW)]);
+
   // ===================== CHAMELEON LOBBY =====================
   const C = await page.evaluate(() => {
     goTo('cham-lobby');
