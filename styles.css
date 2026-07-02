@@ -1379,6 +1379,11 @@
     .lb-row.winner .lb-rank{color:#b8860b}
     .lb-name{flex:1;font-weight:600}
     .lb-score{font-weight:700;font-feature-settings:"tnum"}
+    /* Guess the Theme — final standings: "biggest giver" callout (screen-theme-end).
+       Theme-adaptive via app vars only; no hardcoded colors (dark-mode safe). */
+    .theme-end-giver{margin:16px 0 4px;padding:12px 16px;background:var(--bg-subtle);
+      border:1px solid var(--border);border-radius:var(--radius-lg);
+      font-size:14px;color:var(--text-secondary);text-align:center}
 
     /* Mode setup screen */
     .setting-row{

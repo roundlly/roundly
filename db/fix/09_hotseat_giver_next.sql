@@ -1,6 +1,13 @@
 -- ============================================================================
 -- db/fix/09_hotseat_giver_next.sql  (2026-07-01)
 -- ----------------------------------------------------------------------------
+-- ⚠⚠ SUPERSEDED by db/fix/12_hotseat_gtt_order_deck.sql (2026-07-02) ⚠⚠
+-- Run 12 INSTEAD of this file — it contains this function plus a 4th
+-- parameter (p_giver_idx, the "biggest giver" stat). NEVER run this file
+-- AFTER 12: it would re-create the old 3-argument version NEXT TO the new
+-- 4-argument one and PostgREST would reject every call as ambiguous.
+-- Kept only as history of what shipped with commit 3fa3a02.
+-- ----------------------------------------------------------------------------
 -- "Guess the Theme" mode — the "whoever gives it away goes next" rule.
 --
 -- In this mode the game does NOT take fixed turns. Whoever's clue cracks the

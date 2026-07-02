@@ -1031,6 +1031,7 @@
         'order.rotating': 'Rotating',
         'order.random': 'Random',
         'order.host': 'Host picks',
+        'order.giver': 'Giver goes next',
 
         // Splash
         'splash.yourTurn': 'Your turn',
@@ -1080,6 +1081,7 @@
         'result.roundOver': 'Round over',
         'result.whoGaveAway': '👉 Who gave it away?',
         'result.passToRandom': 'Next player (random) →',
+        'result.nextPlayer': 'Next player →',
         'result.waitingGiver': 'Waiting for {name} to pick who gave it away…',
         'result.guessedIn': '⏱ Guessed in {time}',
         'result.lastedFor': '⏱ Lasted {time}',
@@ -1089,6 +1091,18 @@
         'result.leaveGame': 'Leave game',
         'result.playAgain': 'Play again',
         'result.waitingForHostNewGame': 'Waiting for host to start new game…',
+        'result.endGame': '🏁 End game',
+
+        // Guess the Theme — End-game confirm + final standings screen
+        'endGame.confirmTitle': 'End the game?',
+        'endGame.confirmBody': 'Everyone will see the final standings. You can start a new game from there.',
+        'endGame.confirmBtn': 'End game',
+        'themeEnd.deckTitle': 'Deck finished!',
+        'themeEnd.deckSub': 'You played every theme in {pack} — all {n} of them!',
+        'themeEnd.hostSub': 'You got through {n} themes.',
+        'themeEnd.standings': 'Final standings · Fastest escape',
+        'themeEnd.biggestGiver': '😅 Biggest giver: {name} — gave it away {n}×',
+        'themeEnd.changePack': 'Change theme pack',
 
         // How to play modal
         'howTo.skip': 'Skip intro',
@@ -1162,12 +1176,14 @@
         'picker.you': 'You',
         'picker.giverTitle': 'Who gave it away?',
         'picker.giverSub': 'Tap whoever\'s clue gave it away — they\'re in the hot seat next.',
+        'picker.giverSubStat': 'Tap whoever\'s clue gave it away — it goes on the standings. Turn order decides who\'s next.',
 
         // Info sheets (rounds / order / hot seat / helper)
         'info.roundsTitle': 'Rounds',
         'info.roundsBody': 'How many times the whole group cycles through everyone.\n\nExample: with 4 players and 3 rounds, every player sits in the hot seat 3 times — 12 turns total.',
         'info.orderTitle': 'Hot seat order',
         'info.orderBody': 'Who sits in the hot seat each turn.\n\n<strong>Rotating</strong> — take turns in order. Fair, everyone goes evenly.\n\n<strong>Random</strong> — app picks a random player. Adds surprise.\n\n<strong>Host picks</strong> — you choose who goes next before each turn.',
+        'info.orderBody_link': 'Who lands in the hot seat after each escape.\n\n<strong>Rotating</strong> — go around the room in seat order.\n\n<strong>Random</strong> — the app picks someone at random.\n\n<strong>Giver goes next</strong> — whoever\'s clue gave it away takes the seat, picked by the player who just escaped. The classic way to play.',
         'info.hotSeatTitle': '🔥 You\'re in the hot seat',
         'info.hotSeatBody': `<div class="info-blocks"><p class="info-intro">Your friends can see a secret word on their phones — you can't see it on yours. Their job is to <strong>give you clues</strong>. Your job is to <strong>guess the word</strong>.</p><div class="info-block"><div class="info-block-emoji">🎧</div><div class="info-block-content"><div class="info-block-title">Listen, then guess out loud</div><div class="info-block-text">Pay attention to your friends' clues, then say each guess <strong>out loud</strong>. You can guess as many times as you need.</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">No timer — take your time</div><div class="info-block-text">There's no clock pressuring you. We do silently track how long you took and show it on the result screen — just a fun stat. It doesn't affect your score.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">When you say the right word</div><div class="info-block-text">Your friends have a <strong>"Hot seat got it!"</strong> button on their phones. The moment you say the word, one of them taps it for you. You score <strong>+1 win</strong> on the leaderboard.</div></div></div><div class="info-block"><div class="info-block-emoji">🏳️</div><div class="info-block-content"><div class="info-block-title">If you're truly stuck</div><div class="info-block-text">Tap <strong>"I give up"</strong> on your own phone to forfeit. No win this round, but the game continues — you'll still get more turns to play.</div></div></div></div>`,
         'info.helperTitle': '👂 You\'re a helper',
@@ -2181,6 +2197,7 @@
         'order.rotating': 'Sırayla',
         'order.random': 'Rastgele',
         'order.host': 'Ev sahibi seçer',
+        'order.giver': 'Ele veren geçer',
 
         // Splash
         'splash.yourTurn': 'Sıra sende',
@@ -2230,6 +2247,7 @@
         'result.roundOver': 'El bitti',
         'result.whoGaveAway': '👉 Kim ele verdi?',
         'result.passToRandom': 'Sıradaki oyuncu (rastgele) →',
+        'result.nextPlayer': 'Sıradaki oyuncu →',
         'result.waitingGiver': '{name} kimin ele verdiğini seçiyor…',
         'result.guessedIn': '⏱ {time} içinde bildi',
         'result.lastedFor': '⏱ {time} sürdü',
@@ -2239,6 +2257,18 @@
         'result.leaveGame': 'Oyundan ayrıl',
         'result.playAgain': 'Tekrar oyna',
         'result.waitingForHostNewGame': 'Sunucunun yeni oyunu başlatması bekleniyor…',
+        'result.endGame': '🏁 Oyunu bitir',
+
+        // Guess the Theme — End-game confirm + final standings screen
+        'endGame.confirmTitle': 'Oyun bitirilsin mi?',
+        'endGame.confirmBody': 'Herkes final sıralamasını görür. Oradan yeni bir oyun başlatabilirsin.',
+        'endGame.confirmBtn': 'Oyunu bitir',
+        'themeEnd.deckTitle': 'Deste bitti!',
+        'themeEnd.deckSub': '{pack} paketindeki tüm temaları oynadınız — tam {n} tane!',
+        'themeEnd.hostSub': 'Toplam {n} tema oynadınız.',
+        'themeEnd.standings': 'Final sıralaması · En hızlı kaçış',
+        'themeEnd.biggestGiver': '😅 En çok ele veren: {name} — {n} kez ele verdi',
+        'themeEnd.changePack': 'Tema paketini değiştir',
 
         // How to play modal
         'howTo.skip': 'Tanıtımı geç',
@@ -2312,12 +2342,14 @@
         'picker.you': 'Sen',
         'picker.giverTitle': 'Kim ele verdi?',
         'picker.giverSub': 'İpucuyla ele veren kişiye dokun — sıradaki sıcak koltuk onun.',
+        'picker.giverSubStat': 'İpucuyla ele veren kişiye dokun — sıralamaya işlenir. Sıradaki oyuncuyu oyun sırası belirler.',
 
         // Info sheets
         'info.roundsTitle': 'Tur sayısı',
         'info.roundsBody': 'Her oyuncunun sıcak koltuğa kaç kez geçeceğini belirler.\n\nÖrnek: 4 oyuncu ve 3 turla, herkes 3 kez sıcak koltuğa geçer — toplam 12 el.',
         'info.orderTitle': 'Sıcak koltuk sırası',
         'info.orderBody': 'Her turda sıcak koltuğa kim geçer.\n\n<strong>Sırayla</strong> — herkes sırasıyla geçer. Adil, herkes eşit oynar.\n\n<strong>Rastgele</strong> — uygulama rastgele bir oyuncu seçer. Sürpriz katar.\n\n<strong>Ev sahibi seçer</strong> — her turdan önce kimin geçeceğini sen seçersin.',
+        'info.orderBody_link': 'Her kaçıştan sonra sıcak koltuğa kim geçer.\n\n<strong>Sırayla</strong> — koltuk oda içinde koltuk sırasıyla döner.\n\n<strong>Rastgele</strong> — uygulama rastgele birini seçer.\n\n<strong>Ele veren geçer</strong> — ipucuyla ele veren kişi koltuğa geçer; onu da koltuktan yeni kurtulan oyuncu seçer. Oyunun klasik hali.',
         'info.hotSeatTitle': '🔥 Sıcak koltuktasın',
         'info.hotSeatBody': `<div class="info-blocks"><p class="info-intro">Arkadaşların telefonlarında gizli bir kelime görüyor — sen göremiyorsun. Onların işi sana <strong>ipucu vermek</strong>. Senin işin ise <strong>kelimeyi tahmin etmek</strong>.</p><div class="info-block"><div class="info-block-emoji">🎧</div><div class="info-block-content"><div class="info-block-title">Dinle, sonra yüksek sesle tahmin et</div><div class="info-block-text">Arkadaşlarının ipuçlarına dikkat et, sonra her tahminini <strong>yüksek sesle</strong> söyle. İstediğin kadar tahminde bulunabilirsin.</div></div></div><div class="info-block"><div class="info-block-emoji">⏳</div><div class="info-block-content"><div class="info-block-title">Süre yok — acele etme</div><div class="info-block-text">Seni baskılayan bir saat yok. Ne kadar sürdüğünü sessizce takip edip sonuç ekranında gösteriyoruz — sadece eğlencelik bir bilgi. Skoruna etkisi yok.</div></div></div><div class="info-block"><div class="info-block-emoji">🎉</div><div class="info-block-content"><div class="info-block-title">Doğru kelimeyi söylediğinde</div><div class="info-block-text">Arkadaşlarının telefonunda <strong>"Sıcak koltuk bildi!"</strong> butonu var. Kelimeyi söylediğin an birisi senin için dokunur. Sıralamada <strong>+1 galibiyet</strong> kazanırsın.</div></div></div><div class="info-block"><div class="info-block-emoji">🏳️</div><div class="info-block-content"><div class="info-block-title">Gerçekten tıkanırsan</div><div class="info-block-text">Kendi telefonunda <strong>"Pas geçiyorum"</strong> butonuna dokunup turu bırakabilirsin. Bu turda galibiyet yok ama oyun devam eder — daha çok turun olur.</div></div></div></div>`,
         'info.helperTitle': '👂 Yardımcısın',

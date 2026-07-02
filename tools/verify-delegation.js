@@ -151,6 +151,64 @@ function server(){ return new Promise(r => { const s = http.createServer((req,re
   });
   results.push(['[hot-lobby] theme-pack row → picker opens, ≥5 packs, backdrop closes', LP.ok, JSON.stringify(LP)]);
 
+  // Guess the Theme: the sheet's hot-seat-order row — exactly 3 ways with 'giver'
+  // (no 'host', that's Classic/Silent-only), giver active by default (hotLinkOrder
+  // fallback), and the buttons delegate to setOrder.
+  const GO = await page.evaluate(() => {
+    goTo('lobby');
+    try { state.mode = 'link'; renderSettings(); } catch(e){ return { ok:false, why:String(e.message||e) }; }
+    const giverBtn = document.querySelector('#hot-modeset-list [data-action="setOrder"][data-arg="giver"]');
+    const hostBtn  = document.querySelector('#hot-modeset-list [data-action="setOrder"][data-arg="host"]');
+    const count = document.querySelectorAll('#hot-modeset-list [data-action="setOrder"]').length;
+    const orig = window.setOrder; let arg = null;
+    window.setOrder = function(){ arg = Array.from(arguments); };
+    if (giverBtn) giverBtn.click();
+    window.setOrder = orig;
+    state.mode = 'classic'; renderSettings();
+    return { ok: !!giverBtn && !hostBtn && count === 3 && !!arg && arg[0] === 'giver', count, hasHost: !!hostBtn, calledWith: arg };
+  });
+  results.push(['[hot-lobby] GTT order row → 3 ways incl. "giver", no "host", setOrder("giver") wired', GO.ok, JSON.stringify(GO)]);
+
+  // Guess the Theme: final-standings screen (phase 'ended') — renders the
+  // ranked rows + biggest-giver callout, and the host actions (Play again /
+  // Change pack / Close room) fire through the data-action engine.
+  const TE = await page.evaluate(() => {
+    const sid = hotGetSessionId();
+    const saved = { mode: state.mode, phase: state.phase, endReason: state.endReason,
+                    hostId: state.hostId, claimedBy: state.claimedBy, meId: state.meId,
+                    myId: hotMe.myId, usedWords: state.usedWords, counted: state._gamesPlayedCounted };
+    try {
+      state.mode = 'link'; state.phase = 'ended'; state.endReason = 'deck';
+      state.hostId = sid; state.claimedBy = { jordan: sid, alex: 'sid_other' };
+      hotMe.myId = 'jordan'; state.meId = 'jordan';
+      state.players[0].bestTimeMs = 8000; state.players[0].wins = 2;
+      state.players[1].giverCount = 3;
+      state.usedWords = Object.keys(LINKS); state._gamesPlayedCounted = true; // don't bump stats in a test
+      if (typeof renderThemeEnd !== 'function') return { ok:false, why:'no renderThemeEnd' };
+      renderThemeEnd();
+    } catch(e){ return { ok:false, why:String(e.message||e) }; }
+    const rows = document.querySelectorAll('#theme-end-lb .lb-row').length;
+    const crowned = !!document.querySelector('#theme-end-lb .lb-row.winner');
+    const giverShown = !document.getElementById('theme-end-giver').hidden;
+    const deckTitle = document.getElementById('theme-end-title').textContent;
+    const names = ['hotPlayAgain','openLinkPackSheet','hotCloseRoom'];
+    const orig = {}, calls = {};
+    names.forEach(n => { orig[n] = window[n]; window[n] = function(){ calls[n] = true; }; });
+    const present = {};
+    names.forEach(n => { const el = document.querySelector('#theme-end-actions [data-action="' + n + '"]'); present[n] = !!el; if (el) el.click(); });
+    names.forEach(n => { window[n] = orig[n]; });
+    // restore
+    state.players[0].bestTimeMs = null; state.players[0].wins = 0; state.players[1].giverCount = 0;
+    state.mode = saved.mode; state.phase = saved.phase; state.endReason = saved.endReason;
+    state.hostId = saved.hostId; state.claimedBy = saved.claimedBy; state.meId = saved.meId;
+    hotMe.myId = saved.myId; state.usedWords = saved.usedWords; state._gamesPlayedCounted = saved.counted;
+    renderSettings();
+    return { ok: rows === 2 && crowned && giverShown && !!deckTitle
+                 && names.every(n => present[n] && calls[n]),
+             rows, crowned, giverShown, deckTitle, present, calls };
+  });
+  results.push(['[theme-end] standings render (2 rows, crown, biggest-giver) + host buttons wired', TE.ok, JSON.stringify(TE)]);
+
   // ===================== CHAMELEON LOBBY =====================
   const C = await page.evaluate(() => {
     goTo('cham-lobby');

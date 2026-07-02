@@ -806,14 +806,17 @@
         rerender: hotRerender, loadRoom: hotLoadRoom, forceLeaveLocal: hotForceLeaveLocal,
         resetPresenceState: hotResetPresenceState,
         graceTimers: _hotLeaveGraceTimers, cancelGrace: hotCancelLeaveGrace, startGrace: hotStartLeaveGrace,
-        isOnGameScreen: (id) => ['lobby','splash','play','result'].indexOf(id) !== -1,
+        isOnGameScreen: (id) => ['lobby','splash','play','result','theme-end'].indexOf(id) !== -1,
         normalizeIncoming: (ns) => { if (!Array.isArray(ns.playersUsedThisRound)) ns.playersUsedThisRound = []; },
         // A game in progress that drops below 2 players ends gracefully back to
         // the lobby. The remaining player became host via the leave RPC, so only
-        // they write the reset (revision bump prevents re-trigger).
+        // they write the reset (revision bump prevents re-trigger). 'ended'
+        // (Guess the Theme standings) counts as NOT mid-game, like 'result' —
+        // players walking out mustn't yank the host off the final standings.
         gracefulEnd: ({ newClaimedBy, prevPhase }) => {
-          const _wasMid = prevPhase && prevPhase !== 'lobby' && prevPhase !== 'result';
-          const _stillMid = state.phase && state.phase !== 'lobby' && state.phase !== 'result';
+          const _notMid = { lobby:1, result:1, ended:1 };
+          const _wasMid = prevPhase && !_notMid[prevPhase];
+          const _stillMid = state.phase && !_notMid[state.phase];
           if (_wasMid && _stillMid && Object.keys(newClaimedBy).length < 2 && hotIsHost()) {
             try { if (typeof showLobbyToast === 'function') showLobbyToast(t('hot.otherPlayerLeft'), 3500); } catch(e){}
             state.phase = 'lobby';
@@ -833,7 +836,7 @@
     // dramatic moments land at the same wall-clock instant. See the
     // huddleSync* block for the mechanism.
     function hotRerenderInner(){
-      const phaseToScreen = { lobby:'lobby', splash:'splash', play:'play', result:'result' };
+      const phaseToScreen = { lobby:'lobby', splash:'splash', play:'play', result:'result', ended:'theme-end' };
       const target = phaseToScreen[state.phase] || 'lobby';
       const activeId = document.querySelector('.screen.active');
       const currentId = activeId ? activeId.id.replace('screen-', '') : null;
@@ -848,14 +851,19 @@
         // settings when the host starts the game.
         const msbd = document.getElementById('hot-modeset-backdrop');
         if (msbd && msbd.classList.contains('active')) closeHotModeSettings();
-        // …and the theme-pack picker stacked on top of it.
-        const lpbd = document.getElementById('linkpack-backdrop');
-        if (lpbd && lpbd.classList.contains('active')) closeLinkPackSheet();
+        // …and the theme-pack picker stacked on top of it — EXCEPT on the
+        // standings screen, where the host legitimately opens it ("Change
+        // theme pack") and a realtime echo must not slam it shut.
+        if (state.phase !== 'ended') {
+          const lpbd = document.getElementById('linkpack-backdrop');
+          if (lpbd && lpbd.classList.contains('active')) closeLinkPackSheet();
+        }
       }
       if (state.phase === 'lobby') { renderLobbyPlayers(); renderSettings(); updateHowToTrigger(); if (typeof renderLobbyInvites === 'function') renderLobbyInvites('hotseat'); }
       else if (state.phase === 'splash') applySplashContent();
       else if (state.phase === 'play') applyPlayContent();
       else if (state.phase === 'result') applyResultContent();
+      else if (state.phase === 'ended') renderThemeEnd();
     }
     const __hotRerenderPending = { timer: null };
     function hotRerender(){
@@ -897,6 +905,7 @@
         view: 'hotseat',
         currentWord: '',
         roundOutcome: null,
+        endReason: null,            // 'host' | 'deck' — why a Guess the Theme game ended
         turnStartTime: 0,
         lastTurnDuration: 0,
         code: code,
@@ -979,6 +988,9 @@
     const INFO = {
       rounds:        { titleKey:'info.roundsTitle',   bodyKey:'info.roundsBody' },
       order:         { titleKey:'info.orderTitle',    bodyKey:'info.orderBody' },
+      // Guess the Theme's order picker has different ways (no "Host picks";
+      // "Giver goes next" instead) — same title, its own explanation.
+      'order-link':  { titleKey:'info.orderTitle',    bodyKey:'info.orderBody_link' },
       'role-hotseat':{ titleKey:'info.hotSeatTitle',  bodyKey:'info.hotSeatBody' },
       'role-helper': { titleKey:'info.helperTitle',   bodyKey:'info.helperBody' },
       // Mode-specific variants. Titles stay the same ("🔥 You're in the hot seat" / "👂 You're
@@ -1345,7 +1357,7 @@
     // back into the abandoned lobby.
     const HUDDLE_KEEP_ROOM_URL = {
       'lobby':1, 'cham-lobby':1, 'liar-lobby':1,
-      'splash':1, 'play':1, 'result':1,
+      'splash':1, 'play':1, 'result':1, 'theme-end':1,
       'cham-splash':1, 'cham-play':1, 'cham-vote':1, 'cham-result':1,
       'liar-play':1,
       // Mafia (Cards mode) screens that carry ?room=&game= so a refresh / phone
@@ -1753,10 +1765,20 @@
       subEl.textContent = t('mode.sub_' + state.mode);
 
       if (state.mode === 'link') {
-        // Guess the Theme's one setting: which THEME PACK feeds the draw pool
-        // (see LINKS/LINK_PACKS). Row mirrors the Category row's look & flow.
+        // Guess the Theme's settings: which THEME PACK feeds the draw pool
+        // (see LINKS/LINK_PACKS) + the hot-seat ORDER. The order reuses the
+        // synced 'order' field with a link-only 3rd value 'giver' ("Giver goes
+        // next" — the mode's signature rule and its default); Classic/Silent
+        // keep their own picker with "Host picks" instead.
         const packKey = LINK_PACKS[state.themePack] ? state.themePack : 'mixed';
         const pk = LINK_PACKS[packKey];
+        const orderSegLink = [
+          {v:'rotating',k:'order.rotating'},
+          {v:'random',k:'order.random'},
+          {v:'giver',k:'order.giver'},
+        ].map(o =>
+          `<button data-action="setOrder" data-arg="${o.v}" class="${hotLinkOrder()===o.v?'active':''}">${t(o.k)}</button>`
+        ).join('');
         listEl.style.display = '';
         listEl.innerHTML = `
           <div class="setting-row" data-action="openLinkPackSheet" style="cursor:pointer">
@@ -1765,6 +1787,10 @@
               <span>${pk.emoji} ${t(pk.labelKey)}</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary)"><path d="m9 18 6-6-6-6"></path></svg>
             </div>
+          </div>
+          <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
+            <div class="setting-row-label">${t('lobby.order')} ${infoIcon('order-link')}</div>
+            <div class="seg full">${orderSegLink}</div>
           </div>
         `;
       } else {
@@ -1837,10 +1863,16 @@
     }
     function setMode(m){
       if (state.code && !hotIsHost()) return;
+      const prevMode = state.mode;
       state.mode = m;
       if (state.code) {
         huddleCallRPC('huddle_hot_set_setting', { p_code: state.code, p_field: 'mode', p_value: m });
       }
+      // Each mode opens on its own default order: Guess the Theme's signature
+      // rule is "Giver goes next"; the link-only 'giver' value must not leak
+      // back into Classic/Silent (their picker has no such option).
+      if (m === 'link' && prevMode !== 'link') setOrder('giver');
+      else if (m !== 'link' && state.order === 'giver') setOrder('rotating');
       renderSettings();
       if (typeof updateHowToTrigger === 'function') updateHowToTrigger();
     }
@@ -1961,15 +1993,25 @@
         if (msbd) msbd.classList.add('active');
         return;
       }
-      // Guess the Theme: ALWAYS start with a RANDOM hot-seat player. After that,
-      // the "whoever gives it away goes next" rule takes over from the result
-      // screen (giverNext*). No fixed turn order / rounds here.
+      // Guess the Theme: first hot-seat player follows the order setting —
+      // Rotating starts at the first claimed seat, Random and "Giver goes
+      // next" start random (the giver rule only kicks in from the first
+      // result screen). No rounds here — the game runs until the deck is
+      // finished or the host ends it.
       if (state.mode === 'link') {
         const claimedL = hotClaimedIndices();
-        const idxL = claimedL[Math.floor(Math.random() * claimedL.length)];
-        huddleCallRPC('huddle_hot_play_again', {
-          p_code: state.code, p_player_idx: idxL, p_word: pickPrompt(),
-        });
+        const idxL = (hotLinkOrder() === 'rotating')
+          ? claimedL[0]
+          : claimedL[Math.floor(Math.random() * claimedL.length)];
+        // Deck rule: themes never repeat in this room, even across Play again —
+        // only when the selected pack is fully used does a new game reshuffle
+        // it fresh. p_fresh_deck is omitted otherwise so the call still matches
+        // the pre-fix/12 server function.
+        const freshDeck = hotLinkRemaining().length === 0;
+        if (freshDeck) state.usedWords = [];
+        const argsL = { p_code: state.code, p_player_idx: idxL, p_word: pickPrompt() };
+        if (freshDeck) argsL.p_fresh_deck = true;
+        huddleCallRPC('huddle_hot_play_again', argsL);
         return;
       }
       // For 'host' picker order, show the picker first — hostPicked will
@@ -2078,11 +2120,13 @@
     }
 
     // ---------- Guess the Theme: "who gave it away?" picker ----------
-    // The player who just escaped the hot seat picks who gave it away — that
-    // person is in the hot seat next. Candidates = every OTHER claimed player
-    // (the giver can be anyone, and the same person can be picked again). The
-    // server (huddle_hot_giver_next) re-checks that the caller is the current
-    // hot-seat player or host. Reuses the shared #pick-backdrop sheet.
+    // The player who just escaped the hot seat picks who gave it away. The pick
+    // happens in ALL three orders (it feeds the "biggest giver" standings stat);
+    // in "Giver goes next" it ALSO decides who's in the hot seat next, while in
+    // Rotating/Random the order decides and the pick is stats-only. Candidates =
+    // every OTHER claimed player (repeats OK). The server (huddle_hot_giver_next)
+    // re-checks that the caller is the current hot-seat player or host. Reuses
+    // the shared #pick-backdrop sheet.
     function openGiverPicker(){
       const grid = document.getElementById('pick-grid');
       if (!grid) return;
@@ -2104,27 +2148,57 @@
       }).join('');
       parseEmoji(grid);
       // Retitle the shared picker sheet for this mode (showPicker resets it back).
+      // The sub explains what the tap DOES — in giver order it sets the next
+      // hot seat; in Rotating/Random it only feeds the standings stat.
       const sheet = document.getElementById('pick-backdrop');
       if (sheet) {
         const tEl = sheet.querySelector('.sheet-title'); if (tEl) tEl.textContent = t('picker.giverTitle');
-        const bEl = sheet.querySelector('.sheet-body');  if (bEl) bEl.textContent = t('picker.giverSub');
+        const bEl = sheet.querySelector('.sheet-body');  if (bEl) bEl.textContent = t(hotLinkOrder() === 'giver' ? 'picker.giverSub' : 'picker.giverSubStat');
       }
       sheet.classList.add('active');
     }
     function giverPicked(idx){
+      idx = Number(idx);
       document.getElementById('pick-backdrop').classList.remove('active');
+      // Next seat: the blamed player in "Giver goes next"; whatever the order
+      // says in Rotating/Random (the blame is stats-only there).
+      const nextIdx = (hotLinkOrder() === 'giver') ? idx : hotLinkNextIdx();
+      if (nextIdx == null) return;
+      const word = pickPrompt();
+      // Deck exhausted — no theme left to play. The final blame still counts;
+      // huddle_hot_end_game records it and flips every phone to the standings.
+      if (word == null) { hotEndGame('deck', idx); return; }
       huddleCallRPC('huddle_hot_giver_next', {
-        p_code: state.code, p_player_idx: idx, p_word: pickPrompt(),
+        p_code: state.code, p_player_idx: nextIdx, p_word: word, p_giver_idx: idx,
       });
     }
-    // Forfeit (gave up) → nobody gave it away → pass to a RANDOM other player.
-    function giverNextRandom(){
-      const others = hotClaimedIndices().filter(i => i !== state.currentPlayerIdx);
-      if (others.length === 0) return;
-      const idx = others[Math.floor(Math.random() * others.length)];
+    // Advance WITHOUT blame — after a forfeit (nobody gave it away; giver order
+    // passes to a random other player, Rotating/Random follow the order), and
+    // the host fallback when the escapee has left mid-result.
+    function giverNextNoBlame(){
+      const nextIdx = hotLinkNextIdx();
+      if (nextIdx == null) return;
+      const word = pickPrompt();
+      if (word == null) { hotEndGame('deck', null); return; }
       huddleCallRPC('huddle_hot_giver_next', {
-        p_code: state.code, p_player_idx: idx, p_word: pickPrompt(),
+        p_code: state.code, p_player_idx: nextIdx, p_word: word,
       });
+    }
+    // End a Guess the Theme game → phase 'ended' → every phone shows the final
+    // standings. reason: 'host' (End-game button) | 'deck' (pack ran out).
+    function hotEndGame(reason, giverIdx){
+      const args = { p_code: state.code, p_reason: reason || 'host' };
+      if (giverIdx != null) args.p_giver_idx = giverIdx;
+      huddleCallRPC('huddle_hot_end_game', args);
+    }
+    async function confirmEndGame(){
+      if (!hotIsHost()) return;
+      const ok = await huddleConfirm({
+        title: t('endGame.confirmTitle'),
+        body: t('endGame.confirmBody'),
+        confirmLabel: t('endGame.confirmBtn'),
+      });
+      if (ok) hotEndGame('host');
     }
 
     function applySplashContent(){
@@ -2197,19 +2271,49 @@
       state.usedWords.push(word);
       return word;
     }
-    // "Guess the Link" picker — mirrors pickWord but draws a secret-theme KEY
-    // from LINKS, reusing state.usedWords so a single game never repeats a theme.
-    function pickLink() {
-      // Draw only from the selected theme pack (lobby setting). An unknown or
-      // near-empty pack (old room state / a future pack edit) falls back to
-      // the whole pool so the game can never stall on a bad setting.
+    // ---------- Guess the Theme: order + deck helpers ----------
+    // The synced 'order' field is shared with Classic/Silent; only 'rotating'
+    // and 'random' are meaningful here — anything else ('host' left over from
+    // a mode switch, old rooms) behaves as the mode's default, "Giver goes next".
+    function hotLinkOrder(){
+      return (state.order === 'rotating' || state.order === 'random') ? state.order : 'giver';
+    }
+    // Who takes the hot seat next when the ORDER decides (Rotating/Random, and
+    // random hand-offs in giver mode after a forfeit). Rotating walks the
+    // claimed seats in seat order; a vanished current seat (indexOf -1) safely
+    // restarts at the first seat.
+    function hotLinkNextIdx(){
+      const claimed = hotClaimedIndices();
+      if (!claimed.length) return null;
+      if (hotLinkOrder() === 'rotating') {
+        const pos = claimed.indexOf(state.currentPlayerIdx);
+        return claimed[(pos + 1) % claimed.length];
+      }
+      const others = claimed.filter(i => i !== state.currentPlayerIdx);
+      return others.length ? others[Math.floor(Math.random() * others.length)] : claimed[0];
+    }
+    // The draw pool for the selected theme pack. An unknown or near-empty pack
+    // (old room state / a future pack edit) falls back to the whole pool so the
+    // game can never stall on a bad setting.
+    function hotLinkPool(){
       let keys = linkPackKeys(state.themePack);
       if (keys.length < 3) keys = Object.keys(LINKS);
+      return keys;
+    }
+    // Themes still in the deck — the pool minus everything played in this room.
+    function hotLinkRemaining(){
       if (!Array.isArray(state.usedWords)) state.usedWords = [];
-      const remaining = keys.filter(k => state.usedWords.indexOf(k) === -1);
-      const pool = remaining.length > 0 ? remaining : keys;
-      if (remaining.length === 0) state.usedWords = [];
-      const key = pool[Math.floor(Math.random() * pool.length)];
+      return hotLinkPool().filter(k => state.usedWords.indexOf(k) === -1);
+    }
+    // "Guess the Theme" draw — mirrors pickWord but draws a secret-theme KEY
+    // from LINKS. Deck rule: a theme NEVER repeats in this room (usedWords
+    // persists across Play again). When the pack runs dry this returns null —
+    // giverPicked/giverNextNoBlame end the game with the "Deck finished!"
+    // standings, and startGame reshuffles a fresh deck instead.
+    function pickLink() {
+      const remaining = hotLinkRemaining();
+      if (remaining.length === 0) return null;
+      const key = remaining[Math.floor(Math.random() * remaining.length)];
       state.usedWords.push(key);
       return key;
     }
@@ -2416,24 +2520,44 @@
 
       const nextBtn = document.getElementById('next-btn');
       const leaveBtn = document.getElementById('leave-btn');
+      const endBtn = document.getElementById('end-game-btn');
       const amHost = hotIsHost();
+      // Host-only "End game" button — Guess the Theme's manual ending (the
+      // game is continuous; this is how a night wraps up mid-deck). Hidden
+      // for every other mode/branch.
+      if (endBtn) { endBtn.style.display = 'none'; endBtn.onclick = null; }
       // Guess the Theme drives turns from the result screen: the player who just
-      // escaped (or gave up) chooses who's next — "whoever gave it away". The
-      // host "Next turn" flow doesn't apply here.
+      // escaped (or gave up) advances the game. The host "Next turn" flow
+      // doesn't apply here.
       if (state.mode === 'link') {
         const amGuesser = player && player.id === hotMe.myId;
+        // No-blame advance label: Rotating is deterministic ("Next player"),
+        // Random and giver-after-forfeit hand off randomly.
+        const noBlameLabel = (hotLinkOrder() === 'rotating') ? t('result.nextPlayer') : t('result.passToRandom');
+        // Anti-stall fallback: if the escapee's seat is gone (they left mid-
+        // result), the host advances instead — the server authorizes host too.
+        const curSeatGone = !player || !(state.claimedBy && state.claimedBy[player.id]);
         if (amGuesser && won) {
           nextBtn.textContent = t('result.whoGaveAway');
           nextBtn.onclick = openGiverPicker;
           nextBtn.disabled = false;
         } else if (amGuesser && !won) {
-          nextBtn.textContent = t('result.passToRandom');
-          nextBtn.onclick = giverNextRandom;
+          nextBtn.textContent = noBlameLabel;
+          nextBtn.onclick = giverNextNoBlame;
+          nextBtn.disabled = false;
+        } else if (amHost && curSeatGone) {
+          nextBtn.textContent = noBlameLabel;
+          nextBtn.onclick = giverNextNoBlame;
           nextBtn.disabled = false;
         } else {
           nextBtn.textContent = t('result.waitingGiver', { name: hotSeatName });
           nextBtn.onclick = null;
           nextBtn.disabled = true;
+        }
+        if (endBtn && amHost) {
+          endBtn.textContent = t('result.endGame');
+          endBtn.onclick = confirmEndGame;
+          endBtn.style.display = '';
         }
         leaveBtn.textContent = t('result.leaveGame');
         leaveBtn.onclick = amHost ? hotCloseRoom : hotLeaveGameOver;
@@ -2502,5 +2626,99 @@
       // the host-picker branch by showing the UI; hostPicked routes that
       // case to the RPC.
       pickNextPlayer(false);
+    }
+
+    // ---------- Guess the Theme: final standings (phase 'ended') ----------
+    // Reached two ways: the selected pack ran out of themes ("Deck finished!",
+    // endReason 'deck') or the host tapped End game (endReason 'host'). Shows
+    // the fastest-escaper crown, the "biggest giver" callout, and — for the
+    // host — Play again (same deck if themes remain, reshuffled if finished),
+    // Change theme pack, and Close room.
+    function renderThemeEnd(){
+      const headerEl = document.getElementById('theme-end-header');
+      if (!headerEl) return;
+      ensureClaimantProfiles(Object.values(state.claimedBy || {}), renderThemeEnd);
+      const isDeck = state.endReason === 'deck';
+      headerEl.textContent = t('result.gameOver');
+      document.getElementById('theme-end-emoji').textContent = isDeck ? '🎴' : '🏁';
+      document.getElementById('theme-end-title').textContent = isDeck ? t('themeEnd.deckTitle') : t('result.gameOver');
+      const packKey = LINK_PACKS[state.themePack] ? state.themePack : 'mixed';
+      const packLabel = LINK_PACKS[packKey].emoji + ' ' + t(LINK_PACKS[packKey].labelKey);
+      const playedN = Array.isArray(state.usedWords) ? state.usedWords.length : 0;
+      document.getElementById('theme-end-sub').textContent = isDeck
+        ? t('themeEnd.deckSub', { pack: packLabel, n: hotLinkPool().length })
+        : t('themeEnd.hostSub', { n: playedN });
+      document.getElementById('theme-end-lb-title').textContent = t('themeEnd.standings');
+
+      // Final standings — same ranking as the in-game leaderboard (fastest
+      // escape first; more wins breaks ties; never-escaped players last).
+      const claimedSet = new Set(Object.keys(state.claimedBy || {}));
+      const sorted = state.players.filter(p => claimedSet.has(p.id)).sort((a,b) => {
+        const aTime = (a.bestTimeMs != null) ? a.bestTimeMs : Infinity;
+        const bTime = (b.bestTimeMs != null) ? b.bestTimeMs : Infinity;
+        if (aTime !== bTime) return aTime - bTime;
+        return (b.wins || 0) - (a.wins || 0);
+      });
+      const lb = document.getElementById('theme-end-lb');
+      lb.innerHTML = sorted.map((p,i) => {
+        const crowned = i === 0 && p.bestTimeMs != null;
+        const isMe = p.id === state.meId;
+        const rowDisplay = playerDisplayFor(p, state.claimedBy);
+        const timeText = (p.bestTimeMs != null) ? `⏱ ${formatDuration(p.bestTimeMs)}` : '—';
+        return `
+          <div class="lb-row ${crowned ? 'winner' : ''}">
+            <div class="lb-rank">${i+1}</div>
+            ${avatarHTML(rowDisplay.avatar, 44, { fallback: p.initial })}
+            <div class="lb-name">${crowned ? '👑 ' : ''}${isMe ? t('picker.you') : escapeHTML(rowDisplay.name)}</div>
+            <div class="lb-score">${timeText}</div>
+          </div>
+        `;
+      }).join('');
+      parseEmoji(lb);
+
+      // "Biggest giver" — whose clues gave it away the most (synced giverCount,
+      // bumped server-side by huddle_hot_giver_next / huddle_hot_end_game).
+      // Hidden when nobody was blamed yet; ties list everyone.
+      const giverEl = document.getElementById('theme-end-giver');
+      const maxGiver = sorted.reduce((m,p) => Math.max(m, p.giverCount || 0), 0);
+      if (giverEl) {
+        if (maxGiver > 0) {
+          const names = sorted
+            .filter(p => (p.giverCount || 0) === maxGiver)
+            .map(p => p.id === state.meId ? t('picker.you') : playerDisplayFor(p, state.claimedBy).name)
+            .join(', ');
+          giverEl.innerHTML = t('themeEnd.biggestGiver', { name: '<b>' + huddleEscape(names) + '</b>', n: maxGiver });
+          giverEl.hidden = false;
+          parseEmoji(giverEl);
+        } else {
+          giverEl.hidden = true;
+        }
+      }
+
+      // Actions. Host: restart (startGame reuses the deck; reshuffles it when
+      // finished), swap packs (the picker syncs, then Play again draws from the
+      // new pack), or close the room for everyone. Others: wait or leave.
+      const actions = document.getElementById('theme-end-actions');
+      if (hotIsHost()) {
+        actions.innerHTML = `
+          <button class="btn btn-primary btn-lg" data-action="hotPlayAgain">${t('result.playAgain')}</button>
+          <button class="btn btn-outline btn-lg" style="margin-top:10px" data-action="openLinkPackSheet">${t('themeEnd.changePack')}</button>
+          <button class="btn btn-outline btn-lg" style="margin-top:10px" data-action="hotCloseRoom">${t('result.leaveGame')}</button>
+        `;
+      } else {
+        actions.innerHTML = `
+          <button class="btn btn-primary btn-lg" disabled>${t('result.waitingForHostNewGame')}</button>
+          <button class="btn btn-outline btn-lg" style="margin-top:10px" data-action="hotLeaveGameOver">${t('result.leaveGame')}</button>
+        `;
+      }
+      parseEmoji(actions);
+
+      // Count the finished game in profile stats — the same synced-flag pattern
+      // as showResult's last-turn block (fix/12 lets the RPC accept 'ended').
+      if (!state._gamesPlayedCounted) {
+        bumpGamesPlayed();
+        state._gamesPlayedCounted = true;
+        huddleCallRPC('huddle_hot_mark_game_counted', { p_code: state.code });
+      }
     }
 

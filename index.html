@@ -2554,7 +2554,38 @@ No online strangers, no random matchmaking. Just the people sitting next to you.
 
         <div style="height:8px"></div>
         <button class="btn btn-primary btn-lg" id="next-btn" onclick="nextTurn()" data-i18n="result.nextTurn">Next turn</button>
+        <!-- Guess the Theme only, host only — shown/wired by showResult() -->
+        <button class="btn btn-outline btn-lg" id="end-game-btn" style="margin-top:10px;display:none">🏁 End game</button>
         <button class="btn btn-outline btn-lg" id="leave-btn" style="margin-top:10px" onclick="hotLeaveGameOver()" data-i18n="result.leaveGame">Leave game</button>
+      </main>
+    </section>
+
+    <!-- ============ GUESS THE THEME — FINAL STANDINGS ============ -->
+    <!-- Phase 'ended' (hotRerenderInner routes here). Reached when the theme
+         deck runs out ("Deck finished!") or the host taps End game. All text
+         and the action buttons are rendered by renderThemeEnd() in app-01. -->
+    <section class="screen" id="screen-theme-end">
+      <header class="header">
+        <button class="icon-btn" onclick="hotLeaveGameOver()" aria-label="Back" data-i18n-aria="common.back">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
+        <div class="header-title center" id="theme-end-header">Game over</div>
+        <span style="width:40px"></span>
+      </header>
+      <main class="page no-nav">
+        <div class="result-hero">
+          <div class="result-emoji" id="theme-end-emoji">🏁</div>
+          <div class="result-title" id="theme-end-title">Game over</div>
+          <div class="result-sub" id="theme-end-sub"></div>
+        </div>
+
+        <div class="theme-end-giver" id="theme-end-giver" hidden></div>
+
+        <div class="section-title" id="theme-end-lb-title">Final standings</div>
+        <div class="leaderboard" id="theme-end-lb"></div>
+
+        <div style="height:8px"></div>
+        <div id="theme-end-actions"></div>
       </main>
     </section>
 
